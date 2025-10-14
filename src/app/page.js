@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import AddItemForm from '@/components/AddItemForm';
 import AisleSection from '@/components/AisleSection';
-import ThemeToggle from '@/components/ThemeToggle';
+import Header from '@/components/Header';
+import LoginForm from '@/components/LoginForm';
+import { useAuth } from '@/contexts/AuthContext';
 import { createShoppingItem, groupItemsByAisle } from '@/types/shoppingList';
 
 export default function Home() {
+  const { user, loading } = useAuth();
   const [items, setItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [listName, setListName] = useState('My Shopping List');
@@ -79,6 +82,23 @@ export default function Home() {
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
 
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return <LoginForm />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-4xl mx-auto py-8 px-4">
@@ -92,7 +112,7 @@ export default function Home() {
               className="text-3xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border-none focus:outline-none focus:ring-0"
             />
             <div className="flex items-center space-x-4">
-              <ThemeToggle />
+              <Header />
               <div className="text-right">
                 <div className="text-lg text-gray-600 dark:text-gray-300">
                   {completedCount} of {totalCount} items completed
