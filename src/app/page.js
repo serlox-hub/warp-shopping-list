@@ -6,58 +6,116 @@ import AisleSection from '@/components/AisleSection';
 import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { createShoppingItem, groupItemsByAisle } from '@/types/shoppingList';
+import { ShoppingListService } from '@/lib/shoppingListService';
+import { groupItemsByAisle } from '@/types/shoppingList';
 
 export default function Home() {
   const { user, loading } = useAuth();
   const [items, setItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [listName, setListName] = useState('My Shopping List');
+  const [shoppingList, setShoppingList] = useState(null);
+  const [dataLoading, setDataLoading] = useState(false);
 
-  // Load data from localStorage on component mount
+  // Load data from Supabase when user is authenticated
   useEffect(() => {
-    const savedItems = localStorage.getItem('shoppingListItems');
-    const savedListName = localStorage.getItem('shoppingListName');
+    if (user && !shoppingList) {
+      loadShoppingListData();
+    }
+  }, [user, shoppingList]);
+
+  const loadShoppingListData = async () => {
+    if (!user) return;
     
-    if (savedItems) {
-      setItems(JSON.parse(savedItems));
+    setDataLoading(true);
+    try {
+      // Get or create the default shopping list for the user
+      const list = await ShoppingListService.getDefaultShoppingList(user.id);
+      setShoppingList(list);
+      setListName(list.name);
+
+      // Load items for this list
+      const listItems = await ShoppingListService.getShoppingItems(list.id);
+      setItems(listItems);
+    } catch (error) {
+      console.error('Error loading shopping list data:', error);
+    } finally {
+      setDataLoading(false);
     }
-    if (savedListName) {
-      setListName(savedListName);
+  };
+
+  // Update shopping list name in Supabase when it changes
+  const updateListName = async (newName) => {
+    if (!shoppingList || !newName.trim()) return;
+    
+    try {
+      await ShoppingListService.updateShoppingListName(shoppingList.id, newName.trim());
+      setListName(newName);
+    } catch (error) {
+      console.error('Error updating list name:', error);
+      // Revert the name change on error
+      setListName(shoppingList.name);
     }
-  }, []);
-
-  // Save data to localStorage whenever items or listName changes
-  useEffect(() => {
-    localStorage.setItem('shoppingListItems', JSON.stringify(items));
-  }, [items]);
-
-  useEffect(() => {
-    localStorage.setItem('shoppingListName', listName);
-  }, [listName]);
-
-  const handleAddItem = (itemData) => {
-    const newItem = createShoppingItem(itemData.name, itemData.aisle, itemData.quantity);
-    setItems(prev => [...prev, newItem]);
   };
 
-  const handleUpdateItem = (updatedItem) => {
-    setItems(prev => prev.map(item => 
-      item.id === updatedItem.id ? updatedItem : item
-    ));
-    setEditingItem(null);
+  const handleAddItem = async (itemData) => {
+    if (!shoppingList || !user) return;
+    
+    try {
+      const newItem = await ShoppingListService.addShoppingItem(
+        shoppingList.id,
+        user.id,
+        itemData
+      );
+      setItems(prev => [newItem, ...prev]);
+    } catch (error) {
+      console.error('Error adding item:', error);
+    }
   };
 
-  const handleToggleComplete = (itemId) => {
-    setItems(prev => prev.map(item =>
-      item.id === itemId ? { ...item, completed: !item.completed } : item
-    ));
-  };
-
-  const handleDeleteItem = (itemId) => {
-    setItems(prev => prev.filter(item => item.id !== itemId));
-    if (editingItem?.id === itemId) {
+  const handleUpdateItem = async (updatedItem) => {
+    try {
+      const updated = await ShoppingListService.updateShoppingItem(updatedItem.id, {
+        name: updatedItem.name,
+        aisle: updatedItem.aisle,
+        quantity: updatedItem.quantity
+      });
+      
+      setItems(prev => prev.map(item => 
+        item.id === updated.id ? updated : item
+      ));
       setEditingItem(null);
+    } catch (error) {
+      console.error('Error updating item:', error);
+    }
+  };
+
+  const handleToggleComplete = async (itemId) => {
+    const item = items.find(item => item.id === itemId);
+    if (!item) return;
+    
+    try {
+      const updated = await ShoppingListService.updateShoppingItem(itemId, {
+        completed: !item.completed
+      });
+      
+      setItems(prev => prev.map(item =>
+        item.id === updated.id ? updated : item
+      ));
+    } catch (error) {
+      console.error('Error toggling item completion:', error);
+    }
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    try {
+      await ShoppingListService.deleteShoppingItem(itemId);
+      setItems(prev => prev.filter(item => item.id !== itemId));
+      if (editingItem?.id === itemId) {
+        setEditingItem(null);
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
     }
   };
 
@@ -69,21 +127,35 @@ export default function Home() {
     setEditingItem(null);
   };
 
-  const handleClearCompleted = () => {
-    setItems(prev => prev.filter(item => !item.completed));
+  const handleClearCompleted = async () => {
+    if (!shoppingList) return;
+    
+    try {
+      await ShoppingListService.clearCompletedItems(shoppingList.id);
+      setItems(prev => prev.filter(item => !item.completed));
+    } catch (error) {
+      console.error('Error clearing completed items:', error);
+    }
   };
 
-  const handleClearAll = () => {
-    setItems([]);
-    setEditingItem(null);
+  const handleClearAll = async () => {
+    if (!shoppingList) return;
+    
+    try {
+      await ShoppingListService.clearAllItems(shoppingList.id);
+      setItems([]);
+      setEditingItem(null);
+    } catch (error) {
+      console.error('Error clearing all items:', error);
+    }
   };
 
   const groupedItems = groupItemsByAisle(items);
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
 
-  // Show loading while checking authentication
-  if (loading) {
+  // Show loading while checking authentication or loading data
+  if (loading || (user && dataLoading)) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -109,6 +181,12 @@ export default function Home() {
               type="text"
               value={listName}
               onChange={(e) => setListName(e.target.value)}
+              onBlur={(e) => updateListName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.target.blur();
+                }
+              }}
               className="text-3xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border-none focus:outline-none focus:ring-0"
             />
             <div className="flex items-center space-x-4">
