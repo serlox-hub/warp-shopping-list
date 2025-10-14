@@ -1,6 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { UserPreferencesService } from '@/lib/userPreferencesService';
 
 const ThemeContext = createContext();
 
@@ -13,39 +15,102 @@ export const useTheme = () => {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('light');
+  const { user } = useAuth();
+  const [theme, setTheme] = useState('system');
+  const [resolvedTheme, setResolvedTheme] = useState('light');
 
-  // Load theme from localStorage on mount
+  // Load theme from Supabase when user is authenticated
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
-      setTheme(savedTheme);
+    if (user) {
+      loadUserTheme();
     } else {
-      // Check system preference
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      setTheme(systemPrefersDark ? 'dark' : 'light');
+      // For non-authenticated users, use localStorage or system preference
+      const savedTheme = localStorage.getItem('theme') || 'system';
+      setTheme(savedTheme);
     }
-  }, []);
+  }, [user]);
 
-  // Apply theme to document and save to localStorage
+  const loadUserTheme = async () => {
+    try {
+      const preferences = await UserPreferencesService.getUserPreferences(user.id);
+      setTheme(preferences.theme || 'system');
+    } catch (error) {
+      console.error('Error loading user theme:', error);
+      // Fallback to localStorage or system preference
+      const savedTheme = localStorage.getItem('theme') || 'system';
+      setTheme(savedTheme);
+    }
+  };
+
+  // Resolve theme (convert 'system' to actual theme)
+  useEffect(() => {
+    let actualTheme = theme;
+    
+    if (theme === 'system') {
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      actualTheme = systemPrefersDark ? 'dark' : 'light';
+      
+      // Listen for system theme changes
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = (e) => {
+        if (theme === 'system') {
+          setResolvedTheme(e.matches ? 'dark' : 'light');
+        }
+      };
+      
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+    
+    setResolvedTheme(actualTheme);
+  }, [theme]);
+
+  // Apply resolved theme to document
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
+    if (resolvedTheme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
+    
+    // Always save to localStorage as fallback
     localStorage.setItem('theme', theme);
-  }, [theme]);
+  }, [resolvedTheme, theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  const toggleTheme = async () => {
+    const newTheme = resolvedTheme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await UserPreferencesService.updateTheme(user.id, newTheme);
+      } catch (error) {
+        console.error('Error saving theme preference:', error);
+      }
+    }
+  };
+
+  const setThemePreference = async (newTheme) => {
+    setTheme(newTheme);
+    
+    // Save to Supabase if user is authenticated
+    if (user) {
+      try {
+        await UserPreferencesService.updateTheme(user.id, newTheme);
+      } catch (error) {
+        console.error('Error saving theme preference:', error);
+      }
+    }
   };
 
   const value = {
     theme,
+    resolvedTheme,
     toggleTheme,
-    isDark: theme === 'dark'
+    setThemePreference,
+    isDark: resolvedTheme === 'dark'
   };
 
   return (

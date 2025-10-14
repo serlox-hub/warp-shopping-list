@@ -1,5 +1,6 @@
--- Shopping Lists Database Setup for Supabase
--- Run these commands in the Supabase SQL Editor
+-- Migration 001: Initial shopping tables
+-- Created: 2025-01-14
+-- Description: Create shopping_lists and shopping_items tables with RLS policies
 
 -- Enable Row Level Security
 ALTER TABLE IF EXISTS public.shopping_lists ENABLE ROW LEVEL SECURITY;

@@ -28,15 +28,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 ## 4. Set Up Database Tables
 
 1. In your Supabase dashboard, go to **SQL Editor**
-2. Create a new query and paste the contents of `supabase-setup.sql`
-3. Run the query to create the necessary tables and security policies
+2. Run the migration files in the `migrations/` folder in order:
+   - First run: `migrations/001_initial_shopping_tables.sql`
+   - Then run: `migrations/002_user_preferences.sql`
+3. Check that each migration completed successfully before moving to the next
 
-The setup creates:
+The migrations create:
 - `shopping_lists` table: Stores shopping lists for each user
-- `shopping_items` table: Stores individual items within shopping lists
+- `shopping_items` table: Stores individual items within shopping lists  
+- `user_preferences` table: Stores user settings like theme preference
 - Row Level Security (RLS) policies to ensure users can only access their own data
 - Indexes for better performance
 - Triggers for automatic timestamp updates
+
+**Note**: See `migrations/README.md` for detailed migration information.
 
 ## 5. Configure Google OAuth
 
