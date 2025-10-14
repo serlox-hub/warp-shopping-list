@@ -1,0 +1,34 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with rounded corners -->
+  <rect width="180" height="180" rx="32" fill="#3B82F6"/>
+  
+  <!-- Shopping list clipboard -->
+  <g>
+    <!-- Main clipboard -->
+    <rect x="45" y="25" width="90" height="130" rx="8" fill="white"/>
+    <rect x="50" y="30" width="80" height="120" rx="6" fill="#F8FAFC"/>
+    
+    <!-- Clip at top -->
+    <rect x="70" y="15" width="40" height="20" rx="6" fill="#6B7280"/>
+    <rect x="75" y="20" width="30" height="10" rx="3" fill="#9CA3AF"/>
+    
+    <!-- List items with checkboxes -->
+    <!-- Item 1 - checked -->
+    <circle cx="65" cy="55" r="8" fill="#10B981"/>
+    <path d="M61 55l3 3 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="80" y="52" width="45" height="6" rx="3" fill="#374151"/>
+    
+    <!-- Item 2 - checked -->
+    <circle cx="65" cy="80" r="8" fill="#10B981"/>
+    <path d="M61 80l3 3 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="80" y="77" width="55" height="6" rx="3" fill="#374151"/>
+    
+    <!-- Item 3 - unchecked -->
+    <circle cx="65" cy="105" r="8" fill="none" stroke="#D1D5DB" stroke-width="2"/>
+    <rect x="80" y="102" width="40" height="6" rx="3" fill="#9CA3AF"/>
+    
+    <!-- Item 4 - unchecked -->
+    <circle cx="65" cy="130" r="8" fill="none" stroke="#D1D5DB" stroke-width="2"/>
+    <rect x="80" y="127" width="35" height="6" rx="3" fill="#9CA3AF"/>
+  </g>
+</svg>

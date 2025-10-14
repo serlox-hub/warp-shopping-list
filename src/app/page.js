@@ -176,6 +176,7 @@ export default function Home() {
       <div className="max-w-4xl mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-8">
+          {/* Top row: Title and User Header */}
           <div className="flex items-center justify-between mb-4">
             <input
               type="text"
@@ -187,25 +188,27 @@ export default function Home() {
                   e.target.blur();
                 }
               }}
-              className="text-3xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border-none focus:outline-none focus:ring-0"
+              className="text-3xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border-none focus:outline-none focus:ring-0 flex-1 mr-4"
             />
-            <div className="flex items-center space-x-4">
-              <Header />
+            <Header />
+          </div>
+          
+          {/* Progress section - separate row */}
+          {totalCount > 0 && (
+            <div className="flex items-center justify-end mb-4">
               <div className="text-right">
-                <div className="text-lg text-gray-600 dark:text-gray-300">
+                <div className="text-lg text-gray-600 dark:text-gray-300 mb-2">
                   {completedCount} of {totalCount} items completed
                 </div>
-                {totalCount > 0 && (
-                  <div className="w-64 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
-                    <div
-                      className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(completedCount / totalCount) * 100}%` }}
-                    ></div>
-                  </div>
-                )}
+                <div className="w-64 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(completedCount / totalCount) * 100}%` }}
+                  ></div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           
           {/* Action buttons */}
           <div className="flex space-x-4">
