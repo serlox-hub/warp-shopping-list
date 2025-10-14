@@ -44,7 +44,7 @@ export class UserPreferencesService {
         )
         .select()
         .single();
-
+      
       if (error) throw error;
       return data;
     } catch (error) {
