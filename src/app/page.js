@@ -5,6 +5,7 @@ import AddItemForm from '@/components/AddItemForm';
 import AisleSection from '@/components/AisleSection';
 import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
+import ListSelector from '@/components/ListSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 import { groupItemsByAisle } from '@/types/shoppingList';
@@ -29,8 +30,8 @@ export default function Home() {
     
     setDataLoading(true);
     try {
-      // Get or create the default shopping list for the user
-      const list = await ShoppingListService.getDefaultShoppingList(user.id);
+      // Get the active shopping list for the user
+      const list = await ShoppingListService.getActiveShoppingList(user.id);
       setShoppingList(list);
       setListName(list.name);
 
@@ -55,6 +56,21 @@ export default function Home() {
       console.error('Error updating list name:', error);
       // Revert the name change on error
       setListName(shoppingList.name);
+    }
+  };
+
+  const handleListChange = async (newList) => {
+    setShoppingList(newList);
+    setListName(newList.name);
+    setEditingItem(null);
+    
+    // Load items for the new list
+    try {
+      const listItems = await ShoppingListService.getShoppingItems(newList.id);
+      setItems(listItems);
+    } catch (error) {
+      console.error('Error loading items for new list:', error);
+      setItems([]);
     }
   };
 
@@ -176,20 +192,23 @@ export default function Home() {
       <div className="max-w-4xl mx-auto py-8 px-4">
         {/* Header */}
         <div className="mb-8">
-          {/* Top row: Title and User Header */}
+          {/* Top row: List selector and User Header */}
           <div className="flex items-center justify-between mb-4">
-            <input
-              type="text"
-              value={listName}
-              onChange={(e) => setListName(e.target.value)}
-              onBlur={(e) => updateListName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.target.blur();
-                }
-              }}
-              className="text-3xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border-none focus:outline-none focus:ring-0 flex-1 mr-4"
-            />
+            <div className="flex items-center space-x-4">
+              <ListSelector currentList={shoppingList} onListChange={handleListChange} />
+              <input
+                type="text"
+                value={listName}
+                onChange={(e) => setListName(e.target.value)}
+                onBlur={(e) => updateListName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.target.blur();
+                  }
+                }}
+                className="text-2xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border-none focus:outline-none focus:ring-0"
+              />
+            </div>
             <Header />
           </div>
           

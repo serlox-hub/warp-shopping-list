@@ -6,8 +6,13 @@ This folder contains database migration files for the Shopping List application.
 
 1. Go to your Supabase dashboard
 2. Navigate to **SQL Editor**
-3. Run each migration file in numerical order
+3. Run each migration file in numerical order:
+   - `001_initial_shopping_tables.sql`
+   - `002_user_preferences.sql`
+   - `003_multiple_lists_support_v2.sql` (use v2, not the original)
 4. Check that each migration completed successfully before moving to the next
+
+**Note**: If migration 003 failed partially, first run `003_rollback.sql` to clean up, then run `003_multiple_lists_support_v2.sql`
 
 ## Migration List
 
@@ -32,6 +37,23 @@ This folder contains database migration files for the Shopping List application.
   - Theme constraint (light, dark, system)
   - RLS policies for user isolation
   - Automatic timestamp updates
+
+### 003_multiple_lists_support_v2.sql
+- **Created**: 2025-01-14
+- **Description**: Add support for multiple shopping lists per user (FIXED VERSION)
+- **Tables Modified**:
+  - `shopping_lists` - Added `is_active` and `list_order` columns
+- **Features**:
+  - Active list tracking with unique constraint
+  - List ordering system
+  - Automatic order assignment for new lists
+  - Proper handling of existing data to avoid constraint violations
+  - Backward compatibility for existing lists
+
+### 003_rollback.sql
+- **Purpose**: Rollback script for migration 003 if it fails
+- **Usage**: Run this ONLY if migration 003 failed and needs cleanup
+- **Description**: Removes all changes made by migration 003
 
 ## Migration Guidelines
 

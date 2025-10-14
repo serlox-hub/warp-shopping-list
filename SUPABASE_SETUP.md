@@ -31,7 +31,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 2. Run the migration files in the `migrations/` folder in order:
    - First run: `migrations/001_initial_shopping_tables.sql`
    - Then run: `migrations/002_user_preferences.sql`
+   - Then run: `migrations/003_multiple_lists_support_v2.sql`
 3. Check that each migration completed successfully before moving to the next
+
+   **If migration 003 failed previously**: First run `migrations/003_rollback.sql` to clean up, then run the v2 version.
 
 The migrations create:
 - `shopping_lists` table: Stores shopping lists for each user

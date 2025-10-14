@@ -21,39 +21,146 @@ import { supabase } from './supabase'
 // - updated_at: timestamp
 
 export class ShoppingListService {
-  // Get or create the default shopping list for a user
-  static async getDefaultShoppingList(userId) {
+  // Get all shopping lists for a user
+  static async getUserShoppingLists(userId) {
     try {
-      // First, try to get existing default list
-      let { data: lists, error } = await supabase
+      const { data, error } = await supabase
         .from('shopping_lists')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('list_order', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting user shopping lists:', error);
+      throw error;
+    }
+  }
+
+  // Get the active shopping list for a user
+  static async getActiveShoppingList(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('shopping_lists')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        // If no active list exists, create a default one
+        if (error.code === 'PGRST116') {
+          return this.createShoppingList(userId, 'My Shopping List', true);
+        }
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error getting active shopping list:', error);
+      throw error;
+    }
+  }
+
+  // Create a new shopping list
+  static async createShoppingList(userId, name, setAsActive = false) {
+    try {
+      // If setting as active, deactivate other lists first
+      if (setAsActive) {
+        await this.deactivateAllLists(userId);
+      }
+
+      const { data, error } = await supabase
+        .from('shopping_lists')
+        .insert([
+          {
+            user_id: userId,
+            name: name.trim(),
+            is_active: setAsActive
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error creating shopping list:', error);
+      throw error;
+    }
+  }
+
+  // Set a list as active (deactivates others)
+  static async setActiveList(userId, listId) {
+    try {
+      // Deactivate all lists for user
+      await this.deactivateAllLists(userId);
+
+      // Activate the selected list
+      const { data, error } = await supabase
+        .from('shopping_lists')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('id', listId)
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error setting active list:', error);
+      throw error;
+    }
+  }
+
+  // Deactivate all lists for a user
+  static async deactivateAllLists(userId) {
+    try {
+      const { error } = await supabase
+        .from('shopping_lists')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deactivating lists:', error);
+      throw error;
+    }
+  }
+
+  // Delete a shopping list
+  static async deleteShoppingList(userId, listId) {
+    try {
+      // Check if this is the only list
+      const allLists = await this.getUserShoppingLists(userId);
+      if (allLists.length === 1) {
+        throw new Error('Cannot delete the last remaining list');
+      }
+
+      const listToDelete = allLists.find(list => list.id === listId);
+      const wasActive = listToDelete?.is_active;
+
+      const { error } = await supabase
+        .from('shopping_lists')
+        .delete()
+        .eq('id', listId)
+        .eq('user_id', userId);
 
       if (error) throw error;
 
-      // If no list exists, create one
-      if (!lists || lists.length === 0) {
-        const { data: newList, error: createError } = await supabase
-          .from('shopping_lists')
-          .insert([
-            { 
-              user_id: userId, 
-              name: 'My Shopping List',
-            }
-          ])
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        return newList;
+      // If we deleted the active list, make the first remaining list active
+      if (wasActive) {
+        const remainingLists = allLists.filter(list => list.id !== listId);
+        if (remainingLists.length > 0) {
+          await this.setActiveList(userId, remainingLists[0].id);
+        }
       }
 
-      return lists[0];
+      return true;
     } catch (error) {
-      console.error('Error getting default shopping list:', error);
+      console.error('Error deleting shopping list:', error);
       throw error;
     }
   }
