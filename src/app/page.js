@@ -3,12 +3,18 @@
 import { useState, useEffect } from 'react';
 import AddItemForm from '@/components/AddItemForm';
 import AisleSection from '@/components/AisleSection';
+import AisleManager from '@/components/AisleManager';
 import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import ListSelector from '@/components/ListSelector';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
-import { groupItemsByAisle } from '@/types/shoppingList';
+import { 
+  groupItemsByAisle,
+  loadCustomAisles,
+  saveCustomAisles,
+  updateItemsAisle
+} from '@/types/shoppingList';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -17,6 +23,14 @@ export default function Home() {
   const [listName, setListName] = useState('My Shopping List');
   const [shoppingList, setShoppingList] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
+  const [customAisles, setCustomAisles] = useState([]);
+  const [showAisleManager, setShowAisleManager] = useState(false);
+
+  // Load custom aisles from localStorage when component mounts
+  useEffect(() => {
+    const aisles = loadCustomAisles();
+    setCustomAisles(aisles);
+  }, []);
 
   // Load data from Supabase when user is authenticated
   useEffect(() => {
@@ -166,7 +180,61 @@ export default function Home() {
     }
   };
 
-  const groupedItems = groupItemsByAisle(items);
+  const handleUpdateAisles = (newAisles) => {
+    const oldAisles = customAisles;
+    setCustomAisles(newAisles);
+    saveCustomAisles(newAisles);
+
+    // Update existing items if any aisles were renamed
+    // We need to detect renames by checking which aisles disappeared and which are new
+    const removedAisles = oldAisles.filter(aisle => !newAisles.includes(aisle));
+    const addedAisles = newAisles.filter(aisle => !oldAisles.includes(aisle));
+    
+    if (removedAisles.length === 1 && addedAisles.length === 1) {
+      // Likely a rename operation
+      const oldAisleName = removedAisles[0];
+      const newAisleName = addedAisles[0];
+      
+      const updatedItems = updateItemsAisle(items, oldAisleName, newAisleName);
+      setItems(updatedItems);
+      
+      // Update items in database for items that were renamed
+      const itemsToUpdate = items.filter(item => item.aisle === oldAisleName);
+      itemsToUpdate.forEach(async (item) => {
+        try {
+          await ShoppingListService.updateShoppingItem(item.id, {
+            aisle: newAisleName
+          });
+        } catch (error) {
+          console.error('Error updating item aisle in database:', error);
+        }
+      });
+    } else if (removedAisles.length > 0) {
+      // Multiple aisles removed, move items to "Other" if it exists, or first available aisle
+      const fallbackAisle = newAisles.includes('Other') ? 'Other' : newAisles[0];
+      
+      let updatedItems = items;
+      removedAisles.forEach(removedAisle => {
+        updatedItems = updateItemsAisle(updatedItems, removedAisle, fallbackAisle);
+        
+        // Update in database
+        const itemsToUpdate = items.filter(item => item.aisle === removedAisle);
+        itemsToUpdate.forEach(async (item) => {
+          try {
+            await ShoppingListService.updateShoppingItem(item.id, {
+              aisle: fallbackAisle
+            });
+          } catch (error) {
+            console.error('Error updating item aisle in database:', error);
+          }
+        });
+      });
+      
+      setItems(updatedItems);
+    }
+  };
+
+  const groupedItems = groupItemsByAisle(items, customAisles);
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
 
@@ -245,6 +313,15 @@ export default function Home() {
             >
               Clear All
             </button>
+            <button
+              onClick={() => setShowAisleManager(true)}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors duration-200 flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              </svg>
+              <span>Manage Aisles</span>
+            </button>
           </div>
         </div>
 
@@ -255,6 +332,7 @@ export default function Home() {
             editingItem={editingItem}
             onUpdateItem={handleUpdateItem}
             onCancelEdit={handleCancelEdit}
+            customAisles={customAisles}
           />
         </div>
 
@@ -278,6 +356,15 @@ export default function Home() {
             ))
           )}
         </div>
+
+        {/* Aisle Manager Modal */}
+        {showAisleManager && (
+          <AisleManager
+            aisles={customAisles}
+            onUpdateAisles={handleUpdateAisles}
+            onClose={() => setShowAisleManager(false)}
+          />
+        )}
       </div>
     </div>
   );

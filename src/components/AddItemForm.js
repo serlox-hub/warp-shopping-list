@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { DEFAULT_AISLES } from '@/types/shoppingList';
 
-export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCancelEdit }) {
+export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCancelEdit, customAisles = DEFAULT_AISLES }) {
   const [name, setName] = useState('');
   const [aisle, setAisle] = useState('Other');
   const [quantity, setQuantity] = useState(1);
@@ -12,15 +12,15 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
   useEffect(() => {
     if (editingItem) {
       setName(editingItem.name || '');
-      setAisle(editingItem.aisle || 'Other');
+      setAisle(editingItem.aisle || (customAisles.includes('Other') ? 'Other' : customAisles[0] || ''));
       setQuantity(editingItem.quantity || 1);
     } else {
       // Reset to default values when not editing
       setName('');
-      setAisle('Other');
+      setAisle(customAisles.includes('Other') ? 'Other' : customAisles[0] || '');
       setQuantity(1);
     }
-  }, [editingItem]);
+  }, [editingItem, customAisles]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -44,7 +44,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
     // Only reset if not editing (values will be reset by useEffect)
     if (!editingItem) {
       setName('');
-      setAisle('Other');
+      setAisle(customAisles.includes('Other') ? 'Other' : customAisles[0] || '');
       setQuantity(1);
     }
   };
@@ -122,7 +122,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
                 : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-700'
             }`}
           >
-            {DEFAULT_AISLES.map(aisleOption => (
+            {customAisles.map(aisleOption => (
               <option key={aisleOption} value={aisleOption}>
                 {aisleOption}
               </option>
