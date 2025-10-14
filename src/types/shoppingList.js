@@ -14,12 +14,13 @@ export const DEFAULT_AISLES = [
 ];
 
 // Create a new shopping list item
-export const createShoppingItem = (name, aisle = 'Other', quantity = 1, completed = false) => ({
+export const createShoppingItem = (name, aisle = 'Other', quantity = 1, completed = false, comment = '') => ({
   id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
   name,
   aisle,
   quantity,
   completed,
+  comment: comment || '', // Optional comment field
   createdAt: new Date().toISOString()
 });
 

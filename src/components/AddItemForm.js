@@ -7,6 +7,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
   const [name, setName] = useState('');
   const [aisle, setAisle] = useState('Other');
   const [quantity, setQuantity] = useState(1);
+  const [comment, setComment] = useState('');
 
   // Update form values when editingItem changes
   useEffect(() => {
@@ -14,11 +15,13 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
       setName(editingItem.name || '');
       setAisle(editingItem.aisle || (customAisles.includes('Other') ? 'Other' : customAisles[0] || ''));
       setQuantity(editingItem.quantity || 1);
+      setComment(editingItem.comment || '');
     } else {
       // Reset to default values when not editing
       setName('');
       setAisle(customAisles.includes('Other') ? 'Other' : customAisles[0] || '');
       setQuantity(1);
+      setComment('');
     }
   }, [editingItem, customAisles]);
 
@@ -31,13 +34,15 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
         ...editingItem,
         name: name.trim(),
         aisle,
-        quantity: parseInt(quantity)
+        quantity: parseInt(quantity),
+        comment: comment.trim()
       });
     } else {
       onAddItem({
         name: name.trim(),
         aisle,
-        quantity: parseInt(quantity)
+        quantity: parseInt(quantity),
+        comment: comment.trim()
       });
     }
 
@@ -46,6 +51,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
       setName('');
       setAisle(customAisles.includes('Other') ? 'Other' : customAisles[0] || '');
       setQuantity(1);
+      setComment('');
     }
   };
 
@@ -149,6 +155,37 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
                 : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-700'
             }`}
           />
+        </div>
+      </div>
+      
+      {/* Comment field - full width */}
+      <div className="mt-4">
+        <label className={`block text-sm font-medium mb-1 ${
+          isEditing 
+            ? 'text-blue-700 dark:text-blue-300' 
+            : 'text-gray-700 dark:text-gray-300'
+        }`}>
+          Comment (optional)
+        </label>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Add a note or comment..."
+          rows={2}
+          className={`w-full p-2 border rounded-md focus:ring-2 focus:border-blue-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200 resize-none ${
+            isEditing
+              ? 'border-blue-300 dark:border-blue-600 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30'
+              : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-700'
+          }`}
+          maxLength={200}
+        />
+        <div className="flex justify-between items-center mt-1">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            Optional note (max 200 characters)
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {comment.length}/200
+          </span>
         </div>
       </div>
       

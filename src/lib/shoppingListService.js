@@ -17,6 +17,7 @@ import { supabase } from './supabase'
 // - aisle: text
 // - quantity: integer
 // - completed: boolean
+// - comment: text (optional)
 // - created_at: timestamp
 // - updated_at: timestamp
 
@@ -212,6 +213,7 @@ export class ShoppingListService {
             name: itemData.name,
             aisle: itemData.aisle,
             quantity: itemData.quantity,
+            comment: itemData.comment || '',
             completed: false,
           }
         ])

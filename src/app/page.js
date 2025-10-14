@@ -108,7 +108,8 @@ export default function Home() {
       const updated = await ShoppingListService.updateShoppingItem(updatedItem.id, {
         name: updatedItem.name,
         aisle: updatedItem.aisle,
-        quantity: updatedItem.quantity
+        quantity: updatedItem.quantity,
+        comment: updatedItem.comment
       });
       
       setItems(prev => prev.map(item => 
