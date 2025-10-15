@@ -75,6 +75,7 @@
   },
   "listSelector": {
     "newList": "Create New List",
+    "editList": "Edit list name",
     "deleteList": "Delete list",
     "listName": "List Name",
     "listNamePlaceholder": "Enter list name",

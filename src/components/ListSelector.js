@@ -12,6 +12,8 @@ export default function ListSelector({ currentList, onListChange }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
+  const [editingListId, setEditingListId] = useState(null);
+  const [editListName, setEditListName] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -68,6 +70,41 @@ export default function ListSelector({ currentList, onListChange }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditList = (e, list) => {
+    e.stopPropagation();
+    setEditingListId(list.id);
+    setEditListName(list.name);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editListName.trim()) return;
+
+    setLoading(true);
+    try {
+      await ShoppingListService.updateShoppingListName(editingListId, editListName.trim());
+      await loadLists();
+      
+      // If we edited the current list, update it
+      if (editingListId === currentList?.id) {
+        const updatedList = { ...currentList, name: editListName.trim() };
+        onListChange(updatedList);
+      }
+      
+      setEditingListId(null);
+      setEditListName('');
+    } catch (error) {
+      console.error('Error updating list name:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingListId(null);
+    setEditListName('');
   };
 
   const handleDeleteList = async (e, listId) => {
@@ -129,36 +166,79 @@ export default function ListSelector({ currentList, onListChange }) {
               {t('listSelector.yourLists', { count: lists.length })}
             </div>
             {lists.map((list) => (
-              <button
-                key={list.id}
-                onClick={() => handleListSelect(list)}
-                disabled={loading}
-                className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 ${
-                  list.id === currentList?.id
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
-                    : 'text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                <span className="flex items-center space-x-2">
-                  <span className="text-sm truncate max-w-40">{list.name}</span>
-                  {list.id === currentList?.id && (
-                    <svg className="w-3 h-3 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </span>
-                {lists.length > 1 && (
+              <div key={list.id}>
+                {editingListId === list.id ? (
+                  // Edit mode
+                  <form onSubmit={handleSaveEdit} className="p-2">
+                    <input
+                      type="text"
+                      value={editListName}
+                      onChange={(e) => setEditListName(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 mb-2"
+                      autoFocus
+                      maxLength={50}
+                    />
+                    <div className="flex space-x-2">
+                      <button
+                        type="submit"
+                        disabled={!editListName.trim() || loading}
+                        className="flex-1 px-3 py-1 text-sm bg-blue-600 dark:bg-blue-600 hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md transition-colors duration-200 font-medium"
+                      >
+                        {t('common.save')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="flex-1 px-3 py-1 text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  // View mode
                   <button
-                    onClick={(e) => handleDeleteList(e, list.id)}
-                    className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors duration-200"
-                    title={t('listSelector.deleteList')}
+                    onClick={() => handleListSelect(list)}
+                    disabled={loading}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 ${
+                      list.id === currentList?.id
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}
                   >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    <span className="flex items-center space-x-2">
+                      <span className="text-sm truncate max-w-32">{list.name}</span>
+                      {list.id === currentList?.id && (
+                        <svg className="w-3 h-3 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </span>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={(e) => handleEditList(e, list)}
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors duration-200"
+                        title={t('listSelector.editList')}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      {lists.length > 1 && (
+                        <button
+                          onClick={(e) => handleDeleteList(e, list.id)}
+                          className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors duration-200"
+                          title={t('listSelector.deleteList')}
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </button>
                 )}
-              </button>
+              </div>
             ))}
           </div>
 
@@ -221,6 +301,8 @@ export default function ListSelector({ currentList, onListChange }) {
             setIsOpen(false);
             setIsCreating(false);
             setNewListName('');
+            setEditingListId(null);
+            setEditListName('');
           }}
         />
       )}
