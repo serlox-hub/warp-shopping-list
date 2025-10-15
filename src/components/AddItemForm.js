@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { DEFAULT_AISLES } from '@/types/shoppingList';
+import { useTranslations } from '@/contexts/LanguageContext';
+import AisleName from './AisleName';
 
 export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCancelEdit, customAisles = DEFAULT_AISLES }) {
+  const t = useTranslations();
   const [name, setName] = useState('');
   const [aisle, setAisle] = useState('Other');
   const [quantity, setQuantity] = useState(1);
@@ -13,34 +16,65 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
   useEffect(() => {
     if (editingItem) {
       setName(editingItem.name || '');
-      setAisle(editingItem.aisle || (customAisles.includes('Other') ? 'Other' : customAisles[0] || ''));
+      // Find the localized aisle name that matches the stored English aisle
+      const matchingLocalizedAisle = customAisles.find(localizedAisle => {
+        // For each localized aisle, check if it translates back to the stored English aisle
+        const aisleTranslationMap = {
+          [t('aisles.produce')]: 'Produce',
+          [t('aisles.dairy')]: 'Dairy',
+          [t('aisles.meatSeafood')]: 'Meat & Seafood',
+          [t('aisles.bakery')]: 'Bakery',
+          [t('aisles.pantry')]: 'Pantry',
+          [t('aisles.frozen')]: 'Frozen',
+          [t('aisles.personalCare')]: 'Personal Care',
+          [t('aisles.household')]: 'Household',
+          [t('aisles.other')]: 'Other'
+        };
+        return aisleTranslationMap[localizedAisle] === editingItem.aisle;
+      });
+      
+      setAisle(matchingLocalizedAisle || editingItem.aisle || (customAisles.includes(t('aisles.other')) ? t('aisles.other') : customAisles[0] || ''));
       setQuantity(editingItem.quantity || 1);
       setComment(editingItem.comment || '');
     } else {
       // Reset to default values when not editing
       setName('');
-      setAisle(customAisles.includes('Other') ? 'Other' : customAisles[0] || '');
+      setAisle(customAisles.includes(t('aisles.other')) ? t('aisles.other') : customAisles[0] || '');
       setQuantity(1);
       setComment('');
     }
-  }, [editingItem, customAisles]);
+  }, [editingItem, customAisles, t]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
 
+    // Convert localized aisle back to English for storage
+    const aisleTranslationMap = {
+      [t('aisles.produce')]: 'Produce',
+      [t('aisles.dairy')]: 'Dairy',
+      [t('aisles.meatSeafood')]: 'Meat & Seafood',
+      [t('aisles.bakery')]: 'Bakery',
+      [t('aisles.pantry')]: 'Pantry',
+      [t('aisles.frozen')]: 'Frozen',
+      [t('aisles.personalCare')]: 'Personal Care',
+      [t('aisles.household')]: 'Household',
+      [t('aisles.other')]: 'Other'
+    };
+    const englishAisle = aisleTranslationMap[aisle] || aisle;
+    
     if (editingItem) {
       onUpdateItem({
         ...editingItem,
         name: name.trim(),
-        aisle,
+        aisle: englishAisle,
         quantity: parseInt(quantity),
         comment: comment.trim()
       });
     } else {
       onAddItem({
         name: name.trim(),
-        aisle,
+        aisle: englishAisle,
         quantity: parseInt(quantity),
         comment: comment.trim()
       });
@@ -49,7 +83,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
     // Only reset if not editing (values will be reset by useEffect)
     if (!editingItem) {
       setName('');
-      setAisle(customAisles.includes('Other') ? 'Other' : customAisles[0] || '');
+      setAisle(customAisles.includes(t('aisles.other')) ? t('aisles.other') : customAisles[0] || '');
       setQuantity(1);
       setComment('');
     }
@@ -84,7 +118,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
             ? 'text-blue-800 dark:text-blue-200' 
             : 'text-gray-900 dark:text-gray-100'
         }`}>
-          {editingItem ? 'Edit Item' : 'Add New Item'}
+          {editingItem ? t('addItemForm.editTitle') : t('addItemForm.addTitle')}
         </h3>
       </div>
       
@@ -95,13 +129,13 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
               ? 'text-blue-700 dark:text-blue-300' 
               : 'text-gray-700 dark:text-gray-300'
           }`}>
-            Item Name
+            {t('addItemForm.itemName')}
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Enter item name"
+            placeholder={t('addItemForm.itemNamePlaceholder')}
             className={`w-full p-2 border rounded-md focus:ring-2 focus:border-blue-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200 ${
               isEditing
                 ? 'border-blue-300 dark:border-blue-600 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30'
@@ -117,7 +151,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
               ? 'text-blue-700 dark:text-blue-300' 
               : 'text-gray-700 dark:text-gray-300'
           }`}>
-            Aisle
+            {t('addItemForm.aisle')}
           </label>
           <select
             value={aisle}
@@ -142,7 +176,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
               ? 'text-blue-700 dark:text-blue-300' 
               : 'text-gray-700 dark:text-gray-300'
           }`}>
-            Quantity
+            {t('addItemForm.quantity')}
           </label>
           <input
             type="number"
@@ -165,12 +199,12 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
             ? 'text-blue-700 dark:text-blue-300' 
             : 'text-gray-700 dark:text-gray-300'
         }`}>
-          Comment (optional)
+          {t('addItemForm.comment')}
         </label>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Add a note or comment..."
+          placeholder={t('addItemForm.commentPlaceholder')}
           rows={2}
           className={`w-full p-2 border rounded-md focus:ring-2 focus:border-blue-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200 resize-none ${
             isEditing
@@ -181,7 +215,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
         />
         <div className="flex justify-between items-center mt-1">
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            Optional note (max 200 characters)
+            {t('addItemForm.commentHelper')}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {comment.length}/200
@@ -196,7 +230,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
             onClick={handleCancel}
             className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         )}
         <button
@@ -207,7 +241,7 @@ export default function AddItemForm({ onAddItem, editingItem, onUpdateItem, onCa
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {editingItem ? 'Update Item' : 'Add Item'}
+          {editingItem ? t('addItemForm.updateButton') : t('addItemForm.addButton')}
         </button>
       </div>
     </form>

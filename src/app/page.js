@@ -8,16 +8,19 @@ import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import ListSelector from '@/components/ListSelector';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslations } from '@/contexts/LanguageContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 import { 
   groupItemsByAisle,
   loadCustomAisles,
   saveCustomAisles,
-  updateItemsAisle
+  updateItemsAisle,
+  mapLocalizedToEnglish
 } from '@/types/shoppingList';
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const t = useTranslations();
   const [items, setItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [listName, setListName] = useState('My Shopping List');
@@ -25,12 +28,18 @@ export default function Home() {
   const [dataLoading, setDataLoading] = useState(false);
   const [customAisles, setCustomAisles] = useState([]);
   const [showAisleManager, setShowAisleManager] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Set client flag on mount to prevent hydration mismatch
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Load custom aisles from localStorage when component mounts
   useEffect(() => {
-    const aisles = loadCustomAisles();
+    const aisles = loadCustomAisles(t);
     setCustomAisles(aisles);
-  }, []);
+  }, [t]);
 
   // Load data from Supabase when user is authenticated
   useEffect(() => {
@@ -183,8 +192,10 @@ export default function Home() {
 
   const handleUpdateAisles = (newAisles) => {
     const oldAisles = customAisles;
+    // Convert localized aisles back to English for storage
+    const englishAisles = mapLocalizedToEnglish(newAisles, t);
     setCustomAisles(newAisles);
-    saveCustomAisles(newAisles);
+    saveCustomAisles(englishAisles);
 
     // Update existing items if any aisles were renamed
     // We need to detect renames by checking which aisles disappeared and which are new
@@ -245,7 +256,9 @@ export default function Home() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            {isClient ? t('common.loading') : 'Loading...'}
+          </p>
         </div>
       </div>
     );
@@ -286,7 +299,7 @@ export default function Home() {
             <div className="flex items-center justify-end mb-4">
               <div className="text-right">
                 <div className="text-lg text-gray-600 dark:text-gray-300 mb-2">
-                  {completedCount} of {totalCount} items completed
+                  {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
                 </div>
                 <div className="w-64 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
@@ -305,14 +318,14 @@ export default function Home() {
               disabled={completedCount === 0}
               className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md transition-colors duration-200"
             >
-              Clear Completed ({completedCount})
+              {t('shoppingList.clearCompleted', { count: completedCount })}
             </button>
             <button
               onClick={handleClearAll}
               disabled={totalCount === 0}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md transition-colors duration-200"
             >
-              Clear All
+              {t('shoppingList.clearAll')}
             </button>
             <button
               onClick={() => setShowAisleManager(true)}
@@ -321,7 +334,7 @@ export default function Home() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
-              <span>Manage Aisles</span>
+              <span>{t('shoppingList.manageAisles')}</span>
             </button>
           </div>
         </div>
@@ -341,8 +354,8 @@ export default function Home() {
         <div className="space-y-6">
           {Object.keys(groupedItems).length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <p className="text-xl">Your shopping list is empty</p>
-              <p>Add some items to get started!</p>
+              <p className="text-xl">{t('shoppingList.emptyTitle')}</p>
+              <p>{t('shoppingList.emptySubtitle')}</p>
             </div>
           ) : (
             Object.entries(groupedItems).map(([aisle, aisleItems]) => (

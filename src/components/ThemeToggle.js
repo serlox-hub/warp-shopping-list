@@ -2,15 +2,17 @@
 
 import { useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useTranslations } from '@/contexts/LanguageContext';
 
 export default function ThemeToggle() {
   const { theme, setThemePreference, resolvedTheme } = useTheme();
+  const t = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
 
   const themes = [
-    { value: 'light', label: 'Light', icon: '☀️' },
-    { value: 'dark', label: 'Dark', icon: '🌙' },
-    { value: 'system', label: 'System', icon: '🖥️' }
+    { value: 'light', label: t('header.lightMode'), icon: '☀️' },
+    { value: 'dark', label: t('header.darkMode'), icon: '🌙' },
+    { value: 'system', label: t('header.systemMode'), icon: '🖥️' }
   ];
 
   const currentTheme = themes.find(t => t.value === theme) || themes[2];
@@ -25,8 +27,8 @@ export default function ThemeToggle() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-200 flex items-center space-x-1"
-        aria-label={`Current theme: ${currentTheme.label}`}
-        title={`Current theme: ${currentTheme.label}`}
+        aria-label={`${t('header.currentTheme')}: ${currentTheme.label}`}
+        title={`${t('header.currentTheme')}: ${currentTheme.label}`}
       >
         <span className="text-sm">{currentTheme.icon}</span>
         <svg

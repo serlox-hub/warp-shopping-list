@@ -1,0 +1,87 @@
+{
+  "common": {
+    "add": "Agregar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "update": "Actualizar",
+    "loading": "Cargando...",
+    "clear": "Limpiar",
+    "reset": "Reiniciar",
+    "close": "Cerrar"
+  },
+  "auth": {
+    "login": "Iniciar Sesión",
+    "logout": "Cerrar Sesión",
+    "email": "Correo Electrónico",
+    "password": "Contraseña",
+    "loginButton": "Iniciar Sesión",
+    "loginError": "Correo o contraseña inválidos",
+    "loginSubtitle": "Inicia sesión para acceder a tus listas de compras"
+  },
+  "header": {
+    "welcome": "Bienvenido",
+    "darkMode": "Modo oscuro",
+    "lightMode": "Modo claro",
+    "systemMode": "Sistema",
+    "currentTheme": "Tema actual"
+  },
+  "shoppingList": {
+    "title": "Mi Lista de Compras",
+    "emptyTitle": "Tu lista de compras está vacía",
+    "emptySubtitle": "¡Agrega algunos productos para comenzar!",
+    "itemsCompleted": "{{completed}} de {{total}} artículos completados",
+    "aisleProgress": "{{completed}}/{{total}} completados",
+    "clearCompleted": "Limpiar Completados ({{count}})",
+    "clearAll": "Limpiar Todo",
+    "manageAisles": "Gestionar Pasillos"
+  },
+  "addItemForm": {
+    "addTitle": "Agregar Nuevo Artículo",
+    "editTitle": "Editar Artículo",
+    "itemName": "Nombre del Artículo",
+    "itemNamePlaceholder": "Ingresa el nombre del artículo",
+    "aisle": "Pasillo",
+    "quantity": "Cantidad",
+    "comment": "Comentario (opcional)",
+    "commentPlaceholder": "Agrega una nota o comentario...",
+    "commentHelper": "Nota opcional (máx. 200 caracteres)",
+    "addButton": "Agregar Artículo",
+    "updateButton": "Actualizar Artículo"
+  },
+  "aisleManager": {
+    "title": "Gestionar Pasillos",
+    "subtitle": "Agrega, edita, elimina y reordena tus pasillos de compras",
+    "addPlaceholder": "Agregar nuevo pasillo...",
+    "saveChanges": "Guardar Cambios",
+    "resetButton": "Reiniciar",
+    "moveUp": "Mover arriba",
+    "moveDown": "Mover abajo",
+    "cannotDeleteLast": "No se puede eliminar el último pasillo",
+    "invalidName": "Nombre inválido: debe ser único, no vacío y menor a 50 caracteres",
+    "finishEditing": "Por favor termina de editar el pasillo actual primero"
+  },
+  "aisles": {
+    "produce": "Productos Frescos",
+    "dairy": "Lácteos",
+    "meatSeafood": "Carnes y Mariscos",
+    "bakery": "Panadería",
+    "pantry": "Despensa",
+    "frozen": "Congelados",
+    "personalCare": "Cuidado Personal",
+    "household": "Hogar",
+    "other": "Otros"
+  },
+  "listSelector": {
+    "newList": "Crear Nueva Lista",
+    "deleteList": "Eliminar lista",
+    "listName": "Nombre de la Lista",
+    "listNamePlaceholder": "Ingresa el nombre de la lista",
+    "createList": "Crear",
+    "cannotDeleteLast": "No se puede eliminar la última lista restante",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar esta lista? Esta acción no se puede deshacer.",
+    "switchList": "Cambiar lista de compras",
+    "yourLists": "Tus Listas ({{count}})"
+  }
+}

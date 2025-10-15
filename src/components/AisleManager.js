@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { isValidAisleName } from '@/types/shoppingList';
+import { useTranslations } from '@/contexts/LanguageContext';
 
 export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
+  const t = useTranslations();
   const [editingAisles, setEditingAisles] = useState([...aisles]);
   const [editingIndex, setEditingIndex] = useState(-1);
   const [editingName, setEditingName] = useState('');
@@ -21,7 +23,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
     const otherAisles = editingAisles.filter((_, idx) => idx !== editingIndex);
     
     if (!isValidAisleName(trimmedName, otherAisles)) {
-      setError('Invalid name: must be unique, non-empty, and under 50 characters');
+      setError(t('aisleManager.invalidName'));
       return;
     }
 
@@ -41,7 +43,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
 
   const handleDeleteAisle = (index) => {
     if (editingAisles.length <= 1) {
-      setError('Cannot delete the last aisle');
+      setError(t('aisleManager.cannotDeleteLast'));
       return;
     }
     
@@ -54,7 +56,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
     const trimmedName = newAisleName.trim();
     
     if (!isValidAisleName(trimmedName, editingAisles)) {
-      setError('Invalid name: must be unique, non-empty, and under 50 characters');
+      setError(t('aisleManager.invalidName'));
       return;
     }
 
@@ -79,7 +81,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
 
   const handleSaveAll = () => {
     if (editingIndex !== -1) {
-      setError('Please finish editing the current aisle first');
+      setError(t('aisleManager.finishEditing'));
       return;
     }
     onUpdateAisles(editingAisles);
@@ -101,7 +103,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Manage Aisles
+              {t('aisleManager.title')}
             </h2>
             <button
               onClick={onClose}
@@ -113,7 +115,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
             </button>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Add, edit, delete, and reorder your shopping aisles
+            {t('aisleManager.subtitle')}
           </p>
         </div>
 
@@ -146,17 +148,17 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
                     <button
                       onClick={handleSaveEdit}
                       className="p-1 text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300"
-                      title="Save"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="p-1 text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                      title="Cancel"
-                    >
+                        title={t('common.save')}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="p-1 text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                        title={t('common.cancel')}
+                      >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
@@ -172,7 +174,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
                         onClick={() => handleMoveUp(index)}
                         disabled={index === 0}
                         className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Move up"
+                        title={t('aisleManager.moveUp')}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -182,7 +184,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
                         onClick={() => handleMoveDown(index)}
                         disabled={index === editingAisles.length - 1}
                         className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Move down"
+                        title={t('aisleManager.moveDown')}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -194,7 +196,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
                     <button
                       onClick={() => handleStartEdit(index)}
                       className="p-1 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                      title="Edit"
+                      title={t('common.edit')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -203,7 +205,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
                     <button
                       onClick={() => handleDeleteAisle(index)}
                       className="p-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                      title="Delete"
+                      title={t('common.delete')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -224,7 +226,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && newAisleName.trim()) handleAddAisle();
               }}
-              placeholder="Add new aisle..."
+              placeholder={t('aisleManager.addPlaceholder')}
               className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
             />
             <button
@@ -232,7 +234,7 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
               disabled={!newAisleName.trim()}
               className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Add
+              {t('common.add')}
             </button>
           </div>
         </div>
@@ -243,20 +245,20 @@ export default function AisleManager({ aisles, onUpdateAisles, onClose }) {
             onClick={handleReset}
             className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
           >
-            Reset
+            {t('aisleManager.resetButton')}
           </button>
           <div className="flex space-x-2">
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleSaveAll}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200"
             >
-              Save Changes
+              {t('aisleManager.saveChanges')}
             </button>
           </div>
         </div>

@@ -13,6 +13,55 @@ export const DEFAULT_AISLES = [
   'Other'
 ];
 
+// Get localized default aisles based on language
+export const getLocalizedDefaultAisles = (t) => {
+  return [
+    t('aisles.produce'),
+    t('aisles.dairy'),
+    t('aisles.meatSeafood'),
+    t('aisles.bakery'),
+    t('aisles.pantry'),
+    t('aisles.frozen'),
+    t('aisles.personalCare'),
+    t('aisles.household'),
+    t('aisles.other')
+  ];
+};
+
+// Map English aisles to localized ones
+export const mapEnglishToLocalized = (englishAisles, t) => {
+  const mapping = {
+    'Produce': t('aisles.produce'),
+    'Dairy': t('aisles.dairy'),
+    'Meat & Seafood': t('aisles.meatSeafood'),
+    'Bakery': t('aisles.bakery'),
+    'Pantry': t('aisles.pantry'),
+    'Frozen': t('aisles.frozen'),
+    'Personal Care': t('aisles.personalCare'),
+    'Household': t('aisles.household'),
+    'Other': t('aisles.other')
+  };
+  
+  return englishAisles.map(aisle => mapping[aisle] || aisle);
+};
+
+// Map localized aisles back to English (for storage consistency)
+export const mapLocalizedToEnglish = (localizedAisles, t) => {
+  const reverseMapping = {
+    [t('aisles.produce')]: 'Produce',
+    [t('aisles.dairy')]: 'Dairy',
+    [t('aisles.meatSeafood')]: 'Meat & Seafood',
+    [t('aisles.bakery')]: 'Bakery',
+    [t('aisles.pantry')]: 'Pantry',
+    [t('aisles.frozen')]: 'Frozen',
+    [t('aisles.personalCare')]: 'Personal Care',
+    [t('aisles.household')]: 'Household',
+    [t('aisles.other')]: 'Other'
+  };
+  
+  return localizedAisles.map(aisle => reverseMapping[aisle] || aisle);
+};
+
 // Create a new shopping list item
 export const createShoppingItem = (name, aisle = 'Other', quantity = 1, completed = false, comment = '') => ({
   id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -87,14 +136,21 @@ export const STORAGE_KEYS = {
   CUSTOM_AISLES: 'shoppingListAisles'
 };
 
-// Load custom aisles from localStorage
-export const loadCustomAisles = () => {
+// Load custom aisles from localStorage with localization support
+export const loadCustomAisles = (t = null) => {
   try {
     const saved = localStorage.getItem(STORAGE_KEYS.CUSTOM_AISLES);
-    return saved ? JSON.parse(saved) : DEFAULT_AISLES;
+    const aisles = saved ? JSON.parse(saved) : DEFAULT_AISLES;
+    
+    // If translation function is provided, localize the aisles
+    if (t) {
+      return mapEnglishToLocalized(aisles, t);
+    }
+    
+    return aisles;
   } catch (error) {
     console.error('Error loading custom aisles:', error);
-    return DEFAULT_AISLES;
+    return t ? getLocalizedDefaultAisles(t) : DEFAULT_AISLES;
   }
 };
 
