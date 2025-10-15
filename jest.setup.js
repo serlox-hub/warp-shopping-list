@@ -77,7 +77,34 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
-}))
+}));
+
+// Mock global Response for server-side code
+if (!global.Response) {
+  global.Response = class MockResponse {
+    constructor(body, init = {}) {
+      this.body = body;
+      this.status = init.status || 200;
+      this.ok = this.status >= 200 && this.status < 300;
+      this.headers = new Map(Object.entries(init.headers || {}));
+    }
+    
+    static redirect(url, status = 302) {
+      return new MockResponse(null, { status, headers: { Location: url } });
+    }
+  };
+}
+
+// Mock URL if not available
+if (!global.URL) {
+  global.URL = class MockURL {
+    constructor(url, base) {
+      this.href = url;
+      this.origin = base || 'http://localhost:3000';
+      this.searchParams = new URLSearchParams(url.split('?')[1] || '');
+    }
+  };
+}
 
 // Mock IntersectionObserver
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({

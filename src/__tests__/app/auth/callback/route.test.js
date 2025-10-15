@@ -1,82 +1,48 @@
-// Mock global Response before importing
-global.Response = class MockResponse {
-  constructor(body, init = {}) {
-    this.body = body;
-    this.status = init.status || 200;
-    this.ok = this.status >= 200 && this.status < 300;
-    this.headers = new Map(Object.entries(init.headers || {}));
-  }
-  
-  static redirect(url, status = 302) {
-    return new MockResponse(null, { status, headers: { Location: url } });
-  }
-};
-
-// Mock Request and Headers
-global.Request = class MockRequest {
-  constructor(url, init = {}) {
-    this.url = url;
-    this.method = init.method || 'GET';
-    this.headers = new Map(Object.entries(init.headers || {}));
-  }
-};
-
-global.Headers = class MockHeaders extends Map {
-  get(key) {
-    return super.get(key.toLowerCase());
-  }
-  set(key, value) {
-    return super.set(key.toLowerCase(), value);
-  }
-};
-
-import { GET } from '../../../../app/auth/callback/route.js'
-
-// Mock next/navigation
-jest.mock('next/navigation', () => ({
+// Mock Next.js modules first
+jest.mock('next/server', () => ({
   NextResponse: {
-    redirect: jest.fn((url) => Response.redirect(url)),
+    redirect: jest.fn(() => ({ status: 302, headers: { location: '/' } })),
   },
 }));
 
-// Mock Supabase
-jest.mock('../../../../lib/supabase', () => ({
-  createClient: jest.fn(() => ({
+jest.mock('next/headers', () => ({
+  cookies: jest.fn(() => ({
+    getAll: jest.fn(() => []),
+    set: jest.fn(),
+  })),
+}));
+
+// Mock Supabase SSR
+jest.mock('@supabase/ssr', () => ({
+  createServerClient: jest.fn(() => ({
     auth: {
-      exchangeCodeForSession: jest.fn(),
+      exchangeCodeForSession: jest.fn(() => Promise.resolve({ data: {}, error: null })),
     },
   })),
 }));
+
+// Import after mocks are set up
+import { GET } from '../../../../app/auth/callback/route.js'
 
 describe('Auth Callback Route', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  it('should handle GET request without crashing', async () => {
-    // Mock request with search params
+  it('should handle GET request with code', async () => {
+    // Mock request with URL containing code
     const mockRequest = {
-      nextUrl: {
-        searchParams: {
-          get: jest.fn((param) => {
-            if (param === 'code') return 'mock-code';
-            return null;
-          }),
-        },
-      },
+      url: 'http://localhost:3000/auth/callback?code=auth_code_123'
     };
 
     const result = await GET(mockRequest);
     expect(result).toBeDefined();
   })
 
-  it('should redirect properly', async () => {
+  it('should handle GET request without code', async () => {
+    // Mock request without code
     const mockRequest = {
-      nextUrl: {
-        searchParams: {
-          get: jest.fn(() => null),
-        },
-      },
+      url: 'http://localhost:3000/auth/callback'
     };
 
     const result = await GET(mockRequest);

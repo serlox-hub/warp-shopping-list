@@ -1,52 +1,65 @@
 import { render, screen } from '@testing-library/react'
 import AisleName from '../../components/AisleName.js'
 
-// Mock dependencies
-jest.mock('next/navigation')
-jest.mock('../../lib/supabase')
+// Mock translation function
+const mockTranslations = jest.fn((key) => key);
 
-// Mock contexts
-const mockContextValue = {
-  // Add mock context values as needed
-}
-
-const MockProvider = ({ children }) => {
-  return children // Add proper provider wrapper if needed
-}
+jest.mock('../../contexts/LanguageContext', () => ({
+  useTranslations: jest.fn(() => mockTranslations),
+}));
 
 describe('AisleName', () => {
   const defaultProps = {
-    // Add default props here
+    aisle: 'Produce'
   }
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockTranslations.mockImplementation((key) => key)
   })
 
   it('should render without crashing', () => {
-    const { container } = render(
-      <MockProvider>
-        <AisleName {...defaultProps} />
-      </MockProvider>
-    )
+    render(<AisleName {...defaultProps} />)
     
-    // Add basic rendering assertions
-    expect(container.firstChild).toBeInTheDocument()
+    expect(screen.getByText('aisles.produce')).toBeInTheDocument()
   })
 
-  it('should handle all props correctly', () => {
-    const customProps = {
-      // Add test props
-    }
+  it('should translate known aisles', () => {
+    mockTranslations.mockImplementation((key) => {
+      const translations = {
+        'aisles.produce': 'Productos',
+        'aisles.dairy': 'Lácteos',
+        'aisles.other': 'Otros'
+      }
+      return translations[key] || key
+    })
+
+    const { rerender } = render(<AisleName aisle="Produce" />)
+    expect(screen.getByText('Productos')).toBeInTheDocument()
     
-    render(
-      <MockProvider>
-        <AisleName {...customProps} />
-      </MockProvider>
-    )
+    rerender(<AisleName aisle="Dairy" />)
+    expect(screen.getByText('Lácteos')).toBeInTheDocument()
     
-    // Add assertions for prop handling
-    expect(true).toBe(true) // Replace with actual tests
+    rerender(<AisleName aisle="Other" />)
+    expect(screen.getByText('Otros')).toBeInTheDocument()
+  })
+
+  it('should return aisle name as-is for unknown aisles', () => {
+    render(<AisleName aisle="Custom Aisle" />)
+    expect(screen.getByText('Custom Aisle')).toBeInTheDocument()
+  })
+
+  it('should handle all predefined aisle mappings', () => {
+    const predefinedAisles = [
+      'Produce', 'Dairy', 'Meat & Seafood', 'Bakery', 'Pantry', 
+      'Frozen', 'Personal Care', 'Household', 'Other'
+    ]
+    
+    predefinedAisles.forEach(aisle => {
+      const { rerender } = render(<AisleName aisle={aisle} />)
+      expect(mockTranslations).toHaveBeenCalled()
+      rerender(<div />) // Clear for next iteration
+    })
   })
 
   // Add more specific tests based on component functionality
