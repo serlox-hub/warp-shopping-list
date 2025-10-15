@@ -20,6 +20,14 @@ import { supabase } from './supabase'
 // - comment: text (optional)
 // - created_at: timestamp
 // - updated_at: timestamp
+//
+// user_aisles table:
+// - id: uuid (primary key)
+// - user_id: uuid (foreign key to auth.users)
+// - name: text
+// - display_order: integer
+// - created_at: timestamp
+// - updated_at: timestamp
 
 export class ShoppingListService {
   // Get all shopping lists for a user
@@ -291,6 +299,101 @@ export class ShoppingListService {
       return true;
     } catch (error) {
       console.error('Error clearing all items:', error);
+      throw error;
+    }
+  }
+
+  // ============== USER AISLES METHODS ==============
+
+  // Get user's custom aisles
+  static async getUserAisles(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('user_aisles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+      
+      // If user has no aisles, create default ones
+      if (!data || data.length === 0) {
+        await this.createDefaultUserAisles(userId);
+        return this.getUserAisles(userId);
+      }
+      
+      return data.map(aisle => aisle.name);
+    } catch (error) {
+      console.error('Error getting user aisles:', error);
+      throw error;
+    }
+  }
+
+  // Create default aisles for new user
+  static async createDefaultUserAisles(userId) {
+    try {
+      const { error } = await supabase.rpc('create_default_user_aisles', {
+        p_user_id: userId
+      });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error creating default user aisles:', error);
+      throw error;
+    }
+  }
+
+  // Update user's aisles (replace all)
+  static async updateUserAisles(userId, aisleNames) {
+    try {
+      // Delete existing aisles
+      const { error: deleteError } = await supabase
+        .from('user_aisles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new aisles
+      const aisleData = aisleNames.map((name, index) => ({
+        user_id: userId,
+        name,
+        display_order: index + 1
+      }));
+
+      const { data, error } = await supabase
+        .from('user_aisles')
+        .insert(aisleData)
+        .select();
+
+      if (error) throw error;
+      return data.map(aisle => aisle.name);
+    } catch (error) {
+      console.error('Error updating user aisles:', error);
+      throw error;
+    }
+  }
+
+  // Migrate localStorage aisles to database
+  static async migrateLocalStorageAisles(userId, localAisles) {
+    try {
+      // Check if user already has aisles in database
+      const { data: existingAisles } = await supabase
+        .from('user_aisles')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+
+      // Only migrate if user has no aisles in database
+      if (!existingAisles || existingAisles.length === 0) {
+        await this.updateUserAisles(userId, localAisles);
+        return true;
+      }
+      
+      return false; // No migration needed
+    } catch (error) {
+      console.error('Error migrating localStorage aisles:', error);
       throw error;
     }
   }

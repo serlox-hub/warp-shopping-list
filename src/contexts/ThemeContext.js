@@ -32,6 +32,17 @@ export const ThemeProvider = ({ children }) => {
 
   const loadUserTheme = async () => {
     try {
+      // Try to migrate localStorage theme first
+      const localTheme = localStorage.getItem('theme');
+      if (localTheme && ['light', 'dark', 'system'].includes(localTheme)) {
+        const migrated = await UserPreferencesService.migrateLocalStoragePreferences(user.id, {
+          theme: localTheme
+        });
+        if (migrated) {
+          console.log('Migrated theme preference to database');
+        }
+      }
+      
       const preferences = await UserPreferencesService.getUserPreferences(user.id);
       setTheme(preferences.theme || 'system');
     } catch (error) {

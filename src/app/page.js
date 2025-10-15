@@ -15,7 +15,9 @@ import {
   loadCustomAisles,
   saveCustomAisles,
   updateItemsAisle,
-  mapLocalizedToEnglish
+  mapLocalizedToEnglish,
+  mapEnglishToLocalized,
+  STORAGE_KEYS
 } from '@/types/shoppingList';
 
 export default function Home() {
@@ -35,11 +37,12 @@ export default function Home() {
     setIsClient(true);
   }, []);
 
-  // Load custom aisles from localStorage when component mounts
+  // Load custom aisles from database when user is authenticated
   useEffect(() => {
-    const aisles = loadCustomAisles(t);
-    setCustomAisles(aisles);
-  }, [t]);
+    if (user) {
+      loadUserAisles();
+    }
+  }, [user, t]);
 
   // Load data from Supabase when user is authenticated
   useEffect(() => {
@@ -47,6 +50,32 @@ export default function Home() {
       loadShoppingListData();
     }
   }, [user, shoppingList]);
+
+  const loadUserAisles = async () => {
+    if (!user) return;
+    
+    try {
+      // Try to migrate localStorage aisles first
+      const localAisles = loadCustomAisles(); // Get from localStorage without translation
+      if (localAisles && localAisles.length > 0) {
+        const migrated = await ShoppingListService.migrateLocalStorageAisles(user.id, localAisles);
+        if (migrated) {
+          // Clear localStorage after successful migration
+          localStorage.removeItem(STORAGE_KEYS.CUSTOM_AISLES);
+        }
+      }
+      
+      // Load aisles from database
+      const dbAisles = await ShoppingListService.getUserAisles(user.id);
+      const localizedAisles = mapEnglishToLocalized(dbAisles, t);
+      setCustomAisles(localizedAisles);
+    } catch (error) {
+      console.error('Error loading user aisles:', error);
+      // Fallback to default aisles if database fails
+      const aisles = loadCustomAisles(t);
+      setCustomAisles(aisles);
+    }
+  };
 
   const loadShoppingListData = async () => {
     if (!user) return;
@@ -190,12 +219,19 @@ export default function Home() {
     }
   };
 
-  const handleUpdateAisles = (newAisles) => {
+  const handleUpdateAisles = async (newAisles) => {
     const oldAisles = customAisles;
     // Convert localized aisles back to English for storage
     const englishAisles = mapLocalizedToEnglish(newAisles, t);
-    setCustomAisles(newAisles);
-    saveCustomAisles(englishAisles);
+    
+    try {
+      // Update aisles in database
+      await ShoppingListService.updateUserAisles(user.id, englishAisles);
+      setCustomAisles(newAisles);
+    } catch (error) {
+      console.error('Error updating user aisles:', error);
+      return; // Don't proceed with item updates if aisle update failed
+    }
 
     // Update existing items if any aisles were renamed
     // We need to detect renames by checking which aisles disappeared and which are new
