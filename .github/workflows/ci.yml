@@ -25,6 +25,9 @@ jobs:
       
     - name: Run tests with coverage
       run: npm test -- --coverage --watchAll=false --passWithNoTests
+      env:
+        NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-for-testing
       
     - name: Test Summary
       run: |
