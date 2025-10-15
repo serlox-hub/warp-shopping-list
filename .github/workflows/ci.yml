@@ -1,0 +1,39 @@
+name: Continuous Integration
+
+# Ejecutar en push a cualquier rama y en pull requests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run tests with coverage
+      run: npm test -- --coverage --watchAll=false --passWithNoTests
+      
+    - name: Test Summary
+      run: |
+        echo "## Test Results Summary 📊" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Tests completed successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Coverage Information" >> $GITHUB_STEP_SUMMARY
+        echo "📋 Coverage reports generated in \`coverage/\` directory" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Branch: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "### Commit: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY

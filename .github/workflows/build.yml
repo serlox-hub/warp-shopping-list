@@ -1,0 +1,53 @@
+name: Build Check
+
+# Ejecutar solo en push a main y pull requests hacia main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Check build size
+      run: |
+        echo "## Build Results 🏗️" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Build completed successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Build artifacts:" >> $GITHUB_STEP_SUMMARY
+        if [ -d ".next" ]; then
+          echo "📦 Next.js build output: \`.next/\`" >> $GITHUB_STEP_SUMMARY
+          du -sh .next >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -d "dist" ]; then
+          echo "📦 Dist output: \`dist/\`" >> $GITHUB_STEP_SUMMARY
+          du -sh dist >> $GITHUB_STEP_SUMMARY
+        fi
+        
+    - name: Upload build artifacts
+      if: github.event_name == 'pull_request'
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-output-${{ github.sha }}
+        path: .next/
+        retention-days: 7
