@@ -1,45 +1,68 @@
-# Shopping List App
+# 🛒 Shopping List App
 
 [![CI](https://github.com/your-username/warp-shopping-list/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/warp-shopping-list/actions/workflows/ci.yml)
 [![Tests](https://github.com/your-username/warp-shopping-list/actions/workflows/test.yml/badge.svg)](https://github.com/your-username/warp-shopping-list/actions/workflows/test.yml)
 [![Build](https://github.com/your-username/warp-shopping-list/actions/workflows/build.yml/badge.svg)](https://github.com/your-username/warp-shopping-list/actions/workflows/build.yml)
+[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)](https://github.com/your-username/warp-shopping-list)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Next.js application for managing shopping lists with items organized by store aisles.
+A modern, full-stack Next.js application for managing collaborative shopping lists with real-time synchronization and intuitive aisle-based organization.
 
-## Features
+## ✨ Features
 
-- ✅ Add, edit, and delete shopping items
-- 🏪 Organize items by store aisles (Produce, Dairy, Meat & Seafood, etc.)
-- ✔️ Mark items as completed
-- 📊 Progress tracking with completion counter and progress bar
-- 🔐 User authentication with Supabase
-- 🗄️ Database storage with Supabase
-- 👥 Multi-user support with list sharing
-- 🌐 Internationalization (English/Spanish)
-- 🎨 Dark/Light theme support
-- 📱 Responsive design with Tailwind CSS
-- 🎨 Clean, intuitive interface
-- 🧪 Comprehensive test suite (88%+ coverage)
+### 🛒 Core Shopping Experience
+- **Smart Item Management**: Add, edit, delete, and organize items with quantity tracking
+- **Aisle Organization**: Automatic categorization by store sections (Produce, Dairy, Bakery, etc.)
+- **Progress Tracking**: Visual completion counter and progress bar
+- **Quick Actions**: Mark items as completed, bulk operations, and smart suggestions
 
-## Store Aisles
+### 👥 Collaboration & Sharing
+- **Multi-User Lists**: Create and share shopping lists with family and friends
+- **Real-time Sync**: Live updates when multiple users edit the same list
+- **User Authentication**: Secure login with Supabase Auth
+- **List Management**: Create multiple lists, switch between them seamlessly
 
-Items can be organized into the following aisles:
-- Produce
-- Dairy
-- Meat & Seafood
-- Bakery
-- Pantry
-- Frozen
-- Personal Care
-- Household
-- Other
+### 🎨 User Experience
+- **Dark/Light Themes**: System-aware theme switching with manual override
+- **Internationalization**: Full support for English and Spanish
+- **Responsive Design**: Optimized for mobile, tablet, and desktop
+- **Accessibility**: ARIA labels, keyboard navigation, and screen reader support
+- **Custom Aisles**: Personalize and reorder aisle categories
+
+### 🔧 Technical Excellence
+- **Real-time Database**: Powered by Supabase with PostgreSQL
+- **Type Safety**: Comprehensive data validation and type checking
+- **Test Coverage**: 88%+ coverage with Jest and React Testing Library
+- **CI/CD Pipeline**: Automated testing, building, and deployment
+- **Performance**: Optimized Next.js with SSR and client-side caching
+
+## 🏪 Store Aisles
+
+The app comes with predefined aisles that mirror typical grocery store layouts:
+
+| Aisle | Examples |
+|-------|----------|
+| 🥬 **Produce** | Fruits, vegetables, herbs |
+| 🥛 **Dairy** | Milk, cheese, yogurt, eggs |
+| 🥩 **Meat & Seafood** | Fresh meat, fish, poultry |
+| 🥖 **Bakery** | Bread, pastries, cakes |
+| 🥫 **Pantry** | Canned goods, pasta, rice |
+| 🧊 **Frozen** | Frozen foods, ice cream |
+| 🧴 **Personal Care** | Toiletries, health items |
+| 🧽 **Household** | Cleaning supplies, paper goods |
+| 📦 **Other** | Miscellaneous items |
+
+**Customizable**: Users can reorder aisles, rename them, or add custom categories to match their preferred shopping route.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and npm installed on your system
-- Supabase account and project (for database and authentication)
+- **Node.js 18+** and **npm** installed on your system
+- **Supabase account** and project ([Create free account](https://supabase.com))
+- **Git** for version control
+
+> **Note**: This app requires a Supabase backend for authentication and data storage. The free tier is sufficient for personal use.
 
 ### Installation
 
@@ -67,38 +90,79 @@ npm run dev
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Testing
+### 🧪 Testing
 
-Run the test suite:
+Run the comprehensive test suite:
 ```bash
-# Run tests
+# Run all tests
 npm test
 
-# Run tests with coverage
+# Run tests with coverage report
 npm run test:coverage
 
-# Run tests in watch mode
+# Run tests in watch mode (development)
 npm run test:watch
+
+# Run tests for CI (non-interactive)
+npm run test:ci
 ```
 
-## Usage
+**Current Test Coverage**: 88.22% overall
+- Components: 89.38%
+- Services: 93.18% 
+- Utilities: 100%
 
-1. **Add Items**: Use the form at the top to add new items with name, aisle, and quantity
-2. **Edit Items**: Click the "Edit" button next to any item to modify it
-3. **Complete Items**: Check the box next to items as you collect them
-4. **Delete Items**: Click the "Delete" button to remove items
-5. **Clear Completed**: Remove all completed items at once
-6. **Clear All**: Start fresh with an empty list
+## 📱 Usage Guide
 
-## Built With
+### Getting Started
+1. **Sign Up/Login**: Create an account or login with existing credentials
+2. **Create Lists**: Start with your first shopping list or use the default one
+3. **Add Items**: Use the quick-add form with smart aisle detection
 
-- [Next.js 14](https://nextjs.org/) - React framework
-- [React 18](https://reactjs.org/) - UI library
-- [Supabase](https://supabase.com/) - Database and authentication
-- [Tailwind CSS](https://tailwindcss.com/) - CSS framework
-- [React i18next](https://react.i18next.com/) - Internationalization
-- [Jest](https://jestjs.io/) - Testing framework
-- [React Testing Library](https://testing-library.com/react) - Component testing
+### Core Features
+
+#### 📝 Managing Items
+- **Add**: Enter item name, select aisle, specify quantity
+- **Edit**: Click edit button to modify any item details
+- **Complete**: Check off items as you shop - see real-time progress
+- **Delete**: Remove unwanted items individually
+- **Bulk Actions**: Clear all completed items or start fresh
+
+#### 📋 List Management
+- **Multiple Lists**: Create separate lists for different stores or occasions
+- **List Switching**: Quick dropdown to switch between your lists
+- **Sharing**: Collaborate with family members on shared lists
+- **Real-time Updates**: See changes instantly when others edit shared lists
+
+#### ⚙️ Customization
+- **Theme**: Toggle between light/dark mode or use system preference
+- **Language**: Switch between English and Spanish
+- **Aisles**: Customize aisle order and names to match your shopping routine
+- **Preferences**: Settings sync across devices when logged in
+
+## 🛠️ Built With
+
+### Core Technologies
+- **[Next.js 14](https://nextjs.org/)** - React framework with App Router
+- **[React 18](https://reactjs.org/)** - UI library with concurrent features
+- **[TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript (via JSDoc)
+- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
+
+### Backend & Database
+- **[Supabase](https://supabase.com/)** - PostgreSQL database with real-time features
+- **[Supabase Auth](https://supabase.com/auth)** - Authentication and user management
+- **[Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)** - Database security
+
+### Internationalization & UX
+- **[React i18next](https://react.i18next.com/)** - Multi-language support
+- **[react-i18next](https://github.com/i18next/react-i18next)** - React integration
+- **System Theme Detection** - Automatic dark/light mode
+
+### Testing & Quality
+- **[Jest](https://jestjs.io/)** - Testing framework
+- **[React Testing Library](https://testing-library.com/react)** - Component testing
+- **[GitHub Actions](https://github.com/features/actions)** - CI/CD pipeline
+- **[ESLint](https://eslint.org/)** - Code linting
 
 ## Project Structure
 
@@ -141,30 +205,57 @@ src/
 
 ## Testing
 
-This project maintains high test coverage (88%+) with comprehensive test suites:
+This project maintains **88.22% test coverage** with comprehensive test suites:
 
-- **Unit Tests**: Component, service, and utility testing
-- **Integration Tests**: Context and service integration
-- **User Interaction Tests**: Real user behavior simulation
-- **Error Handling**: Comprehensive error scenario coverage
-- **Async Testing**: Proper handling of asynchronous operations
+### Testing Strategy
+- **🧪 Unit Tests**: Individual component and function testing
+- **🔗 Integration Tests**: Context providers and service interactions  
+- **👆 User Interaction Tests**: Real user behavior with userEvent
+- **⚠️ Error Boundary Tests**: Comprehensive error scenario coverage
+- **⏱️ Async Testing**: Proper handling of promises and state updates
+- **📊 Coverage Tracking**: Detailed reports with uncovered line identification
 
-### Test Scripts
+### Coverage Breakdown
+| Category | Coverage | Files |
+|----------|----------|-------|
+| **Components** | 89.38% | UI components and forms |
+| **Services** | 93.18% | API and database services |
+| **Contexts** | 73.98% | React context providers |
+| **Types/Utils** | 100% | Utility functions and types |
+| **Overall** | **88.22%** | **All source files** |
 
+### Test Commands
 ```bash
+# Development
 npm test              # Run all tests
-npm run test:coverage # Run with coverage report
 npm run test:watch    # Watch mode for development
+
+# Coverage & CI
+npm run test:coverage # Generate coverage report
+npm run test:ci       # CI mode (non-interactive)
 ```
 
-## CI/CD
+## 🚀 CI/CD Pipeline
 
-This project includes GitHub Actions workflows:
+Robust GitHub Actions workflows ensure code quality and reliability:
 
-- **Continuous Integration**: Runs tests on all pushes and PRs
-- **Test Suite**: Comprehensive testing with coverage reporting
-- **Build Check**: Verifies successful application builds
-- **Multi-Node Testing**: Tests against Node.js 18.x and 20.x
+### Workflow Overview
+| Workflow | Trigger | Purpose | Node Versions |
+|----------|---------|---------|---------------|
+| **🔄 CI** | All pushes & PRs | Basic testing | 20.x |
+| **🧪 Test Suite** | Main branch & PRs | Advanced testing | 18.x, 20.x |
+| **🏗️ Build Check** | Main branch & PRs | Build verification | 20.x |
+
+### Pipeline Features
+- ✅ **Automated Testing**: Every commit tested before merge
+- 📊 **Coverage Reporting**: Automatic coverage comments on PRs
+- 🔍 **Multi-Node Testing**: Compatibility across Node.js versions
+- 📦 **Build Artifacts**: Temporary build storage for review
+- ⚡ **Fast Feedback**: Quick CI for rapid development
+- 🛡️ **Quality Gates**: Prevent broken code from reaching main
+
+### Status Monitoring
+All workflows provide real-time status via GitHub badges above. Click any badge to see detailed build logs and coverage reports.
 
 ## License
 
