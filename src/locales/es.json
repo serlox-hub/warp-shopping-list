@@ -84,5 +84,31 @@
     "confirmDelete": "¿Estás seguro de que quieres eliminar esta lista? Esta acción no se puede deshacer.",
     "switchList": "Cambiar lista de compras",
     "yourLists": "Tus Listas ({{count}})"
+  },
+  "preferences": {
+    "title": "Preferencias de Usuario",
+    "subtitle": "Personaliza tu experiencia de listas de compras",
+    "backToList": "Volver a la Lista de Compras",
+    "appearance": {
+      "title": "Apariencia",
+      "subtitle": "Elige tu tema preferido"
+    },
+    "theme": {
+      "light": "Claro",
+      "lightDescription": "Usar siempre tema claro",
+      "dark": "Oscuro",
+      "darkDescription": "Usar siempre tema oscuro",
+      "system": "Sistema",
+      "systemDescription": "Seguir el tema de tu dispositivo"
+    },
+    "language": {
+      "title": "Idioma",
+      "subtitle": "Elige tu idioma preferido",
+      "updating": "Actualizando idioma..."
+    },
+    "account": {
+      "title": "Cuenta",
+      "subtitle": "Información de tu cuenta"
+    }
   }
 }

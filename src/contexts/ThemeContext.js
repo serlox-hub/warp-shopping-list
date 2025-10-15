@@ -39,7 +39,7 @@ export const ThemeProvider = ({ children }) => {
           theme: localTheme
         });
         if (migrated) {
-          console.log('Migrated theme preference to database');
+          // Theme preference migrated to database
         }
       }
       
@@ -55,29 +55,42 @@ export const ThemeProvider = ({ children }) => {
 
   // Resolve theme (convert 'system' to actual theme)
   useEffect(() => {
-    let actualTheme = theme;
+    // Ensure this only runs on the client side
+    if (typeof window === 'undefined') return;
     
-    if (theme === 'system') {
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      actualTheme = systemPrefersDark ? 'dark' : 'light';
+    const updateResolvedTheme = () => {
+      let actualTheme = theme;
       
-      // Listen for system theme changes
+      if (theme === 'system') {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const systemPrefersDark = mediaQuery.matches;
+        actualTheme = systemPrefersDark ? 'dark' : 'light';
+      }
+      
+      setResolvedTheme(actualTheme);
+    };
+    
+    // Update theme immediately
+    updateResolvedTheme();
+    
+    // Listen for system theme changes if theme is 'system'
+    if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const handleChange = (e) => {
-        if (theme === 'system') {
-          setResolvedTheme(e.matches ? 'dark' : 'light');
-        }
+        const newTheme = e.matches ? 'dark' : 'light';
+        setResolvedTheme(newTheme);
       };
       
       mediaQuery.addEventListener('change', handleChange);
       return () => mediaQuery.removeEventListener('change', handleChange);
     }
-    
-    setResolvedTheme(actualTheme);
   }, [theme]);
 
   // Apply resolved theme to document
   useEffect(() => {
+    // Ensure this only runs on the client side
+    if (typeof window === 'undefined') return;
+    
     const root = document.documentElement;
     if (resolvedTheme === 'dark') {
       root.classList.add('dark');

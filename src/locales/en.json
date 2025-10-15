@@ -84,5 +84,31 @@
     "confirmDelete": "Are you sure you want to delete this list? This action cannot be undone.",
     "switchList": "Switch shopping list",
     "yourLists": "Your Lists ({{count}})"
+  },
+  "preferences": {
+    "title": "User Preferences",
+    "subtitle": "Customize your shopping list experience",
+    "backToList": "Back to Shopping List",
+    "appearance": {
+      "title": "Appearance",
+      "subtitle": "Choose your preferred theme"
+    },
+    "theme": {
+      "light": "Light",
+      "lightDescription": "Always use light theme",
+      "dark": "Dark",
+      "darkDescription": "Always use dark theme",
+      "system": "System",
+      "systemDescription": "Follow your device's theme"
+    },
+    "language": {
+      "title": "Language",
+      "subtitle": "Choose your preferred language",
+      "updating": "Updating language..."
+    },
+    "account": {
+      "title": "Account",
+      "subtitle": "Your account information"
+    }
   }
 }
