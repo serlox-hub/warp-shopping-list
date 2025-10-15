@@ -25,7 +25,6 @@ export default function Home() {
   const t = useTranslations();
   const [items, setItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
-  const [listName, setListName] = useState('My Shopping List');
   const [shoppingList, setShoppingList] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [customAisles, setCustomAisles] = useState([]);
@@ -85,7 +84,6 @@ export default function Home() {
       // Get the active shopping list for the user
       const list = await ShoppingListService.getActiveShoppingList(user.id);
       setShoppingList(list);
-      setListName(list.name);
 
       // Load items for this list
       const listItems = await ShoppingListService.getShoppingItems(list.id);
@@ -97,23 +95,9 @@ export default function Home() {
     }
   };
 
-  // Update shopping list name in Supabase when it changes
-  const updateListName = async (newName) => {
-    if (!shoppingList || !newName.trim()) return;
-    
-    try {
-      await ShoppingListService.updateShoppingListName(shoppingList.id, newName.trim());
-      setListName(newName);
-    } catch (error) {
-      console.error('Error updating list name:', error);
-      // Revert the name change on error
-      setListName(shoppingList.name);
-    }
-  };
 
   const handleListChange = async (newList) => {
     setShoppingList(newList);
-    setListName(newList.name);
     setEditingItem(null);
     
     // Load items for the new list
@@ -314,18 +298,6 @@ export default function Home() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">
               <ListSelector currentList={shoppingList} onListChange={handleListChange} />
-              <input
-                type="text"
-                value={listName}
-                onChange={(e) => setListName(e.target.value)}
-                onBlur={(e) => updateListName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.target.blur();
-                  }
-                }}
-                className="text-2xl font-bold text-gray-800 dark:text-gray-100 bg-transparent border-none focus:outline-none focus:ring-0"
-              />
             </div>
             <Header />
           </div>
