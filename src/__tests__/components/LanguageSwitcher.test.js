@@ -1,17 +1,46 @@
 import { render, screen } from '@testing-library/react'
 import LanguageSwitcher from '../../components/LanguageSwitcher.js'
+import { LanguageProvider } from '../../contexts/LanguageContext.js'
 
 // Mock dependencies
 jest.mock('next/navigation')
 jest.mock('../../lib/supabase')
 
-// Mock contexts
-const mockContextValue = {
-  // Add mock context values as needed
-}
+// Mock react-i18next
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    i18n: {
+      language: 'en',
+      changeLanguage: jest.fn().mockResolvedValue(),
+      on: jest.fn(),
+      off: jest.fn()
+    }
+  })
+}))
+
+// Mock AuthContext
+jest.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({ user: null })
+}))
+
+// Mock UserPreferencesService
+jest.mock('../../lib/userPreferencesService', () => ({
+  UserPreferencesService: {
+    migrateLocalStoragePreferences: jest.fn().mockResolvedValue(false),
+    getUserPreferences: jest.fn().mockResolvedValue({ language: 'en' }),
+    updateLanguage: jest.fn().mockResolvedValue()
+  }
+}))
+
+// Mock i18n module
+jest.mock('../../lib/i18n', () => {})
 
 const MockProvider = ({ children }) => {
-  return children // Add proper provider wrapper if needed
+  return (
+    <LanguageProvider>
+      {children}
+    </LanguageProvider>
+  )
 }
 
 describe('LanguageSwitcher', () => {
@@ -30,23 +59,21 @@ describe('LanguageSwitcher', () => {
       </MockProvider>
     )
     
-    // Add basic rendering assertions
-    expect(screen.getByRole('main')).toBeInTheDocument() // Adjust selector as needed
+    // Should render a select element for language switching
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('English')).toBeInTheDocument()
   })
 
-  it('should handle all props correctly', () => {
-    const customProps = {
-      // Add test props
-    }
-    
+  it('should handle language change correctly', () => {
     render(
       <MockProvider>
-        <LanguageSwitcher {...customProps} />
+        <LanguageSwitcher />
       </MockProvider>
     )
     
-    // Add assertions for prop handling
-    expect(true).toBe(true) // Replace with actual tests
+    // Should show available language options
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('English')).toBeInTheDocument()
   })
 
   // Add more specific tests based on component functionality

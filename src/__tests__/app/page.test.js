@@ -162,7 +162,7 @@ describe('Home', () => {
     render(<Home />)
     
     expect(screen.getByText('Loading...')).toBeInTheDocument()
-    expect(screen.getByRole('status', { hidden: true })).toBeInTheDocument()
+    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument()
   })
 
   it('should show login form when user is not authenticated', () => {

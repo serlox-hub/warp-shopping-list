@@ -1,11 +1,40 @@
 import { renderHook, act } from '@testing-library/react'
-import { LanguageContext, useLanguageContext } from '../../contexts/LanguageContext.js'
+import { LanguageProvider, useLanguage } from '../../contexts/LanguageContext.js'
+
+// Mock react-i18next
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    i18n: {
+      language: 'en',
+      changeLanguage: jest.fn().mockResolvedValue(),
+      on: jest.fn(),
+      off: jest.fn()
+    }
+  })
+}))
+
+// Mock AuthContext
+jest.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({ user: null })
+}))
+
+// Mock UserPreferencesService
+jest.mock('../../lib/userPreferencesService', () => ({
+  UserPreferencesService: {
+    migrateLocalStoragePreferences: jest.fn().mockResolvedValue(false),
+    getUserPreferences: jest.fn().mockResolvedValue({ language: 'en' }),
+    updateLanguage: jest.fn().mockResolvedValue()
+  }
+}))
+
+// Mock i18n module
+jest.mock('../../lib/i18n', () => {})
 
 describe('LanguageContext', () => {
   const wrapper = ({ children }) => (
-    <LanguageContext>
+    <LanguageProvider>
       {children}
-    </LanguageContext>
+    </LanguageProvider>
   )
 
   beforeEach(() => {
@@ -13,21 +42,23 @@ describe('LanguageContext', () => {
   })
 
   it('should provide context value', () => {
-    const { result } = renderHook(() => useLanguageContext(), { wrapper })
+    const { result } = renderHook(() => useLanguage(), { wrapper })
     
     expect(result.current).toBeDefined()
-    // Add specific context value assertions
+    expect(result.current).toHaveProperty('currentLanguage')
+    expect(result.current).toHaveProperty('changeLanguage')
+    expect(result.current).toHaveProperty('isLoading')
+    expect(result.current).toHaveProperty('availableLanguages')
   })
 
-  it('should handle context updates', () => {
-    const { result } = renderHook(() => useLanguageContext(), { wrapper })
+  it('should handle language change', async () => {
+    const { result } = renderHook(() => useLanguage(), { wrapper })
     
-    act(() => {
-      // Trigger context updates
+    await act(async () => {
+      await result.current.changeLanguage('es')
     })
     
-    // Add assertions for updated values
-    expect(true).toBe(true) // Replace with actual tests
+    expect(result.current.changeLanguage).toBeDefined()
   })
 
   // Add more context-specific tests

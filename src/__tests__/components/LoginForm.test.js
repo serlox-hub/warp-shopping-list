@@ -31,7 +31,7 @@ describe('LoginForm', () => {
     )
     
     // Add basic rendering assertions
-    expect(screen.getByRole('main')).toBeInTheDocument() // Adjust selector as needed
+    expect(screen.getByRole('heading', { name: 'Sign in to your account' })).toBeInTheDocument()
   })
 
   it('should handle all props correctly', () => {

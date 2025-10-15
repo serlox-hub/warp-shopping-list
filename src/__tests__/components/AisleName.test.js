@@ -24,14 +24,14 @@ describe('AisleName', () => {
   })
 
   it('should render without crashing', () => {
-    render(
+    const { container } = render(
       <MockProvider>
         <AisleName {...defaultProps} />
       </MockProvider>
     )
     
     // Add basic rendering assertions
-    expect(screen.getByRole('main')).toBeInTheDocument() // Adjust selector as needed
+    expect(container.firstChild).toBeInTheDocument()
   })
 
   it('should handle all props correctly', () => {

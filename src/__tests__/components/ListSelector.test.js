@@ -24,14 +24,14 @@ describe('ListSelector', () => {
   })
 
   it('should render without crashing', () => {
-    render(
+    const { container } = render(
       <MockProvider>
         <ListSelector {...defaultProps} />
       </MockProvider>
     )
     
     // Add basic rendering assertions
-    expect(screen.getByRole('main')).toBeInTheDocument() // Adjust selector as needed
+    expect(container.firstChild).toBeInTheDocument()
   })
 
   it('should handle all props correctly', () => {

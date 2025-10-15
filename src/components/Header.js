@@ -22,7 +22,7 @@ export default function Header() {
   };
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-4" data-testid="header-container">
       {user && (
         <div className="flex items-center gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
           {user.user_metadata?.avatar_url && (

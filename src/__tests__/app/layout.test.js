@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import layout from '../../app/layout.js'
+import RootLayout from '../../app/layout.js'
 
 // Mock dependencies
 jest.mock('next/navigation')
@@ -14,7 +14,7 @@ const MockProvider = ({ children }) => {
   return children // Add proper provider wrapper if needed
 }
 
-describe('layout', () => {
+describe('RootLayout', () => {
   const defaultProps = {
     // Add default props here
   }
@@ -24,14 +24,16 @@ describe('layout', () => {
   })
 
   it('should render without crashing', () => {
-    render(
+    const { container } = render(
       <MockProvider>
-        <layout {...defaultProps} />
+        <RootLayout {...defaultProps}>
+          <div>Test child content</div>
+        </RootLayout>
       </MockProvider>
     )
     
     // Add basic rendering assertions
-    expect(screen.getByRole('main')).toBeInTheDocument() // Adjust selector as needed
+    expect(container.firstChild).toBeInTheDocument()
   })
 
   it('should handle all props correctly', () => {
@@ -41,7 +43,9 @@ describe('layout', () => {
     
     render(
       <MockProvider>
-        <layout {...customProps} />
+        <RootLayout {...customProps}>
+          <div>Test child content</div>
+        </RootLayout>
       </MockProvider>
     )
     

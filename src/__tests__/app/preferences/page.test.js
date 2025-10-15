@@ -1,20 +1,52 @@
 import { render, screen } from '@testing-library/react'
-import page from '../../app/preferences/page.js'
+import PreferencesPage from '../../../app/preferences/page.js'
 
 // Mock dependencies
-jest.mock('next/navigation')
-jest.mock('../../lib/supabase')
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+  })),
+}));
+jest.mock('../../../lib/supabase')
 
 // Mock contexts
-const mockContextValue = {
-  // Add mock context values as needed
-}
+const mockAuthContext = {
+  user: { id: '1', email: 'test@example.com' },
+  loading: false,
+};
+
+const mockThemeContext = {
+  theme: 'light',
+  setThemePreference: jest.fn(),
+};
+
+const mockLanguageContext = {
+  currentLanguage: 'en',
+  changeLanguage: jest.fn(),
+  availableLanguages: [{ code: 'en', name: 'English', nativeName: 'English' }],
+  isLoading: false,
+};
+
+const mockTranslations = jest.fn((key) => key);
+
+jest.mock('../../../contexts/AuthContext', () => ({
+  useAuth: jest.fn(() => mockAuthContext),
+}));
+
+jest.mock('../../../contexts/ThemeContext', () => ({
+  useTheme: jest.fn(() => mockThemeContext),
+}));
+
+jest.mock('../../../contexts/LanguageContext', () => ({
+  useLanguage: jest.fn(() => mockLanguageContext),
+  useTranslations: jest.fn(() => mockTranslations),
+}));
 
 const MockProvider = ({ children }) => {
   return children // Add proper provider wrapper if needed
 }
 
-describe('page', () => {
+describe('PreferencesPage', () => {
   const defaultProps = {
     // Add default props here
   }
@@ -24,14 +56,14 @@ describe('page', () => {
   })
 
   it('should render without crashing', () => {
-    render(
+    const { container } = render(
       <MockProvider>
-        <page {...defaultProps} />
+        <PreferencesPage {...defaultProps} />
       </MockProvider>
     )
     
     // Add basic rendering assertions
-    expect(screen.getByRole('main')).toBeInTheDocument() // Adjust selector as needed
+    expect(container.firstChild).toBeInTheDocument()
   })
 
   it('should handle all props correctly', () => {
@@ -41,7 +73,7 @@ describe('page', () => {
     
     render(
       <MockProvider>
-        <page {...customProps} />
+        <PreferencesPage {...customProps} />
       </MockProvider>
     )
     
