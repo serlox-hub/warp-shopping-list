@@ -267,5 +267,14 @@ COMMENT ON COLUMN public.shopping_lists.is_active IS 'Indicates the currently ac
 COMMENT ON COLUMN public.shopping_lists.list_order IS 'Display order of lists for the user';
 
 -- =============================================================================
+-- 13. GRANTS
+-- =============================================================================
+grant usage on schema public to anon, authenticated, service_role;
+grant select on all tables in schema public to anon;
+grant select, insert, update, delete on all tables in schema public to authenticated, service_role;
+grant usage, select on all sequences in schema public to authenticated, service_role;
+grant usage on all sequences in schema public to anon;
+
+-- =============================================================================
 -- SCHEMA COMPLETE
 -- =============================================================================
