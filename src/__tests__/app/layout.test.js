@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import RootLayout from '../../app/layout.js'
 
 // Mock global CSS import
@@ -27,41 +27,46 @@ describe('RootLayout', () => {
   })
 
   it('should render without crashing', () => {
-    const { container } = render(
+    const markup = renderToStaticMarkup(
       <RootLayout>
         <div>Test child content</div>
       </RootLayout>
     )
     
-    // Check that the basic HTML structure is rendered
-    expect(container.querySelector('html')).toBeInTheDocument()
-    expect(container.querySelector('body')).toBeInTheDocument()
-    expect(screen.getByText('Test child content')).toBeInTheDocument()
+    expect(markup).toContain('<html lang="en">')
+    expect(markup).toContain('<body>')
+    expect(markup).toContain('Test child content')
   })
 
   it('should render with context providers in correct order', () => {
-    render(
+    const markup = renderToStaticMarkup(
       <RootLayout>
         <div data-testid="child-content">Test child content</div>
       </RootLayout>
     )
     
-    // Check that all provider wrappers are present
-    expect(screen.getByTestId('auth-provider')).toBeInTheDocument()
-    expect(screen.getByTestId('language-provider')).toBeInTheDocument()
-    expect(screen.getByTestId('theme-provider')).toBeInTheDocument()
-    expect(screen.getByTestId('child-content')).toBeInTheDocument()
+    const authIndex = markup.indexOf('data-testid="auth-provider"')
+    const languageIndex = markup.indexOf('data-testid="language-provider"')
+    const themeIndex = markup.indexOf('data-testid="theme-provider"')
+    const childIndex = markup.indexOf('data-testid="child-content"')
+
+    expect(authIndex).toBeGreaterThan(-1)
+    expect(languageIndex).toBeGreaterThan(-1)
+    expect(themeIndex).toBeGreaterThan(-1)
+    expect(childIndex).toBeGreaterThan(-1)
+    expect(authIndex).toBeLessThan(languageIndex)
+    expect(languageIndex).toBeLessThan(themeIndex)
+    expect(themeIndex).toBeLessThan(childIndex)
   })
 
   it('should have proper HTML structure', () => {
-    const { container } = render(
+    const markup = renderToStaticMarkup(
       <RootLayout>
         <main>Main content</main>
       </RootLayout>
     )
     
-    const html = container.querySelector('html')
-    expect(html).toHaveAttribute('lang', 'en')
-    expect(screen.getByText('Main content')).toBeInTheDocument()
+    expect(markup).toContain('<html lang="en">')
+    expect(markup).toMatch(/<body>[\s\S]*Main content[\s\S]*<\/body>/)
   })
 })

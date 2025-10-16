@@ -28,6 +28,7 @@ export default function ListSelector({ currentList, onListChange }) {
       setLists(userLists);
     } catch (error) {
       console.error('Error loading lists:', error);
+      setLists([]);
     }
   };
 
@@ -197,25 +198,28 @@ export default function ListSelector({ currentList, onListChange }) {
                   </form>
                 ) : (
                   // View mode
-                  <button
-                    onClick={() => handleListSelect(list)}
-                    disabled={loading}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 ${
-                      list.id === currentList?.id
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
-                        : 'text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    <span className="flex items-center space-x-2">
-                      <span className="text-sm truncate max-w-32">{list.name}</span>
-                      {list.id === currentList?.id && (
-                        <svg className="w-3 h-3 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleListSelect(list)}
+                      disabled={loading}
+                      className={`flex-1 flex items-center justify-between px-3 py-2 text-left rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 ${
+                        list.id === currentList?.id
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+                          : 'text-gray-700 dark:text-gray-300 border border-transparent'
+                      }`}
+                    >
+                      <span className="flex items-center space-x-2">
+                        <span className="text-sm truncate max-w-32">{list.name}</span>
+                        {list.id === currentList?.id && (
+                          <svg className="w-3 h-3 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </span>
+                    </button>
                     <div className="flex items-center space-x-1">
                       <button
+                        type="button"
                         onClick={(e) => handleEditList(e, list)}
                         className="p-1 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors duration-200"
                         title={t('listSelector.editList')}
@@ -226,6 +230,7 @@ export default function ListSelector({ currentList, onListChange }) {
                       </button>
                       {lists.length > 1 && (
                         <button
+                          type="button"
                           onClick={(e) => handleDeleteList(e, list.id)}
                           className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors duration-200"
                           title={t('listSelector.deleteList')}
@@ -236,7 +241,7 @@ export default function ListSelector({ currentList, onListChange }) {
                         </button>
                       )}
                     </div>
-                  </button>
+                  </div>
                 )}
               </div>
             ))}

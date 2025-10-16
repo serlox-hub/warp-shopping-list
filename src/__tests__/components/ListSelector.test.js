@@ -52,20 +52,33 @@ describe('ListSelector', () => {
     mockShoppingListService.getUserShoppingLists.mockResolvedValue([mockList])
   })
 
-  it('should render without crashing', () => {
+  it('should render without crashing', async () => {
     render(<ListSelector {...defaultProps} />)
     
+    await waitFor(() => {
+      expect(mockShoppingListService.getUserShoppingLists).toHaveBeenCalledWith('user-1')
+    })
+
     expect(screen.getByText('Test List')).toBeInTheDocument()
     expect(screen.getByTitle('listSelector.switchList')).toBeInTheDocument()
   })
 
-  it('should return null when no currentList provided', () => {
+  it('should return null when no currentList provided', async () => {
     const { container } = render(<ListSelector currentList={null} onListChange={jest.fn()} />)
+
+    await waitFor(() => {
+      expect(mockShoppingListService.getUserShoppingLists).toHaveBeenCalledWith('user-1')
+    })
+
     expect(container.firstChild).toBeNull()
   })
 
   it('should toggle dropdown when clicked', async () => {
     render(<ListSelector {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(mockShoppingListService.getUserShoppingLists).toHaveBeenCalledWith('user-1')
+    })
     
     const toggleButton = screen.getByTitle('listSelector.switchList')
     

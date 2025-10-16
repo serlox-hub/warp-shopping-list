@@ -142,6 +142,17 @@ describe('Home', () => {
       return translation
     })
 
+    mockShoppingListService.getUserAisles.mockResolvedValue([])
+    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
+    mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
+    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+    mockShoppingListService.addShoppingItem.mockResolvedValue(undefined)
+    mockShoppingListService.updateShoppingItem.mockResolvedValue(undefined)
+    mockShoppingListService.deleteShoppingItem.mockResolvedValue(undefined)
+    mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
+    mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
+    mockShoppingListService.updateUserAisles.mockResolvedValue(undefined)
+
     // Mock localStorage
     Object.defineProperty(window, 'localStorage', {
       value: {
@@ -177,15 +188,17 @@ describe('Home', () => {
     expect(screen.getByText('Please log in')).toBeInTheDocument()
   })
 
-  it('should show loading when data is being loaded for authenticated user', () => {
+  it('should show loading when data is being loaded for authenticated user', async () => {
     mockUseAuth.mockReturnValue({
       user: mockUser,
       loading: false
     })
 
     render(<Home />)
-    
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument()
+    })
   })
 
   it('should load shopping list data when user is authenticated', async () => {

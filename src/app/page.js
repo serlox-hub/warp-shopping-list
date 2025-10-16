@@ -303,21 +303,19 @@ export default function Home() {
           </div>
           
           {/* Progress section - separate row */}
-          {totalCount > 0 && (
-            <div className="flex items-center justify-end mb-4">
-              <div className="text-right">
-                <div className="text-lg text-gray-600 dark:text-gray-300 mb-2">
-                  {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
-                </div>
-                <div className="w-64 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(completedCount / totalCount) * 100}%` }}
-                  ></div>
-                </div>
+          <div className="flex items-center justify-end mb-4">
+            <div className="text-right">
+              <div className="text-lg text-gray-600 dark:text-gray-300 mb-2">
+                {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
+              </div>
+              <div className="w-64 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(completedCount / totalCount) * 100}%` }}
+                ></div>
               </div>
             </div>
-          )}
+          </div>
           
           {/* Action buttons */}
           <div className="flex space-x-4">
