@@ -7,23 +7,9 @@ import {
   createShoppingList,
   groupItemsByAisle,
   sortItemsInAisle,
-  STORAGE_KEYS,
-  loadCustomAisles,
-  saveCustomAisles,
   isValidAisleName,
   updateItemsAisle,
 } from '../../types/shoppingList'
-
-// Mock localStorage
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-}
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
-})
 
 // Mock translation function
 const mockT = jest.fn((key) => {
@@ -44,7 +30,6 @@ const mockT = jest.fn((key) => {
 describe('shoppingList types and utilities', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    localStorageMock.getItem.mockReturnValue(null)
   })
 
   describe('DEFAULT_AISLES', () => {
@@ -263,119 +248,6 @@ describe('shoppingList types and utilities', () => {
       expect(sorted[0].name).toBe('Apple')
       expect(sorted[1].name).toBe('Cherry')
       expect(sorted[2].name).toBe('Zebra')
-    })
-  })
-
-  describe('STORAGE_KEYS', () => {
-    it('should have all required storage keys', () => {
-      expect(STORAGE_KEYS).toEqual({
-        ITEMS: 'shoppingListItems',
-        LIST_NAME: 'shoppingListName',
-        CUSTOM_AISLES: 'shoppingListAisles'
-      })
-    })
-  })
-
-  describe('loadCustomAisles', () => {
-    beforeEach(() => {
-      // Reset console.error mock before each test
-      console.error = jest.fn()
-    })
-
-    it('should load aisles from localStorage', () => {
-      const customAisles = ['Custom1', 'Custom2']
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(customAisles))
-      
-      const result = loadCustomAisles()
-      
-      expect(localStorageMock.getItem).toHaveBeenCalledWith(STORAGE_KEYS.CUSTOM_AISLES)
-      expect(result).toEqual(customAisles)
-    })
-
-    it('should return default aisles if localStorage is empty', () => {
-      localStorageMock.getItem.mockReturnValue(null)
-      
-      const result = loadCustomAisles()
-      
-      expect(result).toEqual(DEFAULT_AISLES)
-    })
-
-    it('should return localized aisles if translation function provided', () => {
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(['Produce', 'Dairy']))
-      
-      const result = loadCustomAisles(mockT)
-      
-      // When translation function is provided, it maps the stored aisles to localized versions
-      expect(result).toEqual(['Productos', 'Lácteos'])
-    })
-
-    it('should return localized default aisles if localStorage is empty and translation function provided', () => {
-      localStorageMock.getItem.mockReturnValue(null)
-      
-      const result = loadCustomAisles(mockT)
-      
-      // When localStorage is empty, it should return all localized default aisles
-      expect(result).toEqual(getLocalizedDefaultAisles(mockT))
-    })
-
-    it('should handle localStorage errors gracefully', () => {
-      localStorageMock.getItem.mockImplementation(() => {
-        throw new Error('Storage error')
-      })
-      
-      const result = loadCustomAisles()
-      
-      expect(console.error).toHaveBeenCalled()
-      expect(result).toEqual(DEFAULT_AISLES)
-    })
-
-    it('should handle localStorage errors with translation function', () => {
-      localStorageMock.getItem.mockImplementation(() => {
-        throw new Error('Storage error')
-      })
-      
-      const result = loadCustomAisles(mockT)
-      
-      expect(console.error).toHaveBeenCalled()
-      expect(result).toEqual(getLocalizedDefaultAisles(mockT))
-    })
-
-    it('should handle invalid JSON in localStorage', () => {
-      localStorageMock.getItem.mockReturnValue('invalid json')
-      
-      const result = loadCustomAisles()
-      
-      expect(console.error).toHaveBeenCalled()
-      expect(result).toEqual(DEFAULT_AISLES)
-    })
-  })
-
-  describe('saveCustomAisles', () => {
-    beforeEach(() => {
-      // Reset console.error mock and localStorage mocks before each test
-      console.error = jest.fn()
-      localStorageMock.setItem.mockReset()
-    })
-
-    it('should save aisles to localStorage', () => {
-      const customAisles = ['Custom1', 'Custom2']
-      
-      saveCustomAisles(customAisles)
-      
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        STORAGE_KEYS.CUSTOM_AISLES,
-        JSON.stringify(customAisles)
-      )
-    })
-
-    it('should handle localStorage errors gracefully', () => {
-      localStorageMock.setItem.mockImplementation(() => {
-        throw new Error('Storage error')
-      })
-      
-      saveCustomAisles(['test'])
-      
-      expect(console.error).toHaveBeenCalled()
     })
   })
 

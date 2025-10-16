@@ -28,9 +28,8 @@ i18n
     
     // Language detection options
     detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      lookupLocalStorage: 'i18nextLng',
-      caches: ['localStorage'],
+      order: ['navigator', 'htmlTag'],
+      caches: [],
     },
 
     interpolation: {

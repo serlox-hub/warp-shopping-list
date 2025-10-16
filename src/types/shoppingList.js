@@ -129,40 +129,6 @@ export const sortItemsInAisle = (items) => {
   });
 };
 
-// Local storage utilities for custom aisles
-export const STORAGE_KEYS = {
-  ITEMS: 'shoppingListItems',
-  LIST_NAME: 'shoppingListName',
-  CUSTOM_AISLES: 'shoppingListAisles'
-};
-
-// Load custom aisles from localStorage with localization support
-export const loadCustomAisles = (t = null) => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEYS.CUSTOM_AISLES);
-    const aisles = saved ? JSON.parse(saved) : DEFAULT_AISLES;
-    
-    // If translation function is provided, localize the aisles
-    if (t) {
-      return mapEnglishToLocalized(aisles, t);
-    }
-    
-    return aisles;
-  } catch (error) {
-    console.error('Error loading custom aisles:', error);
-    return t ? getLocalizedDefaultAisles(t) : DEFAULT_AISLES;
-  }
-};
-
-// Save custom aisles to localStorage
-export const saveCustomAisles = (aisles) => {
-  try {
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_AISLES, JSON.stringify(aisles));
-  } catch (error) {
-    console.error('Error saving custom aisles:', error);
-  }
-};
-
 // Validate aisle name
 export const isValidAisleName = (name, existingAisles = []) => {
   return name && 

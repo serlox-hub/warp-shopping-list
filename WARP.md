@@ -4,7 +4,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-This is a Next.js 14 shopping list application that organizes items by store aisles with local storage persistence. The app uses React 18, Tailwind CSS for styling, and follows the Next.js App Router pattern.
+This is a Next.js 14 shopping list application that organizes items by store aisles with Supabase-backed persistence. The app uses React 18, Tailwind CSS for styling, and follows the Next.js App Router pattern.
 
 ## Development Commands
 
@@ -38,7 +38,7 @@ The app follows a single-page application pattern with state management handled 
 
 - **Main Page** (`src/app/page.js`): Central state container managing all shopping list operations
 - **Component Composition**: Hierarchical component structure where the main page orchestrates all interactions
-- **Local Storage Integration**: All data persistence handled through browser localStorage with automatic save/load
+- **Database Integration**: Data persistence handled through Supabase with automatic read/write
 
 ### State Management Pattern
 The application uses a centralized state management approach:
@@ -49,14 +49,14 @@ The application uses a centralized state management approach:
 ### Data Flow Architecture
 ```
 Main Page (page.js)
-├── Local Storage ↔ State synchronization
+├── Supabase ↔ State synchronization
 ├── AddItemForm → Add/Edit operations
 └── AisleSection → Display & item operations
     └── ShoppingItem → Individual item interactions
 ```
 
 ### Component Responsibilities
-- **page.js**: State management, localStorage sync, business logic
+- **page.js**: State management, Supabase sync, business logic
 - **AddItemForm.js**: Form handling for adding/editing items with dual-mode functionality
 - **AisleSection.js**: Groups items by aisle, handles sorting and progress display
 - **ShoppingItem.js**: Individual item display and basic interactions (complete, edit, delete)
@@ -110,13 +110,12 @@ src/
     └── shoppingList.js# Data utilities and constants
 ```
 
-## Local Storage Integration
+## Data Persistence
 
-The app automatically saves and loads data from browser localStorage:
-- **Items**: Saved as `shoppingListItems` (JSON array)
-- **List Name**: Saved as `shoppingListName` (string)
-- **Auto-sync**: Changes are automatically persisted via useEffect hooks
-- **Load on Mount**: Data is restored when the component mounts
+The app reads and writes data through Supabase:
+- **Shopping Lists & Items**: Stored per user in `shopping_lists` and `shopping_items`
+- **Custom Aisles**: Managed in the `user_aisles` table and localized client-side
+- **User Preferences**: Theme and language saved in `user_preferences`
 
 ## Key Features Implementation
 
@@ -141,12 +140,12 @@ The app automatically saves and loads data from browser localStorage:
 ## Troubleshooting Notes
 
 ### Common Issues
-- **localStorage Access**: Components must be client-side rendered due to localStorage usage
+- **Supabase Access**: Components are client-side rendered while API calls handle persistence
 - **State Sync**: Form state is managed independently and syncs with main state on submit
-- **ID Generation**: Uses timestamp + random string for unique IDs (not suitable for concurrent users)
+- **ID Generation**: Uses timestamp + random string for temporary client IDs before Supabase returns real IDs
 
 ### Development Considerations
-- No server-side functionality - purely client-side application
-- No user authentication or multi-user support
-- Data is not shared between browsers/devices
-- No offline functionality beyond localStorage
+- No server-side functionality beyond Supabase interactions
+- Requires authentication for personalized lists and preferences
+- Data synchronized across devices via Supabase
+- No offline functionality once disconnected from Supabase

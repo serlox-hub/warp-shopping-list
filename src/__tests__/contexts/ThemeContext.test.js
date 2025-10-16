@@ -9,7 +9,6 @@ jest.mock('../../contexts/AuthContext', () => ({
 // Mock UserPreferencesService
 jest.mock('../../lib/userPreferencesService', () => ({
   UserPreferencesService: {
-    migrateLocalStoragePreferences: jest.fn().mockResolvedValue(false),
     getUserPreferences: jest.fn().mockResolvedValue({ theme: 'light' }),
     updateTheme: jest.fn().mockResolvedValue()
   }
@@ -47,7 +46,7 @@ describe('ThemeContext', () => {
     })
     
     // Note: in test environment, theme changes may not be immediately reflected
-    // This is because of async operations and localStorage/DOM interactions
+    // This is because of async operations and DOM interactions
     expect(result.current.toggleTheme).toBeDefined()
   })
 

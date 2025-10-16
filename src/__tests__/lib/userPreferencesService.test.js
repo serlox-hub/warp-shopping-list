@@ -21,7 +21,7 @@ describe('UserPreferencesService', () => {
     updated_at: '2023-01-01T00:00:00.000Z'
   }
 
-  let mockFrom, mockSelect, mockEq, mockSingle, mockUpsert, mockLimit
+  let mockFrom, mockSelect, mockEq, mockSingle, mockUpsert
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -29,10 +29,8 @@ describe('UserPreferencesService', () => {
     
     // Create mock chain for Supabase queries
     mockSingle = jest.fn()
-    mockLimit = jest.fn(() => ({ data: null, error: null }))
     mockEq = jest.fn(() => ({
-      single: mockSingle,
-      limit: mockLimit
+      single: mockSingle
     }))
     mockSelect = jest.fn(() => ({
       eq: mockEq,
@@ -219,67 +217,6 @@ describe('UserPreferencesService', () => {
     })
   })
 
-  describe('migrateLocalStoragePreferences', () => {
-    const localPreferences = { theme: 'dark', language: 'es' }
-
-    it('should migrate preferences when user has no database preferences', async () => {
-      // Mock no existing preferences
-      mockLimit.mockResolvedValue({ data: [], error: null })
-      
-      const updateSpy = jest.spyOn(UserPreferencesService, 'updateUserPreferences')
-        .mockResolvedValue(mockPreferences)
-      
-      const result = await UserPreferencesService.migrateLocalStoragePreferences(mockUserId, localPreferences)
-      
-      expect(supabase.from).toHaveBeenCalledWith('user_preferences')
-      expect(mockSelect).toHaveBeenCalledWith('id')
-      expect(mockEq).toHaveBeenCalledWith('user_id', mockUserId)
-      expect(updateSpy).toHaveBeenCalledWith(mockUserId, localPreferences)
-      expect(result).toBe(true)
-      
-      updateSpy.mockRestore()
-    })
-
-    it('should not migrate when user already has database preferences', async () => {
-      // Mock existing preferences
-      mockLimit.mockResolvedValue({ data: [{ id: 1 }], error: null })
-      
-      const updateSpy = jest.spyOn(UserPreferencesService, 'updateUserPreferences')
-      
-      const result = await UserPreferencesService.migrateLocalStoragePreferences(mockUserId, localPreferences)
-      
-      expect(updateSpy).not.toHaveBeenCalled()
-      expect(result).toBe(false)
-      
-      updateSpy.mockRestore()
-    })
-
-    it('should not migrate when existingPrefs is null', async () => {
-      // Mock null existing preferences
-      mockLimit.mockResolvedValue({ data: null, error: null })
-      
-      const updateSpy = jest.spyOn(UserPreferencesService, 'updateUserPreferences')
-        .mockResolvedValue(mockPreferences)
-      
-      const result = await UserPreferencesService.migrateLocalStoragePreferences(mockUserId, localPreferences)
-      
-      expect(updateSpy).toHaveBeenCalledWith(mockUserId, localPreferences)
-      expect(result).toBe(true)
-      
-      updateSpy.mockRestore()
-    })
-
-    it('should throw error when migration fails', async () => {
-      const dbError = new Error('Migration failed')
-      mockLimit.mockRejectedValue(dbError)
-      
-      await expect(UserPreferencesService.migrateLocalStoragePreferences(mockUserId, localPreferences))
-        .rejects.toThrow('Migration failed')
-      
-      expect(console.error).toHaveBeenCalledWith('Error migrating localStorage preferences:', dbError)
-    })
-  })
-
   describe('Static methods existence', () => {
     it('should have all expected static methods', () => {
       expect(typeof UserPreferencesService.getUserPreferences).toBe('function')
@@ -287,7 +224,6 @@ describe('UserPreferencesService', () => {
       expect(typeof UserPreferencesService.createDefaultUserPreferences).toBe('function')
       expect(typeof UserPreferencesService.updateTheme).toBe('function')
       expect(typeof UserPreferencesService.updateLanguage).toBe('function')
-      expect(typeof UserPreferencesService.migrateLocalStoragePreferences).toBe('function')
     })
   })
 })

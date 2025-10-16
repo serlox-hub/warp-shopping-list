@@ -374,27 +374,4 @@ export class ShoppingListService {
       throw error;
     }
   }
-
-  // Migrate localStorage aisles to database
-  static async migrateLocalStorageAisles(userId, localAisles) {
-    try {
-      // Check if user already has aisles in database
-      const { data: existingAisles } = await supabase
-        .from('user_aisles')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1);
-
-      // Only migrate if user has no aisles in database
-      if (!existingAisles || existingAisles.length === 0) {
-        await this.updateUserAisles(userId, localAisles);
-        return true;
-      }
-      
-      return false; // No migration needed
-    } catch (error) {
-      console.error('Error migrating localStorage aisles:', error);
-      throw error;
-    }
-  }
 }

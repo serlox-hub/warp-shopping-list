@@ -19,7 +19,7 @@ export function LanguageProvider({ children }) {
     if (user) {
       loadUserLanguagePreference();
     } else {
-      // For non-authenticated users, use browser detection or localStorage as fallback
+      // For non-authenticated users, use browser detection
       const detectedLang = i18n.language || 'en';
       setCurrentLanguage(detectedLang);
       i18n.changeLanguage(detectedLang);
@@ -44,19 +44,6 @@ export function LanguageProvider({ children }) {
     
     setIsLoading(true);
     try {
-      // Try to migrate localStorage language first
-      const localLang = localStorage.getItem('i18nextLng');
-      if (localLang && (localLang === 'en' || localLang === 'es')) {
-        const migrated = await UserPreferencesService.migrateLocalStoragePreferences(user.id, {
-          language: localLang
-        });
-        if (migrated) {
-          // Don't remove from localStorage as i18next might still need it for SSR
-          console.log('Migrated language preference to database');
-        }
-      }
-      
-      // Load language from database
       const preferences = await UserPreferencesService.getUserPreferences(user.id);
       const dbLanguage = preferences.language || 'en';
       
@@ -68,6 +55,7 @@ export function LanguageProvider({ children }) {
       console.error('Error loading user language preference:', error);
       // Fallback to browser detection
       const fallbackLang = i18n.language || 'en';
+      await i18n.changeLanguage(fallbackLang);
       setCurrentLanguage(fallbackLang);
     } finally {
       setIsLoading(false);

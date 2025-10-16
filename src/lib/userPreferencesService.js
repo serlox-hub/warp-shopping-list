@@ -82,27 +82,4 @@ export class UserPreferencesService {
   static async updateLanguage(userId, language) {
     return this.updateUserPreferences(userId, { language });
   }
-
-  // Migrate localStorage preferences to database
-  static async migrateLocalStoragePreferences(userId, localPreferences) {
-    try {
-      // Check if user already has preferences in database
-      const { data: existingPrefs } = await supabase
-        .from('user_preferences')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1);
-
-      // Only migrate if user has no preferences in database
-      if (!existingPrefs || existingPrefs.length === 0) {
-        await this.updateUserPreferences(userId, localPreferences);
-        return true;
-      }
-      
-      return false; // No migration needed
-    } catch (error) {
-      console.error('Error migrating localStorage preferences:', error);
-      throw error;
-    }
-  }
 }

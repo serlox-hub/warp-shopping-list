@@ -21,7 +21,6 @@ jest.mock('../../contexts/AuthContext', () => ({
 // Mock UserPreferencesService
 jest.mock('../../lib/userPreferencesService', () => ({
   UserPreferencesService: {
-    migrateLocalStoragePreferences: jest.fn().mockResolvedValue(false),
     getUserPreferences: jest.fn().mockResolvedValue({ language: 'en' }),
     updateLanguage: jest.fn().mockResolvedValue()
   }

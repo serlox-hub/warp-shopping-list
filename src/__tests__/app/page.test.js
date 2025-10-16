@@ -143,7 +143,6 @@ describe('Home', () => {
     })
 
     mockShoppingListService.getUserAisles.mockResolvedValue([])
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.addShoppingItem.mockResolvedValue(undefined)
@@ -152,16 +151,6 @@ describe('Home', () => {
     mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
     mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
     mockShoppingListService.updateUserAisles.mockResolvedValue(undefined)
-
-    // Mock localStorage
-    Object.defineProperty(window, 'localStorage', {
-      value: {
-        getItem: jest.fn(),
-        setItem: jest.fn(),
-        removeItem: jest.fn()
-      },
-      writable: true
-    })
   })
 
   it('should show loading spinner when authentication is loading', () => {
@@ -210,7 +199,6 @@ describe('Home', () => {
     mockShoppingListService.getUserAisles.mockResolvedValue(['Produce', 'Dairy'])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue(mockItems)
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -233,7 +221,6 @@ describe('Home', () => {
     mockShoppingListService.getUserAisles.mockResolvedValue(['Produce', 'Dairy'])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue(mockItems)
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -259,7 +246,6 @@ describe('Home', () => {
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.addShoppingItem.mockResolvedValue(newItem)
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -289,7 +275,6 @@ describe('Home', () => {
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
     mockShoppingListService.updateShoppingItem.mockResolvedValue({ ...mockItems[0], completed: true })
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -319,7 +304,6 @@ describe('Home', () => {
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
     mockShoppingListService.deleteShoppingItem.mockResolvedValue(undefined)
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -345,7 +329,6 @@ describe('Home', () => {
     mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -373,7 +356,6 @@ describe('Home', () => {
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
     mockShoppingListService.updateShoppingItem.mockResolvedValue(updatedItem)
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -415,7 +397,6 @@ describe('Home', () => {
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue(mockItems)
     mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -441,7 +422,6 @@ describe('Home', () => {
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
     mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -466,7 +446,6 @@ describe('Home', () => {
     mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -498,7 +477,6 @@ describe('Home', () => {
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.updateUserAisles.mockResolvedValue(undefined)
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -526,7 +504,6 @@ describe('Home', () => {
     mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     
@@ -549,7 +526,6 @@ describe('Home', () => {
     mockShoppingListService.getShoppingItems
       .mockResolvedValueOnce([]) // Initial load
       .mockResolvedValueOnce([mockItems[0]]) // After list change
-    mockShoppingListService.migrateLocalStorageAisles.mockResolvedValue(false)
 
     render(<Home />)
     

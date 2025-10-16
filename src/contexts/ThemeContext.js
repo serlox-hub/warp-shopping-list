@@ -24,32 +24,18 @@ export const ThemeProvider = ({ children }) => {
     if (user) {
       loadUserTheme();
     } else {
-      // For non-authenticated users, use localStorage or system preference
-      const savedTheme = localStorage.getItem('theme') || 'system';
-      setTheme(savedTheme);
+      setTheme('system');
     }
   }, [user]);
 
   const loadUserTheme = async () => {
+    if (!user) return;
     try {
-      // Try to migrate localStorage theme first
-      const localTheme = localStorage.getItem('theme');
-      if (localTheme && ['light', 'dark', 'system'].includes(localTheme)) {
-        const migrated = await UserPreferencesService.migrateLocalStoragePreferences(user.id, {
-          theme: localTheme
-        });
-        if (migrated) {
-          // Theme preference migrated to database
-        }
-      }
-      
       const preferences = await UserPreferencesService.getUserPreferences(user.id);
       setTheme(preferences.theme || 'system');
     } catch (error) {
       console.error('Error loading user theme:', error);
-      // Fallback to localStorage or system preference
-      const savedTheme = localStorage.getItem('theme') || 'system';
-      setTheme(savedTheme);
+      setTheme('system');
     }
   };
 
@@ -97,9 +83,6 @@ export const ThemeProvider = ({ children }) => {
     } else {
       root.classList.remove('dark');
     }
-    
-    // Always save to localStorage as fallback
-    localStorage.setItem('theme', theme);
   }, [resolvedTheme, theme]);
 
   const toggleTheme = async () => {

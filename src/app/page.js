@@ -12,12 +12,10 @@ import { useTranslations } from '@/contexts/LanguageContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 import { 
   groupItemsByAisle,
-  loadCustomAisles,
-  saveCustomAisles,
   updateItemsAisle,
   mapLocalizedToEnglish,
   mapEnglishToLocalized,
-  STORAGE_KEYS
+  getLocalizedDefaultAisles
 } from '@/types/shoppingList';
 
 export default function Home() {
@@ -40,6 +38,8 @@ export default function Home() {
   useEffect(() => {
     if (user) {
       loadUserAisles();
+    } else {
+      setCustomAisles(getLocalizedDefaultAisles(t));
     }
   }, [user, t]);
 
@@ -54,25 +54,11 @@ export default function Home() {
     if (!user) return;
     
     try {
-      // Try to migrate localStorage aisles first
-      const localAisles = loadCustomAisles(); // Get from localStorage without translation
-      if (localAisles && localAisles.length > 0) {
-        const migrated = await ShoppingListService.migrateLocalStorageAisles(user.id, localAisles);
-        if (migrated) {
-          // Clear localStorage after successful migration
-          localStorage.removeItem(STORAGE_KEYS.CUSTOM_AISLES);
-        }
-      }
-      
-      // Load aisles from database
       const dbAisles = await ShoppingListService.getUserAisles(user.id);
       const localizedAisles = mapEnglishToLocalized(dbAisles, t);
       setCustomAisles(localizedAisles);
     } catch (error) {
       console.error('Error loading user aisles:', error);
-      // Fallback to default aisles if database fails
-      const aisles = loadCustomAisles(t);
-      setCustomAisles(aisles);
     }
   };
 
