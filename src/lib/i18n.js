@@ -43,6 +43,7 @@ i18n
     // Namespace settings
     ns: ['translation'],
     defaultNS: 'translation',
+    debug: false,
   });
 
 export default i18n;
