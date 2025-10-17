@@ -240,6 +240,10 @@ export default function Home() {
   const groupedItems = groupItemsByAisle(items, customAisles);
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
+  const hasItems = totalCount > 0;
+  const progressPercentage = hasItems
+    ? (completedCount / totalCount) * 100
+    : 0;
 
   // Show loading while checking authentication or loading data
   if (loading || (user && dataLoading)) {
@@ -272,14 +276,14 @@ export default function Home() {
           
           {/* Progress section - separate row */}
           <div className="flex items-center justify-end mb-4">
-            <div className="text-right">
+            <div className={`text-right ${hasItems ? '' : 'invisible'}`}>
               <div className="text-lg text-gray-600 dark:text-gray-300 mb-2">
                 {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
               </div>
               <div className="w-64 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
                   className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${(completedCount / totalCount) * 100}%` }}
+                  style={{ width: `${progressPercentage}%` }}
                 ></div>
               </div>
             </div>
