@@ -161,7 +161,6 @@ describe('Home', () => {
 
     render(<Home />)
     
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
     expect(screen.getByTestId('loading-spinner')).toBeInTheDocument()
   })
 

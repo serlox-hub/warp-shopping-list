@@ -52,29 +52,6 @@ describe('shoppingList types and utilities', () => {
     })
   })
 
-  describe('getLocalizedDefaultAisles', () => {
-    it('should return localized aisles using translation function', () => {
-      const result = getLocalizedDefaultAisles(mockT)
-      
-      expect(result).toEqual([
-        'Productos',
-        'Lácteos',
-        'Carnes y Mariscos',
-        'Panadería',
-        'Despensa',
-        'Congelados',
-        'Cuidado Personal',
-        'Hogar',
-        'Otros'
-      ])
-    })
-
-    it('should call translation function for each aisle', () => {
-      getLocalizedDefaultAisles(mockT)
-      expect(mockT).toHaveBeenCalledTimes(9)
-    })
-  })
-
   describe('mapEnglishToLocalized', () => {
     it('should map English aisles to localized ones', () => {
       const englishAisles = ['Produce', 'Dairy', 'Unknown Aisle']

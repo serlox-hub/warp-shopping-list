@@ -24,31 +24,16 @@ export default function Home() {
   const [items, setItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [shoppingList, setShoppingList] = useState(null);
-  const [dataLoading, setDataLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [customAisles, setCustomAisles] = useState([]);
   const [showAisleManager, setShowAisleManager] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-
-  // Set client flag on mount to prevent hydration mismatch
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Load custom aisles from database when user is authenticated
-  useEffect(() => {
-    if (user) {
-      loadUserAisles();
-    } else {
-      setCustomAisles(getLocalizedDefaultAisles(t));
-    }
-  }, [user, t]);
 
   // Load data from Supabase when user is authenticated
   useEffect(() => {
-    if (user && !shoppingList) {
-      loadShoppingListData();
+    if (user) {
+      Promise.all([loadUserAisles(), loadShoppingListData()]);
     }
-  }, [user, shoppingList]);
+  }, [user]);
 
   const loadUserAisles = async () => {
     if (!user) return;
@@ -262,9 +247,6 @@ export default function Home() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" data-testid="loading-spinner"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {isClient ? t('common.loading') : 'Loading...'}
-          </p>
         </div>
       </div>
     );

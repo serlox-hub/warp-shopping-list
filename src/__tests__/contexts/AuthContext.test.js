@@ -115,16 +115,16 @@ describe('AuthContext', () => {
     })
     
     // Simulate sign in
-    act(() => {
-      authStateChangeCallback('SIGNED_IN', { user: mockUser })
+    await act(async () => {
+      await authStateChangeCallback('SIGNED_IN', { user: mockUser })
     })
     
     expect(result.current.user).toEqual(mockUser)
     expect(result.current.loading).toBe(false)
     
     // Simulate sign out
-    act(() => {
-      authStateChangeCallback('SIGNED_OUT', null)
+    await act(async () => {
+      await authStateChangeCallback('SIGNED_OUT', null)
     })
     
     expect(result.current.user).toBe(null)
@@ -210,6 +210,43 @@ describe('AuthContext', () => {
     
     expect(consoleErrorSpy).toHaveBeenCalledWith('Error signing out:', mockError)
     consoleErrorSpy.mockRestore()
+  })
+
+  it('should ignore redundant auth updates with identical users', async () => {
+    let authStateChangeCallback
+    supabase.auth.getSession.mockResolvedValue({
+      data: { session: { user: mockUser } }
+    })
+
+    supabase.auth.onAuthStateChange.mockImplementation((callback) => {
+      authStateChangeCallback = callback
+      return {
+        data: {
+          subscription: {
+            unsubscribe: jest.fn()
+          }
+        }
+      }
+    })
+
+    let renderCount = 0
+
+    const { result } = renderHook(() => {
+      renderCount += 1
+      return useAuth()
+    }, { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.user).toEqual(mockUser)
+    })
+
+    const rendersAfterInitialLoad = renderCount
+
+    await act(async () => {
+      await authStateChangeCallback('INITIAL_SESSION', { user: { ...mockUser } })
+    })
+
+    expect(renderCount).toBe(rendersAfterInitialLoad)
   })
 
   it('should cleanup subscription on unmount', async () => {

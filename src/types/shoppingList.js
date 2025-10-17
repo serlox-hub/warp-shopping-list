@@ -13,21 +13,6 @@ export const DEFAULT_AISLES = [
   'Other'
 ];
 
-// Get localized default aisles based on language
-export const getLocalizedDefaultAisles = (t) => {
-  return [
-    t('aisles.produce'),
-    t('aisles.dairy'),
-    t('aisles.meatSeafood'),
-    t('aisles.bakery'),
-    t('aisles.pantry'),
-    t('aisles.frozen'),
-    t('aisles.personalCare'),
-    t('aisles.household'),
-    t('aisles.other')
-  ];
-};
-
 // Map English aisles to localized ones
 export const mapEnglishToLocalized = (englishAisles, t) => {
   const mapping = {

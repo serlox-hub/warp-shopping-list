@@ -1,9 +1,30 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const AuthContext = createContext({});
+
+const stableSerialize = (value) => {
+  const seen = new WeakSet();
+
+  const serialize = (val) => {
+    if (val === null) return 'null';
+    if (typeof val !== 'object') return JSON.stringify(val);
+    if (seen.has(val)) return '"[Circular]"';
+
+    seen.add(val);
+
+    if (Array.isArray(val)) {
+      return `[${val.map((item) => serialize(item)).join(',')}]`;
+    }
+
+    const keys = Object.keys(val).sort();
+    return `{${keys.map((key) => `${JSON.stringify(key)}:${serialize(val[key])}`).join(',')}}`;
+  };
+
+  return serialize(value);
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -16,12 +37,22 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const lastUserSignatureRef = useRef(stableSerialize(null));
+
+  const updateUserState = useCallback((nextUser) => {
+    const signature = stableSerialize(nextUser);
+
+    if (lastUserSignatureRef.current === signature) return;
+
+    lastUserSignatureRef.current = signature;
+    setUser(nextUser);
+  }, []);
 
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      updateUserState(session?.user ?? null);
       setLoading(false);
     };
 
@@ -30,15 +61,15 @@ export const AuthProvider = ({ children }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user ?? null);
+        updateUserState(session?.user ?? null);
         setLoading(false);
       }
     );
 
     return () => subscription?.unsubscribe();
-  }, []);
+  }, [updateUserState]);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -51,9 +82,9 @@ export const AuthProvider = ({ children }) => {
       console.error('Error signing in with Google:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -61,14 +92,14 @@ export const AuthProvider = ({ children }) => {
       console.error('Error signing out:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     loading,
     signInWithGoogle,
     signOut,
-  };
+  }), [user, loading, signInWithGoogle, signOut]);
 
   return (
     <AuthContext.Provider value={value}>

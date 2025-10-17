@@ -13,12 +13,6 @@ export default function PreferencesPage() {
   const { theme, setThemePreference } = useTheme();
   const { currentLanguage, changeLanguage, availableLanguages, isLoading: languageLoading } = useLanguage();
   const t = useTranslations();
-  const [isClient, setIsClient] = useState(false);
-
-  // Set client flag on mount to prevent hydration mismatch
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // Show loading while checking authentication
   if (loading) {
@@ -26,9 +20,6 @@ export default function PreferencesPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {isClient ? t('common.loading') : 'Loading...'}
-          </p>
         </div>
       </div>
     );
