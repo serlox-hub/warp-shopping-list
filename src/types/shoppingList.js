@@ -13,6 +13,11 @@ export const DEFAULT_AISLES = [
   'Other'
 ];
 
+// Get default aisles localized for UI display
+export const getLocalizedDefaultAisles = (t) => {
+  return mapEnglishToLocalized(DEFAULT_AISLES, t);
+};
+
 // Map English aisles to localized ones
 export const mapEnglishToLocalized = (englishAisles, t) => {
   const mapping = {

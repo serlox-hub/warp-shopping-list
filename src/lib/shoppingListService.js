@@ -229,6 +229,11 @@ export class ShoppingListService {
         .single();
 
       if (error) throw error;
+      // Fire-and-forget analytics update
+      this.recordItemUsage(userId, itemData).catch((usageError) => {
+        console.error('Error recording item usage analytics:', usageError);
+      });
+
       return data;
     } catch (error) {
       console.error('Error adding shopping item:', error);
@@ -372,6 +377,152 @@ export class ShoppingListService {
     } catch (error) {
       console.error('Error updating user aisles:', error);
       throw error;
+    }
+  }
+
+  // ============== ITEM USAGE ANALYTICS ==============
+
+  static async recordItemUsage(userId, itemData) {
+    if (!userId || !itemData?.name) return;
+
+    const trimmedName = itemData.name.trim();
+    if (!trimmedName) return;
+
+    try {
+      await supabase.rpc('increment_item_usage', {
+        p_user_id: userId,
+        p_item_name: trimmedName,
+        p_last_aisle: itemData.aisle ?? null,
+        p_last_quantity: itemData.quantity ?? null
+      });
+    } catch (error) {
+      console.error('Error incrementing item usage:', error);
+    }
+  }
+
+  static async getMostPurchasedItems(userId, limit = 8) {
+    if (!userId) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('shopping_item_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .order('purchase_count', { ascending: false })
+        .order('last_purchased_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('Error fetching most purchased items:', error);
+      return [];
+    }
+  }
+
+  static async updateItemUsageMetadata(userId, itemName, metadata = {}) {
+    if (!userId || !itemName) return;
+
+    const payload = {};
+    if (metadata.aisle !== undefined) payload.last_aisle = metadata.aisle;
+    if (metadata.quantity !== undefined) payload.last_quantity = metadata.quantity;
+
+    if (Object.keys(payload).length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from('shopping_item_usage')
+        .update({
+          ...payload,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('item_name', itemName.trim());
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating item usage metadata:', error);
+    }
+  }
+
+  static async renameItemUsage(userId, oldName, newName, metadata = {}) {
+    if (!userId || !oldName || !newName) return;
+
+    const trimmedOld = oldName.trim();
+    const trimmedNew = newName.trim();
+
+    if (!trimmedOld || !trimmedNew || trimmedOld.toLowerCase() === trimmedNew.toLowerCase()) {
+      return;
+    }
+
+    try {
+      const { data: oldUsage, error: oldError } = await supabase
+        .from('shopping_item_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('item_name', trimmedOld)
+        .single();
+
+      if (oldError) {
+        // Nothing to transfer; ensure metadata for the new item is up to date
+        await this.updateItemUsageMetadata(userId, trimmedNew, metadata);
+        return;
+      }
+
+      const { data: newUsage, error: newError } = await supabase
+        .from('shopping_item_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('item_name', trimmedNew)
+        .single();
+
+      if (newError && newError.code !== 'PGRST116') {
+        throw newError;
+      }
+
+      if (newUsage) {
+        const combinedCount = (newUsage.purchase_count || 0) + (oldUsage.purchase_count || 0);
+        const latestPurchaseAt = new Date(
+          Math.max(
+            new Date(newUsage.last_purchased_at || 0).getTime(),
+            new Date(oldUsage.last_purchased_at || 0).getTime()
+          )
+        ).toISOString();
+
+        const { error: mergeError } = await supabase
+          .from('shopping_item_usage')
+          .update({
+            purchase_count: combinedCount,
+            last_aisle: metadata.aisle ?? oldUsage.last_aisle ?? newUsage.last_aisle,
+            last_quantity: metadata.quantity ?? oldUsage.last_quantity ?? newUsage.last_quantity,
+            last_purchased_at: latestPurchaseAt,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', newUsage.id);
+
+        if (mergeError) throw mergeError;
+
+        await supabase
+          .from('shopping_item_usage')
+          .delete()
+          .eq('id', oldUsage.id);
+
+        return;
+      }
+
+      const { error: renameError } = await supabase
+        .from('shopping_item_usage')
+        .update({
+          item_name: trimmedNew,
+          last_aisle: metadata.aisle ?? oldUsage.last_aisle,
+          last_quantity: metadata.quantity ?? oldUsage.last_quantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', oldUsage.id);
+
+      if (renameError) throw renameError;
+    } catch (error) {
+      console.error('Error renaming item usage:', error);
     }
   }
 }

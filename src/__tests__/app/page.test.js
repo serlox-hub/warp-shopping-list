@@ -86,6 +86,38 @@ jest.mock('../../components/ListSelector', () => {
   }
 })
 
+jest.mock('../../components/TopPurchasedItems', () => {
+  return function MockTopPurchasedItems({ items = [], onAddItem, loading, existingItemNames = [] }) {
+    const existingSet = new Set(
+      existingItemNames
+        .filter(Boolean)
+        .map(name => name.trim().toLowerCase())
+    )
+
+    return (
+      <div data-testid="top-purchased-items">
+        {loading && <span>Loading top items</span>}
+        {items.map(item => {
+          const isInList = existingSet.has(item.item_name.trim().toLowerCase())
+
+          return (
+            <div key={item.item_name}>
+              <span>{item.item_name}</span>
+              {isInList ? (
+                <span>Already added {item.item_name}</span>
+              ) : (
+                <button onClick={() => onAddItem && onAddItem(item)}>
+                  Add {item.item_name}
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+})
+
 const mockUser = {
   id: 'user-1',
   email: 'test@example.com'
@@ -123,7 +155,15 @@ const mockTranslations = {
   'shoppingList.clearAll': 'Clear All',
   'shoppingList.manageAisles': 'Manage Aisles',
   'shoppingList.emptyTitle': 'Your list is empty',
-  'shoppingList.emptySubtitle': 'Add your first item above'
+  'shoppingList.emptySubtitle': 'Add your first item above',
+  'topItems.title': 'Top Items',
+  'topItems.subtitle': 'Subtitle',
+  'topItems.empty': 'No top items yet',
+  'topItems.purchasedCount': 'Purchased {{count}} times',
+  'topItems.addButton': 'Add',
+  'topItems.alreadyAdded': 'Already added',
+  'topItems.openButton': 'Top Items',
+  'topItems.refreshing': 'Refreshing'
 }
 
 describe('Home', () => {
@@ -136,7 +176,8 @@ describe('Home', () => {
     
     mockUseTranslations.mockReturnValue((key, params = {}) => {
       let translation = mockTranslations[key] || key
-      Object.entries(params).forEach(([param, value]) => {
+      const safeParams = params && typeof params === 'object' ? params : {}
+      Object.entries(safeParams).forEach(([param, value]) => {
         translation = translation.replace(`{{${param}}}`, value.toString())
       })
       return translation
@@ -151,6 +192,9 @@ describe('Home', () => {
     mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
     mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
     mockShoppingListService.updateUserAisles.mockResolvedValue(undefined)
+    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
+    mockShoppingListService.renameItemUsage.mockResolvedValue(undefined)
+    mockShoppingListService.updateItemUsageMetadata.mockResolvedValue(undefined)
   })
 
   it('should show loading spinner when authentication is loading', () => {
@@ -204,6 +248,7 @@ describe('Home', () => {
     await waitFor(() => {
       expect(mockShoppingListService.getUserAisles).toHaveBeenCalledWith('user-1')
       expect(mockShoppingListService.getActiveShoppingList).toHaveBeenCalledWith('user-1')
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1')
     })
 
     await waitFor(() => {
@@ -260,6 +305,93 @@ describe('Home', () => {
         'user-1',
         { name: 'Test Item', aisle: 'Produce', quantity: 1 }
       )
+    })
+
+    await waitFor(() => {
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('should allow adding item from top purchased section', async () => {
+    const user = userEvent.setup()
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    const usageItem = {
+      item_name: 'Bananas',
+      purchase_count: 5,
+      last_aisle: 'Produce',
+      last_quantity: 2
+    }
+
+    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
+    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+    mockShoppingListService.addShoppingItem.mockResolvedValue({
+      id: '4',
+      name: 'Bananas',
+      aisle: 'Produce',
+      quantity: 2,
+      completed: false
+    })
+    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([usageItem])
+
+    render(<Home />)
+
+    await waitFor(() => {
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1')
+    })
+
+    await user.click(screen.getByText('Top Items'))
+
+    const quickAddButton = await screen.findByText('Add Bananas')
+    await user.click(quickAddButton)
+
+    await waitFor(() => {
+      expect(mockShoppingListService.addShoppingItem).toHaveBeenCalledWith(
+        'list-1',
+        'user-1',
+        { name: 'Bananas', aisle: 'Produce', quantity: 2, comment: '' }
+      )
+    })
+
+    await waitFor(() => {
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('should hide add button when top purchased item already exists in list', async () => {
+    const user = userEvent.setup()
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    const usageItem = {
+      item_name: 'Apples',
+      purchase_count: 8,
+      last_aisle: 'Produce',
+      last_quantity: 4
+    }
+
+    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
+    mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
+    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([usageItem])
+
+    render(<Home />)
+
+    await waitFor(() => {
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1')
+    })
+
+    await user.click(screen.getByText('Top Items'))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Add Apples')).not.toBeInTheDocument()
+      expect(screen.getByText('Already added Apples')).toBeInTheDocument()
     })
   })
 
@@ -382,6 +514,22 @@ describe('Home', () => {
           comment: undefined
         }
       )
+    })
+
+    await waitFor(() => {
+      expect(mockShoppingListService.renameItemUsage).toHaveBeenCalledWith(
+        'user-1',
+        'Apples',
+        'Updated Item',
+        expect.objectContaining({
+          aisle: 'Produce',
+          quantity: 3
+        })
+      )
+    })
+
+    await waitFor(() => {
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledTimes(2)
     })
   })
 

@@ -37,6 +37,16 @@
     "clearAll": "Limpiar Todo",
     "manageAisles": "Gestionar Pasillos"
   },
+  "topItems": {
+    "title": "Comprados con frecuencia",
+    "subtitle": "Agrega rápidamente tus productos habituales",
+    "empty": "Tus productos más frecuentes aparecerán aquí a medida que los añadas.",
+    "purchasedCount": "Comprado {{count}} veces",
+    "addButton": "Agregar a la lista",
+    "alreadyAdded": "Ya en la lista",
+    "openButton": "Productos frecuentes",
+    "refreshing": "Actualizando..."
+  },
   "addItemForm": {
     "addTitle": "Agregar Nuevo Artículo",
     "editTitle": "Editar Artículo",

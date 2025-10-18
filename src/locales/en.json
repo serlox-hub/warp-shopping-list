@@ -37,6 +37,16 @@
     "clearAll": "Clear All",
     "manageAisles": "Manage Aisles"
   },
+  "topItems": {
+    "title": "Frequently Bought",
+    "subtitle": "Quickly add your go-to products",
+    "empty": "Your most frequent products will appear here as you add them.",
+    "purchasedCount": "Purchased {{count}} times",
+    "addButton": "Add to list",
+    "alreadyAdded": "Already in list",
+    "openButton": "Frequent items",
+    "refreshing": "Updating..."
+  },
   "addItemForm": {
     "addTitle": "Add New Item",
     "editTitle": "Edit Item",

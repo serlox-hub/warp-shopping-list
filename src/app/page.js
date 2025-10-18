@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AddItemForm from '@/components/AddItemForm';
 import AisleSection from '@/components/AisleSection';
 import AisleManager from '@/components/AisleManager';
 import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import ListSelector from '@/components/ListSelector';
+import TopPurchasedItems from '@/components/TopPurchasedItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
@@ -14,57 +15,96 @@ import {
   groupItemsByAisle,
   updateItemsAisle,
   mapLocalizedToEnglish,
-  mapEnglishToLocalized,
-  getLocalizedDefaultAisles
+  mapEnglishToLocalized
 } from '@/types/shoppingList';
 
 export default function Home() {
   const { user, loading } = useAuth();
   const t = useTranslations();
+  const userId = user?.id;
   const [items, setItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
   const [shoppingList, setShoppingList] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [customAisles, setCustomAisles] = useState([]);
   const [showAisleManager, setShowAisleManager] = useState(false);
+  const [topItems, setTopItems] = useState([]);
+  const [topItemsLoading, setTopItemsLoading] = useState(false);
+  const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
 
-  // Load data from Supabase when user is authenticated
-  useEffect(() => {
-    if (user) {
-      Promise.all([loadUserAisles(), loadShoppingListData()]);
+  const loadUserAisles = useCallback(async () => {
+    if (!userId) {
+      setCustomAisles([]);
+      return;
     }
-  }, [user]);
 
-  const loadUserAisles = async () => {
-    if (!user) return;
-    
     try {
-      const dbAisles = await ShoppingListService.getUserAisles(user.id);
+      const dbAisles = await ShoppingListService.getUserAisles(userId);
       const localizedAisles = mapEnglishToLocalized(dbAisles, t);
       setCustomAisles(localizedAisles);
     } catch (error) {
       console.error('Error loading user aisles:', error);
+      setCustomAisles([]);
     }
-  };
+  }, [userId, t]);
 
-  const loadShoppingListData = async () => {
-    if (!user) return;
+  const loadShoppingListData = useCallback(async () => {
+    if (!userId) {
+      setShoppingList(null);
+      setItems([]);
+      setDataLoading(false);
+      return;
+    }
     
     setDataLoading(true);
     try {
-      // Get the active shopping list for the user
-      const list = await ShoppingListService.getActiveShoppingList(user.id);
+      const list = await ShoppingListService.getActiveShoppingList(userId);
       setShoppingList(list);
 
-      // Load items for this list
       const listItems = await ShoppingListService.getShoppingItems(list.id);
       setItems(listItems);
     } catch (error) {
       console.error('Error loading shopping list data:', error);
+      setItems([]);
     } finally {
       setDataLoading(false);
     }
-  };
+  }, [userId]);
+
+  const loadTopItems = useCallback(async () => {
+    if (!userId) {
+      setTopItems([]);
+      return;
+    }
+
+    setTopItemsLoading(true);
+    try {
+      const mostPurchased = await ShoppingListService.getMostPurchasedItems(userId);
+      setTopItems(mostPurchased);
+    } catch (error) {
+      console.error('Error loading top purchased items:', error);
+      setTopItems([]);
+    } finally {
+      setTopItemsLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      Promise.all([
+        loadUserAisles(),
+        loadShoppingListData(),
+        loadTopItems()
+      ]);
+    } else {
+      setItems([]);
+      setShoppingList(null);
+      setTopItems([]);
+      setCustomAisles([]);
+      setDataLoading(false);
+      setIsTopItemsOpen(false);
+    }
+  }, [userId, loadShoppingListData, loadTopItems, loadUserAisles, t]);
 
 
   const handleListChange = async (newList) => {
@@ -91,12 +131,15 @@ export default function Home() {
         itemData
       );
       setItems(prev => [newItem, ...prev]);
+      await loadTopItems();
     } catch (error) {
       console.error('Error adding item:', error);
     }
   };
 
   const handleUpdateItem = async (updatedItem) => {
+    const previousItem = editingItem;
+
     try {
       const updated = await ShoppingListService.updateShoppingItem(updatedItem.id, {
         name: updatedItem.name,
@@ -108,6 +151,27 @@ export default function Home() {
       setItems(prev => prev.map(item => 
         item.id === updated.id ? updated : item
       ));
+
+      if (user && previousItem) {
+        const previousName = previousItem.name?.trim() || '';
+        const updatedName = updated.name?.trim() || '';
+        const nameChanged = previousName.toLowerCase() !== updatedName.toLowerCase();
+        const metadataChanged = previousItem.aisle !== updated.aisle || previousItem.quantity !== updated.quantity;
+
+        if (nameChanged) {
+          await ShoppingListService.renameItemUsage(user.id, previousItem.name, updated.name, {
+            aisle: updated.aisle,
+            quantity: updated.quantity
+          });
+        } else if (metadataChanged) {
+          await ShoppingListService.updateItemUsageMetadata(user.id, updated.name, {
+            aisle: updated.aisle,
+            quantity: updated.quantity
+          });
+        }
+      }
+
+      await loadTopItems();
       setEditingItem(null);
     } catch (error) {
       console.error('Error updating item:', error);
@@ -237,6 +301,20 @@ export default function Home() {
     }
   };
 
+  const handleQuickAddFromUsage = async (usageItem) => {
+    if (!shoppingList || !user) return;
+
+    const targetAisle = usageItem.last_aisle || 'Other';
+    const targetQuantity = usageItem.last_quantity || 1;
+
+    await handleAddItem({
+      name: usageItem.item_name,
+      aisle: targetAisle,
+      quantity: targetQuantity,
+      comment: ''
+    });
+  };
+
   const groupedItems = groupItemsByAisle(items, customAisles);
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
@@ -244,6 +322,8 @@ export default function Home() {
   const progressPercentage = hasItems
     ? (completedCount / totalCount) * 100
     : 0;
+  const hasTopItemsData = topItems.length > 0;
+  const canOpenTopItems = hasTopItemsData || topItemsLoading;
 
   // Show loading while checking authentication or loading data
   if (loading || (user && dataLoading)) {
@@ -358,6 +438,40 @@ export default function Home() {
           />
         )}
       </div>
+      <button
+        type="button"
+        onClick={() => canOpenTopItems && setIsTopItemsOpen(true)}
+        disabled={!canOpenTopItems}
+        className="fixed bottom-6 right-6 flex items-center space-x-2 px-4 py-3 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors duration-200 z-40"
+      >
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a3 3 0 013-3h2a3 3 0 013 3v2m-1 4h-8m2 4h4m-9-8h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a2 2 0 012-2z" />
+        </svg>
+        <span className="text-sm font-medium">
+          {t('topItems.openButton')}
+        </span>
+      </button>
+
+      {isTopItemsOpen && (
+        <div
+          className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-sm"
+          onClick={() => setIsTopItemsOpen(false)}
+        >
+          <div
+            className="w-full max-w-md h-full sm:h-auto sm:max-h-[85vh] sm:my-10 sm:mr-8 overflow-hidden rounded-none sm:rounded-2xl flex flex-col"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <TopPurchasedItems
+              items={topItems}
+              loading={topItemsLoading}
+              onAddItem={handleQuickAddFromUsage}
+              customAisles={customAisles}
+              existingItemNames={items.map(item => item.name)}
+              onClose={() => setIsTopItemsOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
