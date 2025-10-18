@@ -13,6 +13,24 @@ export const DEFAULT_AISLES = [
   'Other'
 ];
 
+// Default colors associated with each aisle (tailwind-inspired palette)
+export const DEFAULT_AISLE_COLORS = {
+  Produce: '#22c55e', // green-500
+  Dairy: '#f97316', // orange-500
+  'Meat & Seafood': '#ef4444', // red-500
+  Bakery: '#f59e0b', // amber-500
+  Pantry: '#6366f1', // indigo-500
+  Frozen: '#0ea5e9', // sky-500
+  'Personal Care': '#ec4899', // pink-500
+  Household: '#14b8a6', // teal-500
+  Other: '#6b7280' // gray-500
+};
+
+// Helper to provide a deterministic fallback color
+export const getDefaultAisleColor = (aisleName) => {
+  return DEFAULT_AISLE_COLORS[aisleName] || '#6b7280';
+};
+
 // Get default aisles localized for UI display
 export const getLocalizedDefaultAisles = (t) => {
   return mapEnglishToLocalized(DEFAULT_AISLES, t);

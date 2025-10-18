@@ -1,5 +1,6 @@
 import { ShoppingListService } from '../../lib/shoppingListService'
 import { supabase } from '../../lib/supabase'
+import { getDefaultAisleColor } from '../../types/shoppingList'
 
 // Mock external dependencies
 jest.mock('../../lib/supabase')
@@ -643,8 +644,8 @@ describe('ShoppingListService', () => {
   describe('getUserAisles', () => {
     it('should return user aisles', async () => {
       const mockAisles = [
-        { id: '1', user_id: mockUserId, name: 'Produce', display_order: 1 },
-        { id: '2', user_id: mockUserId, name: 'Dairy', display_order: 2 }
+        { id: '1', user_id: mockUserId, name: 'Produce', display_order: 1, color: '#34d399' },
+        { id: '2', user_id: mockUserId, name: 'Dairy', display_order: 2, color: '#f97316' }
       ]
 
       mockSupabase.from.mockReturnValue({
@@ -660,12 +661,15 @@ describe('ShoppingListService', () => {
 
       const result = await ShoppingListService.getUserAisles(mockUserId)
 
-      expect(result).toEqual(['Produce', 'Dairy'])
+      expect(result).toEqual([
+        { name: 'Produce', color: '#34d399' },
+        { name: 'Dairy', color: '#f97316' }
+      ])
     })
 
     it('should create default aisles if user has none', async () => {
       const mockDefaultAisles = [
-        { id: '1', user_id: mockUserId, name: 'Produce', display_order: 1 }
+        { id: '1', user_id: mockUserId, name: 'Produce', display_order: 1, color: null }
       ]
 
       mockSupabase.from
@@ -699,7 +703,9 @@ describe('ShoppingListService', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith('create_default_user_aisles', {
         p_user_id: mockUserId
       })
-      expect(result).toEqual(['Produce'])
+      expect(result).toEqual([
+        { name: 'Produce', color: getDefaultAisleColor('Produce') }
+      ])
     })
 
     it('should handle database errors', async () => {
@@ -721,11 +727,17 @@ describe('ShoppingListService', () => {
 
   describe('updateUserAisles', () => {
     it('should update user aisles', async () => {
-      const newAisles = ['Produce', 'Dairy', 'Bakery']
-      const mockUpdatedAisles = newAisles.map((name, index) => ({
+      const newAisles = [
+        { name: 'Produce', color: '#123456' },
+        { name: 'Dairy', color: null },
+        { name: 'Bakery' }
+      ]
+
+      const mockUpdatedAisles = newAisles.map((aisle, index) => ({
         id: `${index + 1}`,
         user_id: mockUserId,
-        name,
+        name: aisle.name,
+        color: aisle.color || getDefaultAisleColor(aisle.name),
         display_order: index + 1
       }))
 
@@ -746,7 +758,9 @@ describe('ShoppingListService', () => {
 
       const result = await ShoppingListService.updateUserAisles(mockUserId, newAisles)
 
-      expect(result).toEqual(newAisles)
+      expect(result).toEqual(
+        mockUpdatedAisles.map((aisle) => ({ name: aisle.name, color: aisle.color }))
+      )
     })
 
     it('should handle database errors during deletion', async () => {
@@ -757,7 +771,7 @@ describe('ShoppingListService', () => {
         })
       })
 
-      await expect(ShoppingListService.updateUserAisles(mockUserId, ['Produce']))
+      await expect(ShoppingListService.updateUserAisles(mockUserId, [{ name: 'Produce', color: '#ffffff' }]))
         .rejects.toThrow('Delete error')
     })
 
@@ -778,7 +792,7 @@ describe('ShoppingListService', () => {
           })
         })
 
-      await expect(ShoppingListService.updateUserAisles(mockUserId, ['Produce']))
+      await expect(ShoppingListService.updateUserAisles(mockUserId, [{ name: 'Produce', color: '#ffffff' }]))
         .rejects.toThrow('Insert error')
     })
   })

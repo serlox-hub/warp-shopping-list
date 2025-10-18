@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getDefaultAisleColor } from '@/types/shoppingList'
 
 // Table structures needed in Supabase:
 // 
@@ -26,6 +27,7 @@ import { supabase } from './supabase'
 // - user_id: uuid (foreign key to auth.users)
 // - name: text
 // - display_order: integer
+// - color: text (hex)
 // - created_at: timestamp
 // - updated_at: timestamp
 
@@ -327,7 +329,10 @@ export class ShoppingListService {
         return this.getUserAisles(userId);
       }
       
-      return data.map(aisle => aisle.name);
+      return data.map(aisle => ({
+        name: aisle.name,
+        color: aisle.color || getDefaultAisleColor(aisle.name)
+      }));
     } catch (error) {
       console.error('Error getting user aisles:', error);
       throw error;
@@ -350,7 +355,7 @@ export class ShoppingListService {
   }
 
   // Update user's aisles (replace all)
-  static async updateUserAisles(userId, aisleNames) {
+  static async updateUserAisles(userId, aisles) {
     try {
       // Delete existing aisles
       const { error: deleteError } = await supabase
@@ -361,9 +366,10 @@ export class ShoppingListService {
       if (deleteError) throw deleteError;
 
       // Insert new aisles
-      const aisleData = aisleNames.map((name, index) => ({
+      const aisleData = aisles.map((aisle, index) => ({
         user_id: userId,
-        name,
+        name: aisle.name,
+        color: aisle.color || getDefaultAisleColor(aisle.name),
         display_order: index + 1
       }));
 
@@ -373,7 +379,10 @@ export class ShoppingListService {
         .select();
 
       if (error) throw error;
-      return data.map(aisle => aisle.name);
+      return data.map(aisle => ({
+        name: aisle.name,
+        color: aisle.color || getDefaultAisleColor(aisle.name)
+      }));
     } catch (error) {
       console.error('Error updating user aisles:', error);
       throw error;

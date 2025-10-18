@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ShoppingItem from '../../components/ShoppingItem'
 import { useTranslations } from '../../contexts/LanguageContext'
@@ -35,7 +35,8 @@ describe('ShoppingItem', () => {
     item: defaultItem,
     onToggleComplete: mockOnToggleComplete,
     onDelete: mockOnDelete,
-    onEdit: mockOnEdit
+    onEdit: mockOnEdit,
+    aisleColor: '#22c55e'
   }
 
   beforeEach(() => {
@@ -50,6 +51,7 @@ describe('ShoppingItem', () => {
     expect(screen.getByText('(3)')).toBeInTheDocument()
     expect(screen.getByText('Red apples')).toBeInTheDocument()
     expect(screen.getByTestId('aisle-name')).toHaveTextContent('Produce')
+    expect(screen.getByTestId('aisle-name').parentElement.style.backgroundColor).toBe('rgb(34, 197, 94)')
   })
 
   it('should show item as completed when completed is true', () => {

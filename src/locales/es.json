@@ -70,7 +70,8 @@
     "moveDown": "Mover abajo",
     "cannotDeleteLast": "No se puede eliminar el último pasillo",
     "invalidName": "Nombre inválido: debe ser único, no vacío y menor a 50 caracteres",
-    "finishEditing": "Por favor termina de editar el pasillo actual primero"
+    "finishEditing": "Por favor termina de editar el pasillo actual primero",
+    "colorLabel": "Seleccionar color"
   },
   "aisles": {
     "produce": "Productos Frescos",

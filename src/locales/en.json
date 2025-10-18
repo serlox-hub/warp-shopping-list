@@ -70,7 +70,8 @@
     "moveDown": "Move down",
     "cannotDeleteLast": "Cannot delete the last aisle",
     "invalidName": "Invalid name: must be unique, non-empty, and under 50 characters",
-    "finishEditing": "Please finish editing the current aisle first"
+    "finishEditing": "Please finish editing the current aisle first",
+    "colorLabel": "Select color"
   },
   "aisles": {
     "produce": "Produce",

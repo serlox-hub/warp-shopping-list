@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react';
 import { useTranslations } from '@/contexts/LanguageContext';
-import { mapEnglishToLocalized } from '@/types/shoppingList';
+import { mapEnglishToLocalized, getDefaultAisleColor } from '@/types/shoppingList';
+import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
 
 export default function TopPurchasedItems({
   items = [],
@@ -11,6 +12,7 @@ export default function TopPurchasedItems({
   customAisles = [],
   existingItemNames = [],
   onClose,
+  aisleColors = {}
 }) {
   const t = useTranslations();
 
@@ -31,13 +33,19 @@ export default function TopPurchasedItems({
       const fallbackAisle =
         !item.last_aisle && customAisles.length > 0 ? customAisles[0] : null;
 
+      const displayAisle = localizedAisle || fallbackAisle;
+      const colorFromMap = displayAisle ? aisleColors[displayAisle] : null;
+      const defaultColor = item.last_aisle ? getDefaultAisleColor(item.last_aisle) : null;
+      const displayColor = normalizeHexColor(colorFromMap) || defaultColor || '#6b7280';
+
       return {
         ...item,
-        displayAisle: localizedAisle || fallbackAisle,
+        displayAisle,
+        displayColor,
         isInCurrentList: existingItemsSet.has(item.item_name.trim().toLowerCase()),
       };
     });
-  }, [items, customAisles, t, existingItemsSet]);
+  }, [items, customAisles, aisleColors, t, existingItemsSet]);
 
   const hasItems = normalizedItems.length > 0;
   const showFullSpinner = loading && !hasItems;
@@ -93,8 +101,15 @@ export default function TopPurchasedItems({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {normalizedItems.map((item) =>
-              item.isInCurrentList ? (
+            {normalizedItems.map((item) => {
+              const badgeColor = normalizeHexColor(item.displayColor) || '#6b7280';
+              const badgeTextColor = getContrastingTextColor(badgeColor, {
+                light: '#f9fafb',
+                dark: '#111827'
+              });
+              const badgeBorderColor = getBorderColorFromHex(badgeColor, 0.45) || 'rgba(107,114,128,0.45)';
+
+              return item.isInCurrentList ? (
                 <div
                   key={item.item_name}
                   className="flex items-center justify-between p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/10 text-left"
@@ -103,9 +118,20 @@ export default function TopPurchasedItems({
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[180px]">
                       {item.item_name}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('topItems.purchasedCount', { count: item.purchase_count })}
-                      {item.displayAisle ? ` • ${item.displayAisle}` : ''}
+                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-wrap">
+                      <span>{t('topItems.purchasedCount', { count: item.purchase_count })}</span>
+                      {item.displayAisle && (
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded-full border border-transparent font-medium"
+                          style={{
+                            backgroundColor: badgeColor,
+                            color: badgeTextColor,
+                            borderColor: badgeBorderColor
+                          }}
+                        >
+                          {item.displayAisle}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
@@ -122,17 +148,28 @@ export default function TopPurchasedItems({
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[180px]">
                       {item.item_name}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('topItems.purchasedCount', { count: item.purchase_count })}
-                      {item.displayAisle ? ` • ${item.displayAisle}` : ''}
+                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-wrap">
+                      <span>{t('topItems.purchasedCount', { count: item.purchase_count })}</span>
+                      {item.displayAisle && (
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded-full border border-transparent font-medium"
+                          style={{
+                            backgroundColor: badgeColor,
+                            color: badgeTextColor,
+                            borderColor: badgeBorderColor
+                          }}
+                        >
+                          {item.displayAisle}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
                     {t('topItems.addButton')}
                   </span>
                 </button>
-              )
-            )}
+              );
+            })}
           </div>
         )}
       </div>

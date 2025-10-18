@@ -1,10 +1,22 @@
 'use client';
 
 import { useTranslations } from '@/contexts/LanguageContext';
+import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
 import AisleName from './AisleName';
 
-export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit }) {
+const FALLBACK_BADGE_COLOR = '#e5e7eb';
+const FALLBACK_TEXT_DARK = '#111827';
+
+export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit, aisleColor }) {
   const t = useTranslations();
+  const normalizedColor = normalizeHexColor(aisleColor) || FALLBACK_BADGE_COLOR;
+  const badgeColor = normalizedColor;
+  const badgeTextColor = getContrastingTextColor(badgeColor, {
+    light: '#f9fafb',
+    dark: FALLBACK_TEXT_DARK
+  });
+  const badgeBorderColor = getBorderColorFromHex(badgeColor, 0.45) || 'rgba(107, 114, 128, 0.45)';
+
   return (
     <div className={`p-3 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors duration-200 ${
       item.completed ? 'bg-gray-50 dark:bg-gray-800 opacity-75' : 'bg-white dark:bg-gray-800'
@@ -40,7 +52,14 @@ export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit 
         </div>
         
         <div className="flex items-center space-x-2">
-          <span className="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded text-gray-700 dark:text-gray-300">
+          <span
+            className="text-xs px-2 py-1 rounded font-medium border border-transparent"
+            style={{
+              backgroundColor: badgeColor,
+              color: badgeTextColor,
+              borderColor: badgeBorderColor
+            }}
+          >
             <AisleName aisle={item.aisle} />
           </span>
           <button

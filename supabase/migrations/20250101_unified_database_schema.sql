@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS public.user_aisles (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     name TEXT NOT NULL,
     display_order INTEGER NOT NULL DEFAULT 0,
+    color TEXT DEFAULT '#6b7280',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     UNIQUE(user_id, name)
@@ -143,17 +144,17 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION public.create_default_user_aisles(p_user_id UUID)
 RETURNS VOID AS $$
 BEGIN
-    INSERT INTO public.user_aisles (user_id, name, display_order)
+    INSERT INTO public.user_aisles (user_id, name, display_order, color)
     VALUES 
-        (p_user_id, 'Produce', 1),
-        (p_user_id, 'Dairy', 2),
-        (p_user_id, 'Meat & Seafood', 3),
-        (p_user_id, 'Bakery', 4),
-        (p_user_id, 'Pantry', 5),
-        (p_user_id, 'Frozen', 6),
-        (p_user_id, 'Personal Care', 7),
-        (p_user_id, 'Household', 8),
-        (p_user_id, 'Other', 9)
+        (p_user_id, 'Produce', 1, '#22c55e'),
+        (p_user_id, 'Dairy', 2, '#f97316'),
+        (p_user_id, 'Meat & Seafood', 3, '#ef4444'),
+        (p_user_id, 'Bakery', 4, '#f59e0b'),
+        (p_user_id, 'Pantry', 5, '#6366f1'),
+        (p_user_id, 'Frozen', 6, '#0ea5e9'),
+        (p_user_id, 'Personal Care', 7, '#ec4899'),
+        (p_user_id, 'Household', 8, '#14b8a6'),
+        (p_user_id, 'Other', 9, '#6b7280')
     ON CONFLICT (user_id, name) DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;

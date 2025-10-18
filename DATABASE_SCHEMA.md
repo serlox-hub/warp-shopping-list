@@ -83,6 +83,7 @@ CREATE TABLE user_aisles (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     display_order INTEGER NOT NULL DEFAULT 0,
+    color TEXT DEFAULT '#6b7280',
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now()),
     UNIQUE(user_id, name)
@@ -92,6 +93,7 @@ CREATE TABLE user_aisles (
 **Key Features:**
 - Customizable aisle names per user
 - Ordered display with `display_order`
+- Per-aisle color metadata with sensible defaults
 - Default aisles created automatically for new users
 
 ## Security (Row Level Security)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import AddItemForm from '@/components/AddItemForm';
 import AisleSection from '@/components/AisleSection';
 import AisleManager from '@/components/AisleManager';
@@ -15,7 +15,8 @@ import {
   groupItemsByAisle,
   updateItemsAisle,
   mapLocalizedToEnglish,
-  mapEnglishToLocalized
+  mapEnglishToLocalized,
+  getDefaultAisleColor
 } from '@/types/shoppingList';
 
 export default function Home() {
@@ -27,26 +28,48 @@ export default function Home() {
   const [shoppingList, setShoppingList] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [customAisles, setCustomAisles] = useState([]);
+  const [aisleColors, setAisleColors] = useState({});
   const [showAisleManager, setShowAisleManager] = useState(false);
   const [topItems, setTopItems] = useState([]);
   const [topItemsLoading, setTopItemsLoading] = useState(false);
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
 
+  const applyAisleState = useCallback((rawAisles) => {
+    if (!rawAisles || rawAisles.length === 0) {
+      setCustomAisles([]);
+      setAisleColors({});
+      return;
+    }
+
+    const englishNames = rawAisles.map(aisle => aisle.name);
+    const localizedNames = mapEnglishToLocalized(englishNames, t);
+    const colorMap = localizedNames.reduce((acc, localizedName, index) => {
+      const englishName = englishNames[index];
+      const aisleColor = rawAisles[index]?.color || getDefaultAisleColor(englishName);
+      acc[localizedName] = aisleColor;
+      return acc;
+    }, {});
+
+    setCustomAisles(localizedNames);
+    setAisleColors(colorMap);
+  }, [t]);
+
   const loadUserAisles = useCallback(async () => {
     if (!userId) {
       setCustomAisles([]);
+      setAisleColors({});
       return;
     }
 
     try {
       const dbAisles = await ShoppingListService.getUserAisles(userId);
-      const localizedAisles = mapEnglishToLocalized(dbAisles, t);
-      setCustomAisles(localizedAisles);
+      applyAisleState(dbAisles);
     } catch (error) {
       console.error('Error loading user aisles:', error);
       setCustomAisles([]);
+      setAisleColors({});
     }
-  }, [userId, t]);
+  }, [userId, applyAisleState]);
 
   const loadShoppingListData = useCallback(async () => {
     if (!userId) {
@@ -101,6 +124,7 @@ export default function Home() {
       setShoppingList(null);
       setTopItems([]);
       setCustomAisles([]);
+      setAisleColors({});
       setDataLoading(false);
       setIsTopItemsOpen(false);
     }
@@ -238,15 +262,36 @@ export default function Home() {
     }
   };
 
-  const handleUpdateAisles = async (newAisles) => {
+  const handleUpdateAisles = async (pendingAisles) => {
+    const normalizedAisles = (pendingAisles || []).map((entry) => {
+      if (typeof entry === 'string') {
+        return {
+          name: entry,
+          color: aisleColors[entry] || null
+        };
+      }
+      return entry;
+    });
+
     const oldAisles = customAisles;
-    // Convert localized aisles back to English for storage
-    const englishAisles = mapLocalizedToEnglish(newAisles, t);
-    
+    const newAisleNames = normalizedAisles.map(aisle => aisle.name);
+    const englishAisles = mapLocalizedToEnglish(newAisleNames, t);
+    const englishPayload = englishAisles.map((name, index) => ({
+      name,
+      color: normalizedAisles[index]?.color || getDefaultAisleColor(name)
+    }));
+    const updatedColorMap = newAisleNames.reduce((acc, localizedName, index) => {
+      const englishName = englishAisles[index];
+      const color = normalizedAisles[index]?.color || getDefaultAisleColor(englishName);
+      acc[localizedName] = color;
+      return acc;
+    }, {});
+
     try {
       // Update aisles in database
-      await ShoppingListService.updateUserAisles(user.id, englishAisles);
-      setCustomAisles(newAisles);
+      await ShoppingListService.updateUserAisles(user.id, englishPayload);
+      setCustomAisles(newAisleNames);
+      setAisleColors(updatedColorMap);
     } catch (error) {
       console.error('Error updating user aisles:', error);
       return; // Don't proceed with item updates if aisle update failed
@@ -254,8 +299,8 @@ export default function Home() {
 
     // Update existing items if any aisles were renamed
     // We need to detect renames by checking which aisles disappeared and which are new
-    const removedAisles = oldAisles.filter(aisle => !newAisles.includes(aisle));
-    const addedAisles = newAisles.filter(aisle => !oldAisles.includes(aisle));
+    const removedAisles = oldAisles.filter(aisle => !newAisleNames.includes(aisle));
+    const addedAisles = newAisleNames.filter(aisle => !oldAisles.includes(aisle));
     
     if (removedAisles.length === 1 && addedAisles.length === 1) {
       // Likely a rename operation
@@ -278,7 +323,7 @@ export default function Home() {
       });
     } else if (removedAisles.length > 0) {
       // Multiple aisles removed, move items to "Other" if it exists, or first available aisle
-      const fallbackAisle = newAisles.includes('Other') ? 'Other' : newAisles[0];
+      const fallbackAisle = newAisleNames.includes('Other') ? 'Other' : newAisleNames[0];
       
       let updatedItems = items;
       removedAisles.forEach(removedAisle => {
@@ -324,6 +369,17 @@ export default function Home() {
     : 0;
   const hasTopItemsData = topItems.length > 0;
   const canOpenTopItems = hasTopItemsData || topItemsLoading;
+
+  const englishAislesForManager = useMemo(() => mapLocalizedToEnglish(customAisles, t), [customAisles, t]);
+  const managerAisles = useMemo(() => {
+    return customAisles.map((name, index) => {
+      const englishName = englishAislesForManager[index];
+      return {
+        name,
+        color: aisleColors[name] || getDefaultAisleColor(englishName)
+      };
+    });
+  }, [customAisles, aisleColors, englishAislesForManager]);
 
   // Show loading while checking authentication or loading data
   if (loading || (user && dataLoading)) {
@@ -421,6 +477,7 @@ export default function Home() {
                 key={aisle}
                 aisle={aisle}
                 items={aisleItems}
+                aisleColors={aisleColors}
                 onToggleComplete={handleToggleComplete}
                 onDelete={handleDeleteItem}
                 onEdit={handleEditItem}
@@ -432,7 +489,7 @@ export default function Home() {
         {/* Aisle Manager Modal */}
         {showAisleManager && (
           <AisleManager
-            aisles={customAisles}
+            aisles={managerAisles}
             onUpdateAisles={handleUpdateAisles}
             onClose={() => setShowAisleManager(false)}
           />
@@ -468,6 +525,7 @@ export default function Home() {
               customAisles={customAisles}
               existingItemNames={items.map(item => item.name)}
               onClose={() => setIsTopItemsOpen(false)}
+              aisleColors={aisleColors}
             />
           </div>
         </div>

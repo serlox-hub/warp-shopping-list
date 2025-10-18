@@ -286,7 +286,7 @@ describe('Home', () => {
     })
 
     const newItem = { id: '3', name: 'Test Item', aisle: 'Produce', quantity: 1, completed: false }
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.addShoppingItem.mockResolvedValue(newItem)
@@ -638,7 +638,9 @@ describe('Home', () => {
     await user.click(screen.getByText('Update Aisles'))
     
     await waitFor(() => {
-      expect(mockShoppingListService.updateUserAisles).toHaveBeenCalledWith('user-1', ['New Aisle'])
+      expect(mockShoppingListService.updateUserAisles).toHaveBeenCalledWith('user-1', [
+        { name: 'New Aisle', color: '#6b7280' }
+      ])
     })
   })
 
@@ -648,7 +650,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
 
@@ -668,7 +670,7 @@ describe('Home', () => {
     })
 
     const newList = { id: '2', name: 'New List' }
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems
       .mockResolvedValueOnce([]) // Initial load

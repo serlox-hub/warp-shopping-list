@@ -5,9 +5,13 @@ import { useTranslations } from '../../contexts/LanguageContext'
 import { mapEnglishToLocalized } from '../../types/shoppingList'
 
 jest.mock('../../contexts/LanguageContext')
-jest.mock('../../types/shoppingList', () => ({
-  mapEnglishToLocalized: jest.fn()
-}))
+jest.mock('../../types/shoppingList', () => {
+  const actual = jest.requireActual('../../types/shoppingList')
+  return {
+    ...actual,
+    mapEnglishToLocalized: jest.fn()
+  }
+})
 
 const mockUseTranslations = useTranslations
 const mockMapEnglishToLocalized = mapEnglishToLocalized
@@ -74,12 +78,16 @@ describe('TopPurchasedItems', () => {
         loading={false}
         onAddItem={onAddItem}
         existingItemNames={[]}
+        aisleColors={{ 'Localized Dairy': '#123456' }}
       />
     )
 
     expect(mockMapEnglishToLocalized).toHaveBeenCalledWith(['Dairy'], expect.any(Function))
     expect(screen.getByText('Milk')).toBeInTheDocument()
-    expect(screen.getByText('Purchased 5 times • Localized Dairy')).toBeInTheDocument()
+    expect(screen.getByText('Purchased 5 times')).toBeInTheDocument()
+
+    const badge = screen.getByText('Localized Dairy')
+    expect(badge.style.backgroundColor).toBe('rgb(18, 52, 86)')
 
     const addButton = screen.getByRole('button', { name: /Add to list/ })
     await user.click(addButton)
@@ -99,6 +107,7 @@ describe('TopPurchasedItems', () => {
         items={[baseItem]}
         loading={false}
         existingItemNames={['  milk  ']}
+        aisleColors={{ 'Localized Dairy': '#123456' }}
       />
     )
 
@@ -119,11 +128,13 @@ describe('TopPurchasedItems', () => {
         items={[itemWithoutAisle]}
         loading={false}
         customAisles={['Produce', 'Bakery']}
+        aisleColors={{ Produce: '#abcdef' }}
       />
     )
 
     expect(screen.getByText('Bananas')).toBeInTheDocument()
-    expect(screen.getByText('Purchased 2 times • Produce')).toBeInTheDocument()
+    expect(screen.getByText('Purchased 2 times')).toBeInTheDocument()
+    expect(screen.getByText('Produce')).toBeInTheDocument()
     expect(mockMapEnglishToLocalized).not.toHaveBeenCalled()
   })
 
@@ -133,6 +144,7 @@ describe('TopPurchasedItems', () => {
         items={[baseItem]}
         loading
         existingItemNames={[]}
+        aisleColors={{ 'Localized Dairy': '#123456' }}
       />
     )
 
@@ -149,6 +161,7 @@ describe('TopPurchasedItems', () => {
         loading={false}
         onClose={onClose}
         existingItemNames={[]}
+        aisleColors={{ 'Localized Dairy': '#123456' }}
       />
     )
 
