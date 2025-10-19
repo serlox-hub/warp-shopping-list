@@ -35,6 +35,9 @@ export default function Home() {
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
   const [itemUsageHistory, setItemUsageHistory] = useState([]);
   const englishCustomAisles = useMemo(() => mapLocalizedToEnglish(customAisles, t), [customAisles, t]);
+  const primaryActionClass = 'inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed';
+  const subtleActionClass = 'inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+  const dangerActionClass = 'inline-flex items-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-400 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const applyAisleState = useCallback((rawAisles) => {
     if (!rawAisles || rawAisles.length === 0) {
@@ -424,60 +427,65 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <div className="max-w-4xl mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="mb-8">
-          {/* Top row: List selector and User Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-4">
-              <ListSelector currentList={shoppingList} onListChange={handleListChange} />
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 transition-colors duration-200">
+      <div className="max-w-5xl mx-auto px-6 py-12 space-y-10">
+        <header className="space-y-6">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.35em] uppercase text-indigo-500">
+                Warp Shopping
+              </span>
+              <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100 leading-tight">
+                {t('shoppingList.title')}
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xl">
+                {t('shoppingList.tagline')}
+              </p>
             </div>
             <Header />
           </div>
-          
-          {/* Progress section - separate row */}
-          <div className="flex items-center justify-end mb-4">
-            <div className={`text-right ${hasItems ? '' : 'invisible'}`}>
-              <div className="text-lg text-gray-600 dark:text-gray-300 mb-2">
+
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <ListSelector currentList={shoppingList} onListChange={handleListChange} />
+            <div className={`flex flex-col gap-2 lg:items-end ${hasItems ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
                 {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
               </div>
-              <div className="w-64 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className="w-full lg:w-64 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                 <div
-                  className="bg-green-600 dark:bg-green-500 h-2 rounded-full transition-all duration-300"
+                  className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300"
                   style={{ width: `${progressPercentage}%` }}
-                ></div>
+                />
               </div>
             </div>
           </div>
-          
-          {/* Action buttons */}
-          <div className="flex space-x-4">
+
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={handleClearCompleted}
               disabled={completedCount === 0}
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md transition-colors duration-200"
+              className={subtleActionClass}
             >
               {t('shoppingList.clearCompleted', { count: completedCount })}
             </button>
             <button
               onClick={handleClearAll}
               disabled={totalCount === 0}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md transition-colors duration-200"
+              className={dangerActionClass}
             >
               {t('shoppingList.clearAll')}
             </button>
             <button
               onClick={() => setShowAisleManager(true)}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors duration-200 flex items-center space-x-2"
+              className={primaryActionClass}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
               <span>{t('shoppingList.manageAisles')}</span>
             </button>
           </div>
-        </div>
+        </header>
 
         {/* Add/Edit Item Form */}
         <div className="mb-8">
@@ -529,7 +537,7 @@ export default function Home() {
         type="button"
         onClick={() => canOpenTopItems && setIsTopItemsOpen(true)}
         disabled={!canOpenTopItems}
-        className="fixed bottom-6 right-6 flex items-center space-x-2 px-4 py-3 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white transition-colors duration-200 z-40"
+        className="fixed bottom-6 right-6 flex items-center gap-2 px-5 py-3 rounded-full shadow-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 disabled:bg-slate-400 disabled:cursor-not-allowed text-white transition-colors duration-200 z-40"
       >
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a3 3 0 013-3h2a3 3 0 013 3v2m-1 4h-8m2 4h4m-9-8h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a2 2 0 012-2z" />

@@ -345,6 +345,6 @@ describe('AddItemForm', () => {
     // Check edit mode styling
     rerender(<AddItemForm {...defaultProps} editingItem={mockEditingItem} />)
     form = screen.getByText('Edit Item').closest('form')
-    expect(form).toHaveClass('bg-blue-50')
+    expect(form).toHaveClass('border-indigo-200')
   })
 })

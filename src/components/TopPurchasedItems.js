@@ -51,20 +51,20 @@ export default function TopPurchasedItems({
   const showFullSpinner = loading && !hasItems;
 
   return (
-    <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg transition-colors duration-200">
-      <div className="flex items-start justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+    <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg transition-colors duration-200">
+      <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex-1">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {t('topItems.title')}
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {t('topItems.subtitle')}
           </p>
         </div>
         {loading && hasItems && (
           <div className="mr-3 mt-0.5">
-            <span className="inline-flex items-center text-xs font-medium text-gray-400 dark:text-gray-500">
-              <svg className="animate-spin h-4 w-4 mr-1 text-blue-500" viewBox="0 0 24 24">
+            <span className="inline-flex items-center text-xs font-medium text-slate-400 dark:text-slate-500">
+              <svg className="animate-spin h-4 w-4 mr-1 text-indigo-500" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
               </svg>
@@ -76,7 +76,7 @@ export default function TopPurchasedItems({
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors duration-200"
+            className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-200 transition-colors duration-200"
             aria-label={t('common.close')}
           >
             <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -96,7 +96,7 @@ export default function TopPurchasedItems({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         ) : normalizedItems.length === 0 ? (
-          <div className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          <div className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
             {t('topItems.empty')}
           </div>
         ) : (
@@ -112,13 +112,13 @@ export default function TopPurchasedItems({
               return item.isInCurrentList ? (
                 <div
                   key={item.item_name}
-                  className="flex items-center justify-between p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900/10 text-left"
+                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/20 text-left"
                 >
                   <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[180px]">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[180px]">
                       {item.item_name}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-wrap">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
                       <span>{t('topItems.purchasedCount', { count: item.purchase_count })}</span>
                       {item.displayAisle && (
                         <span
@@ -134,7 +134,7 @@ export default function TopPurchasedItems({
                       )}
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
                     {t('topItems.alreadyAdded')}
                   </span>
                 </div>
@@ -142,13 +142,13 @@ export default function TopPurchasedItems({
                 <button
                   key={item.item_name}
                   onClick={() => onAddItem?.(item)}
-                  className="flex items-center justify-between p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 hover:bg-white dark:hover:bg-gray-900 transition-colors duration-200 text-left"
+                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/40 hover:border-indigo-200 dark:hover:border-indigo-400/60 hover:bg-white dark:hover:bg-slate-900 transition-colors duration-200 text-left"
                 >
                   <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[180px]">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[180px]">
                       {item.item_name}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2 flex-wrap">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
                       <span>{t('topItems.purchasedCount', { count: item.purchase_count })}</span>
                       {item.displayAisle && (
                         <span
@@ -164,7 +164,7 @@ export default function TopPurchasedItems({
                       )}
                     </div>
                   </div>
-                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                  <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-300 uppercase tracking-wide">
                     {t('topItems.addButton')}
                   </span>
                 </button>

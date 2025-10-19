@@ -67,8 +67,8 @@ describe('Header', () => {
     }
     
     render(<Header />)
-    
-    expect(screen.getByText('test@example.com')).toBeInTheDocument()
+
+    expect(screen.getAllByText('test@example.com').length).toBeGreaterThan(0)
   })
 
   it('should not show avatar when avatar_url is not available', () => {

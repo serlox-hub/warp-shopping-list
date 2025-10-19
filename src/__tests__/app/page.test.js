@@ -159,6 +159,7 @@ const mockTranslations = {
   'shoppingList.clearCompleted': 'Clear Completed ({{count}})',
   'shoppingList.clearAll': 'Clear All',
   'shoppingList.manageAisles': 'Manage Aisles',
+  'shoppingList.tagline': 'Plan and prioritise every grocery run with confidence.',
   'shoppingList.emptyTitle': 'Your list is empty',
   'shoppingList.emptySubtitle': 'Add your first item above',
   'shoppingList.itemActions': 'Item actions',

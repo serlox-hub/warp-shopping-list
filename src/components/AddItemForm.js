@@ -370,20 +370,25 @@ export default function AddItemForm({
   };
 
   const isEditing = !!editingItem;
+  const labelClass = 'block text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300 mb-2';
+  const controlClass = `w-full px-3 py-2 rounded-lg border bg-white dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 transition-colors duration-200`;
+  const controlBorderClass = isEditing
+    ? 'border-indigo-200 dark:border-indigo-500/40'
+    : 'border-slate-200 dark:border-slate-700';
 
   return (
     <form
       onSubmit={handleSubmit}
-      className={`p-4 rounded-lg border shadow-sm transition-colors duration-200 ${
+      className={`rounded-2xl border transition-colors duration-200 shadow-sm backdrop-blur ${
         isEditing
-          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-      }`}
+          ? 'border-indigo-200 dark:border-indigo-500/40 bg-white/85 dark:bg-slate-900/70 ring-1 ring-indigo-500/30'
+          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
+      } p-6`}
     >
-      <div className="flex items-center space-x-2 mb-4">
+      <div className="flex items-center gap-3 mb-6">
         {isEditing && (
           <svg
-            className="w-5 h-5 text-blue-600 dark:text-blue-400"
+            className="w-5 h-5 text-indigo-500 dark:text-indigo-300"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -396,26 +401,14 @@ export default function AddItemForm({
             />
           </svg>
         )}
-        <h3
-          className={`text-lg font-semibold ${
-            isEditing
-              ? 'text-blue-800 dark:text-blue-200'
-              : 'text-gray-900 dark:text-gray-100'
-          }`}
-        >
+        <h3 className={`text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100`}>
           {editingItem ? t('addItemForm.editTitle') : t('addItemForm.addTitle')}
         </h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label
-            className={`block text-sm font-medium mb-1 ${
-              isEditing
-                ? 'text-blue-700 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300'
-            }`}
-          >
+          <label className={labelClass}>
             {t('addItemForm.itemName')}
           </label>
           <div className="relative">
@@ -426,11 +419,7 @@ export default function AddItemForm({
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
               placeholder={t('addItemForm.itemNamePlaceholder')}
-              className={`w-full p-2 border rounded-md focus:ring-2 focus:border-blue-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200 ${
-                isEditing
-                  ? 'border-blue-300 dark:border-blue-600 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                  : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-700'
-              }`}
+              className={`${controlClass} ${controlBorderClass}`}
               required
               autoComplete="off"
             />
@@ -457,12 +446,12 @@ export default function AddItemForm({
                       <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {suggestion.highlightSegments?.length
                           ? suggestion.highlightSegments.map((segment, index) =>
-                              segment.match ? (
-                                <mark
-                                  key={`${suggestion.item_name}-${index}-match`}
-                                  data-testid="highlight-segment-match"
-                                  className="rounded-sm bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-200 px-0.5"
-                                >
+                                segment.match ? (
+                                  <mark
+                                    key={`${suggestion.item_name}-${index}-match`}
+                                    data-testid="highlight-segment-match"
+                                    className="rounded-sm bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-200 px-0.5"
+                                  >
                                   {segment.text}
                                 </mark>
                               ) : (
@@ -501,23 +490,13 @@ export default function AddItemForm({
         </div>
 
         <div>
-          <label
-            className={`block text-sm font-medium mb-1 ${
-              isEditing
-                ? 'text-blue-700 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300'
-            }`}
-          >
+          <label className={labelClass}>
             {t('addItemForm.aisle')}
           </label>
           <select
             value={aisle}
             onChange={(e) => setAisle(e.target.value)}
-            className={`w-full p-2 border rounded-md focus:ring-2 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-colors duration-200 ${
-              isEditing
-                ? 'border-blue-300 dark:border-blue-600 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-700'
-            }`}
+            className={`${controlClass} ${controlBorderClass}`}
           >
             {customAisles.map((aisleOption) => (
               <option key={aisleOption} value={aisleOption}>
@@ -528,13 +507,7 @@ export default function AddItemForm({
         </div>
 
         <div>
-          <label
-            className={`block text-sm font-medium mb-1 ${
-              isEditing
-                ? 'text-blue-700 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300'
-            }`}
-          >
+          <label className={labelClass}>
             {t('addItemForm.quantity')}
           </label>
           <input
@@ -542,23 +515,13 @@ export default function AddItemForm({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             min="1"
-            className={`w-full p-2 border rounded-md focus:ring-2 focus:border-blue-500 text-gray-900 dark:text-gray-100 transition-colors duration-200 ${
-              isEditing
-                ? 'border-blue-300 dark:border-blue-600 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-700'
-            }`}
+            className={`${controlClass} ${controlBorderClass}`}
           />
         </div>
       </div>
 
       <div className="mt-4">
-        <label
-          className={`block text-sm font-medium mb-1 ${
-            isEditing
-              ? 'text-blue-700 dark:text-blue-300'
-              : 'text-gray-700 dark:text-gray-300'
-          }`}
-        >
+        <label className={labelClass}>
           {t('addItemForm.comment')}
         </label>
         <textarea
@@ -566,18 +529,14 @@ export default function AddItemForm({
           onChange={(e) => setComment(e.target.value)}
           placeholder={t('addItemForm.commentPlaceholder')}
           rows={2}
-          className={`w-full p-2 border rounded-md focus:ring-2 focus:border-blue-500 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 transition-colors duration-200 resize-none ${
-            isEditing
-              ? 'border-blue-300 dark:border-blue-600 focus:ring-blue-500 bg-blue-50 dark:bg-blue-900/30'
-              : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 bg-white dark:bg-gray-700'
-          }`}
+          className={`${controlClass} ${controlBorderClass} resize-none`}
           maxLength={200}
         />
         <div className="flex justify-between items-center mt-1">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {t('addItemForm.commentHelper')}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             {comment.length}/200
           </span>
         </div>
@@ -588,18 +547,14 @@ export default function AddItemForm({
           <button
             type="button"
             onClick={handleCancel}
-            className="px-4 py-2 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200"
           >
             {t('common.cancel')}
           </button>
         )}
         <button
           type="submit"
-          className={`px-4 py-2 text-white rounded-md transition-colors duration-200 font-medium ${
-            isEditing
-              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'
-              : 'bg-blue-600 hover:bg-blue-700'
-          }`}
+          className="px-5 py-2 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
         >
           {editingItem ? t('addItemForm.updateButton') : t('addItemForm.addButton')}
         </button>
