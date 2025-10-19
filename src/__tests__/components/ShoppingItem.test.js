@@ -100,6 +100,16 @@ describe('ShoppingItem', () => {
     expect(mockOnToggleComplete).toHaveBeenCalledWith('1')
   })
 
+  it('should toggle when clicking item content area', async () => {
+    const user = userEvent.setup()
+    render(<ShoppingItem {...defaultProps} />)
+
+    const itemName = screen.getByText('Apples')
+    await user.click(itemName)
+
+    expect(mockOnToggleComplete).toHaveBeenCalledWith('1')
+  })
+
   it('should call onEdit when edit button is clicked', async () => {
     const user = userEvent.setup()
     render(<ShoppingItem {...defaultProps} />)
