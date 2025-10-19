@@ -5,30 +5,18 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "save": "Save",
-    "update": "Update",
-    "loading": "Loading...",
-    "clear": "Clear",
-    "reset": "Reset",
     "close": "Close"
   },
   "auth": {
-    "login": "Sign In",
-    "logout": "Sign Out",
-    "email": "Email",
-    "password": "Password",
-    "loginButton": "Sign In",
-    "loginError": "Invalid email or password",
-    "loginSubtitle": "Sign in to access your shopping lists"
+    "logout": "Sign Out"
   },
   "header": {
-    "welcome": "Welcome",
     "darkMode": "Dark mode",
     "lightMode": "Light mode",
     "systemMode": "System",
     "currentTheme": "Current theme"
   },
   "shoppingList": {
-    "title": "My Shopping List",
     "emptyTitle": "Your shopping list is empty",
     "emptySubtitle": "Add some items to get started!",
     "itemsCompleted": "{{completed}} of {{total}} items completed",
@@ -36,7 +24,6 @@
     "clearCompleted": "Clear Completed ({{count}})",
     "clearAll": "Clear All",
     "manageAisles": "Manage Aisles",
-    "tagline": "Plan and prioritise every grocery run with confidence.",
     "itemActions": "Item actions"
   },
   "topItems": {
@@ -60,10 +47,7 @@
     "commentPlaceholder": "Add a note or comment...",
     "commentHelper": "Optional note (max 200 characters)",
     "addButton": "Add Item",
-    "updateButton": "Update Item",
-    "suggestionExact": "Exact match",
-    "suggestionPartial": "Partial match",
-    "suggestionFuzzy": "Flexible match"
+    "updateButton": "Update Item"
   },
   "aisleManager": {
     "title": "Manage Aisles",
@@ -93,7 +77,6 @@
     "newList": "Create New List",
     "editList": "Edit list name",
     "deleteList": "Delete list",
-    "listName": "List Name",
     "listNamePlaceholder": "Enter list name",
     "createList": "Create",
     "cannotDeleteLast": "Cannot delete the last remaining list",

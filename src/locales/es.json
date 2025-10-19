@@ -5,30 +5,18 @@
     "delete": "Eliminar",
     "cancel": "Cancelar",
     "save": "Guardar",
-    "update": "Actualizar",
-    "loading": "Cargando...",
-    "clear": "Limpiar",
-    "reset": "Reiniciar",
     "close": "Cerrar"
   },
   "auth": {
-    "login": "Iniciar Sesión",
-    "logout": "Cerrar Sesión",
-    "email": "Correo Electrónico",
-    "password": "Contraseña",
-    "loginButton": "Iniciar Sesión",
-    "loginError": "Correo o contraseña inválidos",
-    "loginSubtitle": "Inicia sesión para acceder a tus listas de compras"
+    "logout": "Cerrar Sesión"
   },
   "header": {
-    "welcome": "Bienvenido",
     "darkMode": "Modo oscuro",
     "lightMode": "Modo claro",
     "systemMode": "Sistema",
     "currentTheme": "Tema actual"
   },
   "shoppingList": {
-    "title": "Mi Lista de Compras",
     "emptyTitle": "Tu lista de compras está vacía",
     "emptySubtitle": "¡Agrega algunos productos para comenzar!",
     "itemsCompleted": "{{completed}} de {{total}} artículos completados",
@@ -36,7 +24,6 @@
     "clearCompleted": "Limpiar Completados ({{count}})",
     "clearAll": "Limpiar Todo",
     "manageAisles": "Gestionar Pasillos",
-    "tagline": "Organiza tus compras con un enfoque claro y profesional.",
     "itemActions": "Acciones del artículo"
   },
   "topItems": {
@@ -60,10 +47,7 @@
     "commentPlaceholder": "Agrega una nota o comentario...",
     "commentHelper": "Nota opcional (máx. 200 caracteres)",
     "addButton": "Agregar Artículo",
-    "updateButton": "Actualizar Artículo",
-    "suggestionExact": "Coincidencia exacta",
-    "suggestionPartial": "Coincidencia parcial",
-    "suggestionFuzzy": "Coincidencia flexible"
+    "updateButton": "Actualizar Artículo"
   },
   "aisleManager": {
     "title": "Gestionar Pasillos",
@@ -93,7 +77,6 @@
     "newList": "Crear Nueva Lista",
     "editList": "Editar nombre de la lista",
     "deleteList": "Eliminar lista",
-    "listName": "Nombre de la Lista",
     "listNamePlaceholder": "Ingresa el nombre de la lista",
     "createList": "Crear",
     "cannotDeleteLast": "No se puede eliminar la última lista restante",
