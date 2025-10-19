@@ -4,8 +4,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
 export const metadata = {
-  title: 'Shopping List App',
-  description: 'Organize your shopping lists by aisles',
+  title: 'Pocuo',
+  description: 'Organize your shopping lists by aisles with Pocuo',
   icons: {
     icon: [
       {

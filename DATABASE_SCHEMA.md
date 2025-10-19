@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the unified database schema for the Shopping List application. The schema has been consolidated into a single, clean migration file that includes all necessary tables, functions, indexes, and security policies.
+This document describes the unified database schema for Pocuo. The schema has been consolidated into a single, clean migration file that includes all necessary tables, functions, indexes, and security policies.
 
 ## Database Structure
 

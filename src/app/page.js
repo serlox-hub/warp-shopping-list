@@ -428,39 +428,26 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 transition-colors duration-200">
-      <div className="max-w-5xl mx-auto px-6 py-12 space-y-10">
-        <header className="space-y-6">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-2">
-              <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.35em] uppercase text-indigo-500">
-                Warp Shopping
-              </span>
-              <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100 leading-tight">
-                {t('shoppingList.title')}
-              </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xl">
-                {t('shoppingList.tagline')}
-              </p>
-            </div>
+      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+        <header className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <ListSelector currentList={shoppingList} onListChange={handleListChange} />
             <Header />
           </div>
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <ListSelector currentList={shoppingList} onListChange={handleListChange} />
-            <div className={`flex flex-col gap-2 lg:items-end ${hasItems ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
-              </div>
-              <div className="w-full lg:w-64 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                <div
-                  className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
+          <div className={`flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end ${hasItems ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
+              {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
+            </div>
+            <div className="w-full lg:w-64 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+              <div
+                className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300"
+                style={{ width: `${progressPercentage}%` }}
+              />
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={handleClearCompleted}
               disabled={completedCount === 0}

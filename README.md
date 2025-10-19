@@ -1,12 +1,12 @@
-# 🛒 Shopping List App
+# 🛒 Pocuo
 
-[![CI](https://github.com/your-username/warp-shopping-list/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/warp-shopping-list/actions/workflows/ci.yml)
-[![Tests](https://github.com/your-username/warp-shopping-list/actions/workflows/test.yml/badge.svg)](https://github.com/your-username/warp-shopping-list/actions/workflows/test.yml)
-[![Build](https://github.com/your-username/warp-shopping-list/actions/workflows/build.yml/badge.svg)](https://github.com/your-username/warp-shopping-list/actions/workflows/build.yml)
-[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)](https://github.com/your-username/warp-shopping-list)
+[![CI](https://github.com/your-username/pocuo/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/pocuo/actions/workflows/ci.yml)
+[![Tests](https://github.com/your-username/pocuo/actions/workflows/test.yml/badge.svg)](https://github.com/your-username/pocuo/actions/workflows/test.yml)
+[![Build](https://github.com/your-username/pocuo/actions/workflows/build.yml/badge.svg)](https://github.com/your-username/pocuo/actions/workflows/build.yml)
+[![Coverage](https://img.shields.io/badge/coverage-88%25-brightgreen)](https://github.com/your-username/pocuo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A modern, full-stack Next.js application for managing collaborative shopping lists with real-time synchronization and intuitive aisle-based organization.
+Pocuo is a modern, full-stack Next.js application for managing collaborative shopping lists with real-time synchronization and intuitive aisle-based organization.
 
 ## ✨ Features
 
@@ -68,8 +68,8 @@ The app comes with predefined aisles that mirror typical grocery store layouts:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/warp-shopping-list.git
-cd warp-shopping-list
+git clone https://github.com/your-username/pocuo.git
+cd pocuo
 ```
 
 2. Install dependencies:

@@ -1,6 +1,6 @@
 # Supabase Setup Guide
 
-This guide will help you set up Supabase authentication and database for your shopping list application.
+This guide will help you set up Supabase authentication and database for Pocuo.
 
 ## 1. Create a Supabase Project
 
