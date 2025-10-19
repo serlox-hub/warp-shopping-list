@@ -53,7 +53,7 @@ describe('Header', () => {
     
     render(<Header />)
     
-    expect(screen.getByText('Test User')).toBeInTheDocument()
+    expect(screen.getByText('Test')).toBeInTheDocument()
     expect(screen.getByAltText('User avatar')).toBeInTheDocument()
     expect(screen.getByTitle('preferences.title')).toBeInTheDocument()
     expect(screen.getByTitle('auth.logout')).toBeInTheDocument()
@@ -68,7 +68,7 @@ describe('Header', () => {
     
     render(<Header />)
 
-    expect(screen.getAllByText('test@example.com').length).toBeGreaterThan(0)
+    expect(screen.getByText('test')).toBeInTheDocument()
   })
 
   it('should not show avatar when avatar_url is not available', () => {
@@ -83,7 +83,7 @@ describe('Header', () => {
     render(<Header />)
     
     expect(screen.queryByAltText('User avatar')).not.toBeInTheDocument()
-    expect(screen.getByText('Test User')).toBeInTheDocument()
+    expect(screen.getByText('Test')).toBeInTheDocument()
   })
 
   it('should handle preferences button click', async () => {

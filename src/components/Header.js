@@ -46,12 +46,9 @@ export default function Header() {
               {user.email?.[0]?.toUpperCase()}
             </div>
           )}
-          <div className="min-w-0">
+          <div className="min-w-0 pr-3 mr-3 border-r border-slate-200 dark:border-slate-700">
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[8rem]">
-              {user.user_metadata?.full_name || user.email}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[8rem]">
-              {user.email}
+              {user.user_metadata?.full_name?.split(' ')?.[0] || user.email?.split('@')?.[0]}
             </p>
           </div>
           <div className="flex items-center gap-1">

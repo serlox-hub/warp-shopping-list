@@ -429,48 +429,50 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 transition-colors duration-200">
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-        <header className="flex flex-col gap-3">
+        <header className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <ListSelector currentList={shoppingList} onListChange={handleListChange} />
             <Header />
           </div>
 
-          <div className={`flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end ${hasItems ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
-              {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className={`flex flex-col gap-2 sm:flex-row sm:items-center ${hasItems ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
+              </div>
+              <div className="w-full sm:w-64 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                <div
+                  className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full lg:w-64 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-              <div
-                className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-          </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleClearCompleted}
-              disabled={completedCount === 0}
-              className={subtleActionClass}
-            >
-              {t('shoppingList.clearCompleted', { count: completedCount })}
-            </button>
-            <button
-              onClick={handleClearAll}
-              disabled={totalCount === 0}
-              className={dangerActionClass}
-            >
-              {t('shoppingList.clearAll')}
-            </button>
-            <button
-              onClick={() => setShowAisleManager(true)}
-              className={primaryActionClass}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              <span>{t('shoppingList.manageAisles')}</span>
-            </button>
+            <div className="flex flex-wrap gap-2 ml-auto">
+              <button
+                onClick={handleClearCompleted}
+                disabled={completedCount === 0}
+                className={subtleActionClass}
+              >
+                {t('shoppingList.clearCompleted', { count: completedCount })}
+              </button>
+              <button
+                onClick={handleClearAll}
+                disabled={totalCount === 0}
+                className={dangerActionClass}
+              >
+                {t('shoppingList.clearAll')}
+              </button>
+              <button
+                onClick={() => setShowAisleManager(true)}
+                className={primaryActionClass}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span>{t('shoppingList.manageAisles')}</span>
+              </button>
+            </div>
           </div>
         </header>
 
