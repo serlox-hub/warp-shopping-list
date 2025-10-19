@@ -50,6 +50,7 @@ describe('AddItemForm', () => {
     customAisles: ['Produce', 'Dairy', 'Bakery', 'Other'],
     itemUsageHistory: [],
     existingItemNames: [],
+    existingItems: [],
     aisleColors: {}
   }
 
@@ -219,7 +220,7 @@ describe('AddItemForm', () => {
           { item_name: 'Mazapan', purchase_count: 6, last_aisle: 'Bakery' },
           { item_name: 'Pera', purchase_count: 4 }
         ]}
-        existingItemNames={['Manzana']}
+        existingItems={[{ name: 'Manzana', aisle: 'Produce' }]}
       />
     )
 
@@ -248,6 +249,30 @@ describe('AddItemForm', () => {
 
     const secondaryHighlights = within(suggestionItems[1]).getAllByTestId('highlight-segment-match')
     expect(secondaryHighlights.map((node) => node.textContent?.trim())).toEqual(['M', 'z', 'n'])
+  })
+
+  it('should treat identical names in different aisles as distinct suggestions', async () => {
+    const user = userEvent.setup()
+    render(
+      <AddItemForm
+        {...defaultProps}
+        existingItems={[{ name: 'Setas', aisle: 'Produce' }]}
+        itemUsageHistory={[
+          { item_name: 'Setas', purchase_count: 8, last_aisle: 'Produce', usage_key: 'Setas::Produce' },
+          { item_name: 'Setas', purchase_count: 5, last_aisle: 'Frozen', usage_key: 'Setas::Frozen' }
+        ]}
+      />
+    )
+
+    const nameInput = screen.getByPlaceholderText('Enter item name')
+    await user.type(nameInput, 'setas')
+
+    const suggestionsList = await screen.findByTestId('item-suggestions')
+    const suggestionItems = within(suggestionsList).getAllByTestId('suggestion-item')
+
+    expect(suggestionItems).toHaveLength(2)
+    expect(suggestionItems[0]).toHaveAttribute('data-in-list', 'true')
+    expect(suggestionItems[1]).toHaveAttribute('data-in-list', 'false')
   })
 
   it('should prioritize exact matches before partial matches', async () => {

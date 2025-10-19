@@ -102,6 +102,7 @@ export default function AddItemForm({
   customAisles = DEFAULT_AISLES,
   itemUsageHistory = [],
   existingItemNames = [],
+  existingItems = [],
   aisleColors = {}
 }) {
   const t = useTranslations();
@@ -136,19 +137,26 @@ export default function AddItemForm({
   }, [englishToLocalized]);
 
   const existingItemsSet = useMemo(() => {
-    return new Set(
-      existingItemNames
-        .filter(Boolean)
-        .map((itemName) => normalizeText(itemName))
-    );
-  }, [existingItemNames]);
+    const set = new Set();
+
+    (existingItems || [])
+      .filter((entry) => entry && entry.name)
+      .forEach((entry) => {
+        const key = `${normalizeText(entry.name)}::${normalizeText(entry.aisle)}`;
+        set.add(key);
+      });
+
+    return set;
+  }, [existingItems]);
 
   const normalizedUsageHistory = useMemo(() => {
     const unique = new Map();
     itemUsageHistory.forEach((entry) => {
-      const key = normalizeText(entry?.item_name);
-      if (!key || unique.has(key)) return;
-      unique.set(key, entry);
+      const usageKey =
+        entry?.usage_key ||
+        `${normalizeText(entry?.item_name)}::${normalizeText(entry?.usage_aisle || entry?.last_aisle || '')}`;
+      if (!usageKey || unique.has(usageKey)) return;
+      unique.set(usageKey, entry);
     });
     return Array.from(unique.values());
   }, [itemUsageHistory]);
@@ -187,14 +195,20 @@ export default function AddItemForm({
 
     const pushGroup = (group, type) => {
       group.sort(sortByUsage).some((entry) => {
-        const key = normalizeText(entry?.item_name);
-        if (!key || seen.has(key)) {
+        const originalName = entry?.item_name?.trim() || '';
+        if (!originalName) {
           return false;
         }
-        seen.add(key);
-        const isInCurrentList = existingItemsSet.has(key);
-        const originalName = entry?.item_name?.trim() || '';
-        const englishAisle = entry?.last_aisle?.trim() || null;
+        const englishAisle = entry?.usage_aisle?.trim() || entry?.last_aisle?.trim() || null;
+        const usageKey =
+          entry?.usage_key ||
+          `${normalizeText(originalName)}::${normalizeText(englishAisle)}`;
+        if (!usageKey || seen.has(usageKey)) {
+          return false;
+        }
+        seen.add(usageKey);
+        const inListKey = `${normalizeText(originalName)}::${normalizeText(englishAisle)}`;
+        const isInCurrentList = existingItemsSet.has(inListKey);
         const localizedAisle = englishAisle
           ? englishToLocalized[englishAisle] || englishAisle
           : null;
@@ -210,6 +224,7 @@ export default function AddItemForm({
         const highlightSegments = buildHighlightSegments(originalName, trimmedQuery, type);
         rankedSuggestions.push({
           ...entry,
+          usageKey,
           item_name: originalName,
           matchType: type,
           isInCurrentList,
@@ -426,7 +441,7 @@ export default function AddItemForm({
               >
                 {suggestions.map((suggestion) => (
                   <button
-                    key={suggestion.item_name}
+                    key={suggestion.usageKey || suggestion.item_name}
                     type="button"
                     data-testid="suggestion-item"
                     data-in-list={suggestion.isInCurrentList ? 'true' : 'false'}

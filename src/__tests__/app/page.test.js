@@ -13,8 +13,8 @@ let addItemFormPropsLog = []
 let aisleSectionRenderLog = []
 
 jest.mock('../../components/AddItemForm', () => {
-  return function MockAddItemForm({ onAddItem, editingItem, onUpdateItem, onCancelEdit, customAisles, aisleColors }) {
-    addItemFormPropsLog.push({ customAisles, aisleColors })
+  return function MockAddItemForm({ onAddItem, editingItem, onUpdateItem, onCancelEdit, customAisles, aisleColors, existingItems }) {
+    addItemFormPropsLog.push({ customAisles, aisleColors, existingItems })
     return (
       <div data-testid="add-item-form">
         <button onClick={() => onAddItem({ name: 'Test Item', aisle: 'Produce', quantity: 1 })}>
@@ -613,7 +613,8 @@ describe('Home', () => {
         'Apples',
         'Updated Item',
         expect.objectContaining({
-          aisle: 'Produce',
+          oldAisle: 'Produce',
+          newAisle: 'Produce',
           quantity: 3
         })
       )

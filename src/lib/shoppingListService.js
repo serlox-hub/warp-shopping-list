@@ -1,6 +1,8 @@
 import { supabase } from './supabase'
 import { getDefaultAisleColor } from '@/types/shoppingList'
 
+const ITEM_USAGE_DELIMITER = '::'
+
 // Table structures needed in Supabase:
 // 
 // shopping_lists table:
@@ -391,16 +393,54 @@ export class ShoppingListService {
 
   // ============== ITEM USAGE ANALYTICS ==============
 
+  static buildItemUsageKey(name, aisle) {
+    const trimmedName = typeof name === 'string' ? name.trim() : ''
+    if (!trimmedName) return ''
+
+    const sanitizedAisle =
+      typeof aisle === 'string' && aisle.trim().length > 0
+        ? aisle.trim()
+        : null
+
+    return sanitizedAisle ? `${trimmedName}${ITEM_USAGE_DELIMITER}${sanitizedAisle}` : trimmedName
+  }
+
+  static parseItemUsageKey(key) {
+    if (typeof key !== 'string' || key.length === 0) {
+      return { name: '', aisle: null }
+    }
+    const delimiterIndex = key.indexOf(ITEM_USAGE_DELIMITER)
+    if (delimiterIndex === -1) {
+      return { name: key, aisle: null }
+    }
+    const name = key.slice(0, delimiterIndex)
+    const aisle = key.slice(delimiterIndex + ITEM_USAGE_DELIMITER.length) || null
+    return { name, aisle }
+  }
+
+  static mapUsageRow(row) {
+    if (!row) return row
+    const { name, aisle } = this.parseItemUsageKey(row.item_name)
+    return {
+      ...row,
+      usage_key: row.item_name,
+      item_name: name || row.item_name,
+      usage_aisle: aisle || row.last_aisle || null
+    }
+  }
+
   static async recordItemUsage(userId, itemData) {
     if (!userId || !itemData?.name) return;
 
     const trimmedName = itemData.name.trim();
     if (!trimmedName) return;
 
+    const usageKey = this.buildItemUsageKey(trimmedName, itemData.aisle);
+
     try {
       await supabase.rpc('increment_item_usage', {
         p_user_id: userId,
-        p_item_name: trimmedName,
+        p_item_name: usageKey || trimmedName,
         p_last_aisle: itemData.aisle ?? null,
         p_last_quantity: itemData.quantity ?? null
       });
@@ -422,7 +462,7 @@ export class ShoppingListService {
         .limit(limit);
 
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((row) => this.mapUsageRow(row));
     } catch (error) {
       console.error('Error fetching most purchased items:', error);
       return [];
@@ -442,7 +482,7 @@ export class ShoppingListService {
         .limit(limit);
 
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((row) => this.mapUsageRow(row));
     } catch (error) {
       console.error('Error fetching item usage history:', error);
       return [];
@@ -452,23 +492,43 @@ export class ShoppingListService {
   static async updateItemUsageMetadata(userId, itemName, metadata = {}) {
     if (!userId || !itemName) return;
 
+    const previousName = metadata.previousName ?? itemName;
+    const previousAisle = metadata.previousAisle ?? metadata.aisle ?? null;
+    const targetKey = this.buildItemUsageKey(itemName, metadata.aisle);
+    const previousKey = this.buildItemUsageKey(previousName, previousAisle);
+    const fallbackPreviousKey = previousName?.trim() || '';
+
     const payload = {};
     if (metadata.aisle !== undefined) payload.last_aisle = metadata.aisle;
     if (metadata.quantity !== undefined) payload.last_quantity = metadata.quantity;
 
-    if (Object.keys(payload).length === 0) return;
+    const hasUpdates = Object.keys(payload).length > 0 || (targetKey && targetKey !== previousKey);
+    if (!hasUpdates) return;
+
+    if (targetKey && targetKey !== previousKey) {
+      payload.item_name = targetKey;
+    }
+
+    payload.updated_at = new Date().toISOString();
+
+    const attemptUpdate = async (key) => {
+      if (!key) return { data: [], error: null };
+      return await supabase
+        .from('shopping_item_usage')
+        .update(payload)
+        .eq('user_id', userId)
+        .eq('item_name', key)
+        .select();
+    };
 
     try {
-      const { error } = await supabase
-        .from('shopping_item_usage')
-        .update({
-          ...payload,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId)
-        .eq('item_name', itemName.trim());
-
+      let { data, error } = await attemptUpdate(previousKey || fallbackPreviousKey);
       if (error) throw error;
+
+      if ((!data || data.length === 0) && previousKey && previousKey !== fallbackPreviousKey) {
+        const fallbackResult = await attemptUpdate(fallbackPreviousKey);
+        if (fallbackResult.error) throw fallbackResult.error;
+      }
     } catch (error) {
       console.error('Error updating item usage metadata:', error);
     }
@@ -484,26 +544,42 @@ export class ShoppingListService {
       return;
     }
 
-    try {
-      const { data: oldUsage, error: oldError } = await supabase
+    const oldAisle = metadata.oldAisle ?? metadata.previousAisle ?? metadata.aisle ?? null;
+    const newAisle = metadata.newAisle ?? metadata.aisle ?? oldAisle;
+
+    const oldKey = this.buildItemUsageKey(trimmedOld, oldAisle);
+    const fallbackOldKey = trimmedOld;
+    const newKey = this.buildItemUsageKey(trimmedNew, newAisle);
+    const fallbackNewKey = trimmedNew;
+
+    const fetchUsage = async (key) => {
+      return await supabase
         .from('shopping_item_usage')
         .select('*')
         .eq('user_id', userId)
-        .eq('item_name', trimmedOld)
+        .eq('item_name', key)
         .single();
+    };
+
+    try {
+      let { data: oldUsage, error: oldError } = await fetchUsage(oldKey || fallbackOldKey);
+      if (oldError && oldError.code === 'PGRST116' && oldKey && oldKey !== fallbackOldKey) {
+        const fallbackOldResult = await fetchUsage(fallbackOldKey);
+        oldUsage = fallbackOldResult.data;
+        oldError = fallbackOldResult.error;
+      }
 
       if (oldError) {
-        // Nothing to transfer; ensure metadata for the new item is up to date
-        await this.updateItemUsageMetadata(userId, trimmedNew, metadata);
+        await this.updateItemUsageMetadata(userId, trimmedNew, {
+          ...metadata,
+          previousName: trimmedOld,
+          previousAisle: oldAisle,
+          aisle: newAisle
+        });
         return;
       }
 
-      const { data: newUsage, error: newError } = await supabase
-        .from('shopping_item_usage')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('item_name', trimmedNew)
-        .single();
+      const { data: newUsage, error: newError } = await fetchUsage(newKey || fallbackNewKey);
 
       if (newError && newError.code !== 'PGRST116') {
         throw newError;
@@ -521,8 +597,9 @@ export class ShoppingListService {
         const { error: mergeError } = await supabase
           .from('shopping_item_usage')
           .update({
+            item_name: newKey || fallbackNewKey,
             purchase_count: combinedCount,
-            last_aisle: metadata.aisle ?? oldUsage.last_aisle ?? newUsage.last_aisle,
+            last_aisle: newAisle ?? oldUsage.last_aisle ?? newUsage.last_aisle,
             last_quantity: metadata.quantity ?? oldUsage.last_quantity ?? newUsage.last_quantity,
             last_purchased_at: latestPurchaseAt,
             updated_at: new Date().toISOString()
@@ -542,8 +619,8 @@ export class ShoppingListService {
       const { error: renameError } = await supabase
         .from('shopping_item_usage')
         .update({
-          item_name: trimmedNew,
-          last_aisle: metadata.aisle ?? oldUsage.last_aisle,
+          item_name: newKey || fallbackNewKey,
+          last_aisle: newAisle ?? oldUsage.last_aisle,
           last_quantity: metadata.quantity ?? oldUsage.last_quantity,
           updated_at: new Date().toISOString()
         })

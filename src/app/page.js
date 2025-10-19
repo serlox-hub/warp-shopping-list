@@ -205,13 +205,16 @@ export default function Home() {
 
         if (nameChanged) {
           await ShoppingListService.renameItemUsage(user.id, previousItem.name, updated.name, {
-            aisle: updated.aisle,
+            oldAisle: previousItem.aisle,
+            newAisle: updated.aisle,
             quantity: updated.quantity
           });
         } else if (metadataChanged) {
           await ShoppingListService.updateItemUsageMetadata(user.id, updated.name, {
             aisle: updated.aisle,
-            quantity: updated.quantity
+            quantity: updated.quantity,
+            previousAisle: previousItem.aisle,
+            previousName: previousItem.name
           });
         }
       }
@@ -486,6 +489,7 @@ export default function Home() {
             customAisles={customAisles}
             itemUsageHistory={itemUsageHistory}
             existingItemNames={items.map(item => item.name)}
+            existingItems={items}
             aisleColors={aisleColors}
           />
         </div>
