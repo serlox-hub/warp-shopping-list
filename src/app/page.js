@@ -34,6 +34,7 @@ export default function Home() {
   const [topItemsLoading, setTopItemsLoading] = useState(false);
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
   const [itemUsageHistory, setItemUsageHistory] = useState([]);
+  const englishCustomAisles = useMemo(() => mapLocalizedToEnglish(customAisles, t), [customAisles, t]);
 
   const applyAisleState = useCallback((rawAisles) => {
     if (!rawAisles || rawAisles.length === 0) {
@@ -48,6 +49,7 @@ export default function Home() {
       const englishName = englishNames[index];
       const aisleColor = rawAisles[index]?.color || getDefaultAisleColor(englishName);
       acc[localizedName] = aisleColor;
+      acc[englishName] = aisleColor;
       return acc;
     }, {});
 
@@ -304,6 +306,7 @@ export default function Home() {
       const englishName = englishAisles[index];
       const color = normalizedAisles[index]?.color || getDefaultAisleColor(englishName);
       acc[localizedName] = color;
+      acc[englishName] = color;
       return acc;
     }, {});
 
@@ -380,7 +383,7 @@ export default function Home() {
     });
   };
 
-  const groupedItems = groupItemsByAisle(items, customAisles);
+  const groupedItems = groupItemsByAisle(items, englishCustomAisles);
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
   const hasItems = totalCount > 0;
@@ -390,16 +393,16 @@ export default function Home() {
   const hasTopItemsData = topItems.length > 0;
   const canOpenTopItems = hasTopItemsData || topItemsLoading;
 
-  const englishAislesForManager = useMemo(() => mapLocalizedToEnglish(customAisles, t), [customAisles, t]);
   const managerAisles = useMemo(() => {
-    return customAisles.map((name, index) => {
-      const englishName = englishAislesForManager[index];
+    return customAisles.map((localizedName, index) => {
+      const englishName = englishCustomAisles[index] || localizedName;
+      const mappedColor = aisleColors[localizedName] || aisleColors[englishName];
       return {
-        name,
-        color: aisleColors[name] || getDefaultAisleColor(englishName)
+        name: localizedName,
+        color: mappedColor || getDefaultAisleColor(englishName)
       };
     });
-  }, [customAisles, aisleColors, englishAislesForManager]);
+  }, [customAisles, aisleColors, englishCustomAisles]);
 
   // Show loading while checking authentication or loading data
   if (loading || (user && dataLoading)) {

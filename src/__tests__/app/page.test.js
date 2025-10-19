@@ -9,8 +9,12 @@ import { ShoppingListService } from '../../lib/shoppingListService'
 jest.mock('../../contexts/AuthContext')
 jest.mock('../../contexts/LanguageContext')
 jest.mock('../../lib/shoppingListService')
+let addItemFormPropsLog = []
+let aisleSectionRenderLog = []
+
 jest.mock('../../components/AddItemForm', () => {
-  return function MockAddItemForm({ onAddItem, editingItem, onUpdateItem, onCancelEdit, customAisles }) {
+  return function MockAddItemForm({ onAddItem, editingItem, onUpdateItem, onCancelEdit, customAisles, aisleColors }) {
+    addItemFormPropsLog.push({ customAisles, aisleColors })
     return (
       <div data-testid="add-item-form">
         <button onClick={() => onAddItem({ name: 'Test Item', aisle: 'Produce', quantity: 1 })}>
@@ -32,6 +36,7 @@ jest.mock('../../components/AddItemForm', () => {
 
 jest.mock('../../components/AisleSection', () => {
   return function MockAisleSection({ aisle, items, onToggleComplete, onDelete, onEdit }) {
+    aisleSectionRenderLog.push(aisle)
     return (
       <div data-testid={`aisle-section-${aisle}`}>
         <h3>{aisle}</h3>
@@ -156,6 +161,7 @@ const mockTranslations = {
   'shoppingList.manageAisles': 'Manage Aisles',
   'shoppingList.emptyTitle': 'Your list is empty',
   'shoppingList.emptySubtitle': 'Add your first item above',
+  'shoppingList.itemActions': 'Item actions',
   'topItems.title': 'Top Items',
   'topItems.subtitle': 'Subtitle',
   'topItems.empty': 'No top items yet',
@@ -166,6 +172,30 @@ const mockTranslations = {
   'topItems.refreshing': 'Refreshing'
 }
 
+const englishAisleTranslations = {
+  'aisles.produce': 'Produce',
+  'aisles.dairy': 'Dairy',
+  'aisles.meatSeafood': 'Meat & Seafood',
+  'aisles.bakery': 'Bakery',
+  'aisles.pantry': 'Pantry',
+  'aisles.frozen': 'Frozen',
+  'aisles.personalCare': 'Personal Care',
+  'aisles.household': 'Household',
+  'aisles.other': 'Other'
+}
+
+const spanishAisleTranslations = {
+  'aisles.produce': 'Productos Frescos',
+  'aisles.dairy': 'Lácteos',
+  'aisles.meatSeafood': 'Carnes y Mariscos',
+  'aisles.bakery': 'Panadería',
+  'aisles.pantry': 'Despensa',
+  'aisles.frozen': 'Congelados',
+  'aisles.personalCare': 'Cuidado Personal',
+  'aisles.household': 'Hogar',
+  'aisles.other': 'Otros'
+}
+
 describe('Home', () => {
   const mockUseAuth = useAuth
   const mockUseTranslations = useTranslations
@@ -173,7 +203,10 @@ describe('Home', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+    addItemFormPropsLog = []
+    aisleSectionRenderLog = []
+    Object.assign(mockTranslations, englishAisleTranslations)
+
     mockUseTranslations.mockReturnValue((key, params = {}) => {
       let translation = mockTranslations[key] || key
       const safeParams = params && typeof params === 'object' ? params : {}
@@ -218,6 +251,64 @@ describe('Home', () => {
     
     expect(screen.getByTestId('login-form')).toBeInTheDocument()
     expect(screen.getByText('Please log in')).toBeInTheDocument()
+  })
+
+  it('should preserve default aisle colors when localized to Spanish', async () => {
+    Object.assign(mockTranslations, spanishAisleTranslations)
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    mockShoppingListService.getUserAisles.mockResolvedValueOnce([
+      { name: 'Produce', color: '#22c55e' },
+      { name: 'Dairy', color: '#f97316' },
+      { name: 'Other', color: '#6b7280' }
+    ])
+
+    render(<Home />)
+
+    await waitFor(() => {
+      expect(addItemFormPropsLog.length).toBeGreaterThan(0)
+    })
+
+    const lastProps = addItemFormPropsLog[addItemFormPropsLog.length - 1]
+    expect(lastProps.customAisles).toContain('Productos Frescos')
+    expect(lastProps.customAisles).toContain('Lácteos')
+    expect(lastProps.aisleColors['Produce']).toBe('#22c55e')
+    expect(lastProps.aisleColors['Productos Frescos']).toBe('#22c55e')
+    expect(lastProps.aisleColors['Dairy']).toBe('#f97316')
+    expect(lastProps.aisleColors['Lácteos']).toBe('#f97316')
+    expect(lastProps.aisleColors['Other']).toBe('#6b7280')
+    expect(lastProps.aisleColors['Otros']).toBe('#6b7280')
+  })
+
+  it('should keep aisle ordering when localized to Spanish', async () => {
+    Object.assign(mockTranslations, spanishAisleTranslations)
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    mockShoppingListService.getUserAisles.mockResolvedValueOnce([
+      { name: 'Produce', color: '#22c55e' },
+      { name: 'Dairy', color: '#f97316' },
+      { name: 'Other', color: '#6b7280' }
+    ])
+
+    mockShoppingListService.getShoppingItems.mockResolvedValueOnce(mockItems)
+
+    render(<Home />)
+
+    await waitFor(() => {
+      const sections = document.querySelectorAll('[data-testid^="aisle-section-"]')
+      expect(sections.length).toBeGreaterThanOrEqual(2)
+    })
+
+    const sections = Array.from(document.querySelectorAll('[data-testid^="aisle-section-"]'))
+    const order = sections.map(node => node.getAttribute('data-testid')?.replace('aisle-section-', ''))
+
+    expect(order.slice(0, 2)).toEqual(['Produce', 'Dairy'])
   })
 
   it('should show loading when data is being loaded for authenticated user', async () => {
