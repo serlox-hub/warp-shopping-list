@@ -33,6 +33,7 @@ export default function Home() {
   const [topItems, setTopItems] = useState([]);
   const [topItemsLoading, setTopItemsLoading] = useState(false);
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
+  const [itemUsageHistory, setItemUsageHistory] = useState([]);
 
   const applyAisleState = useCallback((rawAisles) => {
     if (!rawAisles || rawAisles.length === 0) {
@@ -112,12 +113,28 @@ export default function Home() {
     }
   }, [userId]);
 
+  const loadItemUsageHistory = useCallback(async () => {
+    if (!userId) {
+      setItemUsageHistory([]);
+      return;
+    }
+
+    try {
+      const history = await ShoppingListService.getItemUsageHistory(userId);
+      setItemUsageHistory(history);
+    } catch (error) {
+      console.error('Error loading item usage history:', error);
+      setItemUsageHistory([]);
+    }
+  }, [userId]);
+
   useEffect(() => {
     if (userId) {
       Promise.all([
         loadUserAisles(),
         loadShoppingListData(),
-        loadTopItems()
+        loadTopItems(),
+        loadItemUsageHistory()
       ]);
     } else {
       setItems([]);
@@ -127,8 +144,9 @@ export default function Home() {
       setAisleColors({});
       setDataLoading(false);
       setIsTopItemsOpen(false);
+      setItemUsageHistory([]);
     }
-  }, [userId, loadShoppingListData, loadTopItems, loadUserAisles, t]);
+  }, [userId, loadShoppingListData, loadTopItems, loadUserAisles, loadItemUsageHistory, t]);
 
 
   const handleListChange = async (newList) => {
@@ -156,6 +174,7 @@ export default function Home() {
       );
       setItems(prev => [newItem, ...prev]);
       await loadTopItems();
+      await loadItemUsageHistory();
     } catch (error) {
       console.error('Error adding item:', error);
     }
@@ -196,6 +215,7 @@ export default function Home() {
       }
 
       await loadTopItems();
+      await loadItemUsageHistory();
       setEditingItem(null);
     } catch (error) {
       console.error('Error updating item:', error);
@@ -461,6 +481,9 @@ export default function Home() {
             onUpdateItem={handleUpdateItem}
             onCancelEdit={handleCancelEdit}
             customAisles={customAisles}
+            itemUsageHistory={itemUsageHistory}
+            existingItemNames={items.map(item => item.name)}
+            aisleColors={aisleColors}
           />
         </div>
 

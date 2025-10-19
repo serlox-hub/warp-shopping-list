@@ -429,6 +429,26 @@ export class ShoppingListService {
     }
   }
 
+  static async getItemUsageHistory(userId, limit = 200) {
+    if (!userId) return [];
+
+    try {
+      const { data, error } = await supabase
+        .from('shopping_item_usage')
+        .select('*')
+        .eq('user_id', userId)
+        .order('purchase_count', { ascending: false })
+        .order('last_purchased_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data ?? [];
+    } catch (error) {
+      console.error('Error fetching item usage history:', error);
+      return [];
+    }
+  }
+
   static async updateItemUsageMetadata(userId, itemName, metadata = {}) {
     if (!userId || !itemName) return;
 

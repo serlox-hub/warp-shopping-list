@@ -58,7 +58,10 @@
     "commentPlaceholder": "Agrega una nota o comentario...",
     "commentHelper": "Nota opcional (máx. 200 caracteres)",
     "addButton": "Agregar Artículo",
-    "updateButton": "Actualizar Artículo"
+    "updateButton": "Actualizar Artículo",
+    "suggestionExact": "Coincidencia exacta",
+    "suggestionPartial": "Coincidencia parcial",
+    "suggestionFuzzy": "Coincidencia flexible"
   },
   "aisleManager": {
     "title": "Gestionar Pasillos",

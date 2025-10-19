@@ -58,7 +58,10 @@
     "commentPlaceholder": "Add a note or comment...",
     "commentHelper": "Optional note (max 200 characters)",
     "addButton": "Add Item",
-    "updateButton": "Update Item"
+    "updateButton": "Update Item",
+    "suggestionExact": "Exact match",
+    "suggestionPartial": "Partial match",
+    "suggestionFuzzy": "Flexible match"
   },
   "aisleManager": {
     "title": "Manage Aisles",

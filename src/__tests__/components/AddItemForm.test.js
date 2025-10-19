@@ -1,19 +1,19 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AddItemForm from '../../components/AddItemForm'
 import { useTranslations } from '../../contexts/LanguageContext'
-import { DEFAULT_AISLES } from '../../types/shoppingList'
 
 // Mock dependencies
 jest.mock('../../contexts/LanguageContext')
 jest.mock('../../types/shoppingList', () => ({
-  DEFAULT_AISLES: ['Produce', 'Dairy', 'Bakery', 'Other']
+  DEFAULT_AISLES: ['Produce', 'Dairy', 'Bakery', 'Other'],
+  getDefaultAisleColor: (aisle) => ({
+    Produce: '#22c55e',
+    Dairy: '#f97316',
+    Bakery: '#f59e0b',
+    Other: '#6b7280'
+  })[aisle] || '#6b7280'
 }))
-jest.mock('../../components/AisleName', () => {
-  return function MockAisleName({ aisle }) {
-    return <span data-testid="aisle-name">{aisle}</span>
-  }
-})
 
 const mockTranslations = {
   'addItemForm.addTitle': 'Add New Item',
@@ -28,6 +28,7 @@ const mockTranslations = {
   'addItemForm.addButton': 'Add Item',
   'addItemForm.updateButton': 'Update Item',
   'common.cancel': 'Cancel',
+  'topItems.alreadyAdded': 'Already in list',
   // Aisle translations
   'aisles.produce': 'Produce',
   'aisles.dairy': 'Dairy',
@@ -46,7 +47,10 @@ describe('AddItemForm', () => {
     editingItem: null,
     onUpdateItem: mockOnUpdateItem,
     onCancelEdit: mockOnCancelEdit,
-    customAisles: ['Produce', 'Dairy', 'Bakery', 'Other']
+    customAisles: ['Produce', 'Dairy', 'Bakery', 'Other'],
+    itemUsageHistory: [],
+    existingItemNames: [],
+    aisleColors: {}
   }
 
   const mockEditingItem = {
@@ -203,6 +207,84 @@ describe('AddItemForm', () => {
     
     const commentInput = screen.getByPlaceholderText('Add a note or comment...')
     expect(commentInput).toHaveAttribute('maxLength', '200')
+  })
+
+  it('should show fuzzy suggestions after typing three characters', async () => {
+    const user = userEvent.setup()
+    render(
+      <AddItemForm
+        {...defaultProps}
+        itemUsageHistory={[
+          { item_name: 'Manzana', purchase_count: 10, last_aisle: 'Produce' },
+          { item_name: 'Mazapan', purchase_count: 6, last_aisle: 'Bakery' },
+          { item_name: 'Pera', purchase_count: 4 }
+        ]}
+        existingItemNames={['Manzana']}
+      />
+    )
+
+    const nameInput = screen.getByPlaceholderText('Enter item name')
+    await user.type(nameInput, 'mzn')
+
+    const suggestionsList = await screen.findByTestId('item-suggestions')
+    const suggestionItems = within(suggestionsList).getAllByTestId('suggestion-item')
+
+    expect(suggestionItems).toHaveLength(2)
+    expect(suggestionItems[0]).toHaveTextContent('Manzana')
+    expect(suggestionItems[0]).toHaveAttribute('data-in-list', 'true')
+    expect(suggestionItems[0]).toHaveTextContent('Already in list')
+    expect(suggestionItems[1]).toHaveTextContent('Mazapan')
+    expect(suggestionItems[1]).toHaveAttribute('data-in-list', 'false')
+    const produceBadge = within(suggestionItems[0]).getByText('Produce')
+    const bakeryBadge = within(suggestionItems[1]).getByText('Bakery')
+    expect(produceBadge).toBeInTheDocument()
+    expect(bakeryBadge).toBeInTheDocument()
+    expect(produceBadge).toHaveStyle({ backgroundColor: '#22c55e' })
+    expect(produceBadge).toHaveStyle({ borderColor: 'rgba(34, 197, 94, 0.45)' })
+    expect(bakeryBadge).toHaveStyle({ backgroundColor: '#f59e0b' })
+
+    const primaryHighlights = within(suggestionItems[0]).getAllByTestId('highlight-segment-match')
+    expect(primaryHighlights.map((node) => node.textContent?.trim())).toEqual(['M', 'z', 'n'])
+
+    const secondaryHighlights = within(suggestionItems[1]).getAllByTestId('highlight-segment-match')
+    expect(secondaryHighlights.map((node) => node.textContent?.trim())).toEqual(['M', 'z', 'n'])
+  })
+
+  it('should prioritize exact matches before partial matches', async () => {
+    const user = userEvent.setup()
+    render(
+      <AddItemForm
+        {...defaultProps}
+        itemUsageHistory={[
+          { item_name: 'Leche', purchase_count: 2, last_aisle: 'Dairy' },
+          { item_name: 'Dulce de Leche', purchase_count: 6, last_aisle: 'Bakery' },
+          { item_name: 'Lechuga', purchase_count: 5, last_aisle: 'Produce' }
+        ]}
+      />
+    )
+
+    const nameInput = screen.getByPlaceholderText('Enter item name')
+    await user.type(nameInput, 'leche')
+
+    const suggestionsList = await screen.findByTestId('item-suggestions')
+    const suggestionItems = within(suggestionsList).getAllByTestId('suggestion-item')
+
+    expect(suggestionItems[0]).toHaveTextContent('Leche')
+    expect(suggestionItems[1]).toHaveTextContent('Dulce de Leche')
+    const dairyBadge = within(suggestionItems[0]).getByText('Dairy')
+    const bakeryBadge = within(suggestionItems[1]).getByText('Bakery')
+    expect(dairyBadge).toBeInTheDocument()
+    expect(bakeryBadge).toBeInTheDocument()
+    expect(dairyBadge).toHaveStyle({ backgroundColor: '#f97316' })
+    expect(bakeryBadge).toHaveStyle({ backgroundColor: '#f59e0b' })
+
+    const exactHighlights = within(suggestionItems[0]).getAllByTestId('highlight-segment-match')
+    expect(exactHighlights).toHaveLength(1)
+    expect(exactHighlights[0]).toHaveTextContent('Leche')
+
+    const partialHighlights = within(suggestionItems[1]).getAllByTestId('highlight-segment-match')
+    expect(partialHighlights).toHaveLength(1)
+    expect(partialHighlights[0]).toHaveTextContent('Leche')
   })
 
   it('should reset form after adding item', async () => {
