@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
 import { UserPreferencesService } from '@/lib/userPreferencesService';
@@ -14,6 +14,28 @@ export function LanguageProvider({ children }) {
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isLoading, setIsLoading] = useState(false);
 
+  const loadUserLanguagePreference = useCallback(async () => {
+    if (!user?.id) return;
+
+    setIsLoading(true);
+    try {
+      const preferences = await UserPreferencesService.getUserPreferences(user.id);
+      const dbLanguage = preferences.language || 'en';
+
+      if (dbLanguage !== currentLanguage) {
+        await i18n.changeLanguage(dbLanguage);
+        setCurrentLanguage(dbLanguage);
+      }
+    } catch (error) {
+      console.error('Error loading user language preference:', error);
+      const fallbackLang = i18n.language || 'en';
+      await i18n.changeLanguage(fallbackLang);
+      setCurrentLanguage(fallbackLang);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentLanguage, i18n, user?.id]);
+
   // Load user's language preference from database when authenticated
   useEffect(() => {
     if (user) {
@@ -24,7 +46,7 @@ export function LanguageProvider({ children }) {
       setCurrentLanguage(detectedLang);
       i18n.changeLanguage(detectedLang);
     }
-  }, [user, i18n]);
+  }, [user, i18n, loadUserLanguagePreference]);
 
   // Listen for language changes from i18next
   useEffect(() => {
@@ -38,29 +60,6 @@ export function LanguageProvider({ children }) {
       i18n.off('languageChanged', handleLanguageChange);
     };
   }, [i18n]);
-
-  const loadUserLanguagePreference = async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    try {
-      const preferences = await UserPreferencesService.getUserPreferences(user.id);
-      const dbLanguage = preferences.language || 'en';
-      
-      if (dbLanguage !== currentLanguage) {
-        await i18n.changeLanguage(dbLanguage);
-        setCurrentLanguage(dbLanguage);
-      }
-    } catch (error) {
-      console.error('Error loading user language preference:', error);
-      // Fallback to browser detection
-      const fallbackLang = i18n.language || 'en';
-      await i18n.changeLanguage(fallbackLang);
-      setCurrentLanguage(fallbackLang);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const changeLanguage = async (language) => {
     try {

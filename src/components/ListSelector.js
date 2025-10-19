@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
@@ -16,13 +16,12 @@ export default function ListSelector({ currentList, onListChange }) {
   const [editListName, setEditListName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadLists();
+  const loadLists = useCallback(async () => {
+    if (!user?.id) {
+      setLists([]);
+      return;
     }
-  }, [user]);
 
-  const loadLists = async () => {
     try {
       const userLists = await ShoppingListService.getUserShoppingLists(user.id);
       setLists(userLists);
@@ -30,9 +29,17 @@ export default function ListSelector({ currentList, onListChange }) {
       console.error('Error loading lists:', error);
       setLists([]);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadLists();
+  }, [loadLists]);
 
   const handleListSelect = async (list) => {
+    if (!user?.id) {
+      return;
+    }
+
     if (list.id === currentList?.id) {
       setIsOpen(false);
       return;
@@ -53,6 +60,7 @@ export default function ListSelector({ currentList, onListChange }) {
   const handleCreateList = async (e) => {
     e.preventDefault();
     if (!newListName.trim()) return;
+    if (!user?.id) return;
 
     setLoading(true);
     try {
@@ -110,6 +118,7 @@ export default function ListSelector({ currentList, onListChange }) {
 
   const handleDeleteList = async (e, listId) => {
     e.stopPropagation();
+    if (!user?.id) return;
     
     if (lists.length === 1) {
       alert(t('listSelector.cannotDeleteLast'));

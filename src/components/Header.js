@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/contexts/LanguageContext';
@@ -8,6 +10,11 @@ export default function Header() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const t = useTranslations();
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user?.user_metadata?.avatar_url]);
 
   const handleSignOut = async () => {
     try {
@@ -25,11 +32,14 @@ export default function Header() {
     <div data-testid="header-container">
       {user && (
         <div className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 px-4 py-3 shadow-sm backdrop-blur">
-          {user.user_metadata?.avatar_url ? (
-            <img
+          {user.user_metadata?.avatar_url && !avatarError ? (
+            <Image
               src={user.user_metadata.avatar_url}
               alt="User avatar"
+              width={36}
+              height={36}
               className="w-9 h-9 rounded-full object-cover"
+              onError={() => setAvatarError(true)}
             />
           ) : (
             <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 flex items-center justify-center text-sm font-semibold">

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,6 +14,11 @@ export default function PreferencesPage() {
   const { theme, setThemePreference } = useTheme();
   const { currentLanguage, changeLanguage, availableLanguages, isLoading: languageLoading } = useLanguage();
   const t = useTranslations();
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [user?.user_metadata?.avatar_url]);
 
   // Show loading while checking authentication
   if (loading) {
@@ -182,28 +188,23 @@ export default function PreferencesPage() {
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <div className="relative">
-                  {user.user_metadata?.avatar_url ? (
-                    <img
+                  {user.user_metadata?.avatar_url && !avatarError ? (
+                    <Image
                       src={user.user_metadata.avatar_url}
                       alt="User avatar"
+                      width={40}
+                      height={40}
                       className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextElementSibling.style.display = 'flex';
-                      }}
+                      onError={() => setAvatarError(true)}
                     />
-                  ) : null}
-                  <div 
-                    className={`w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center ${
-                      user.user_metadata?.avatar_url ? 'hidden' : 'flex'
-                    }`}
-                    style={{ display: user.user_metadata?.avatar_url ? 'none' : 'flex' }}
-                  >
-                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                      {user.user_metadata?.full_name?.charAt(0).toUpperCase() || 
-                       user.email?.charAt(0).toUpperCase() || 'U'}
-                    </span>
-                  </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                      <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                        {user.user_metadata?.full_name?.charAt(0).toUpperCase() ||
+                         user.email?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">

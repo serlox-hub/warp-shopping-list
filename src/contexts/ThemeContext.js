@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { UserPreferencesService } from '@/lib/userPreferencesService';
 
@@ -19,17 +19,12 @@ export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('system');
   const [resolvedTheme, setResolvedTheme] = useState('light');
 
-  // Load theme from Supabase when user is authenticated
-  useEffect(() => {
-    if (user) {
-      loadUserTheme();
-    } else {
+  const loadUserTheme = useCallback(async () => {
+    if (!user?.id) {
       setTheme('system');
+      return;
     }
-  }, [user]);
 
-  const loadUserTheme = async () => {
-    if (!user) return;
     try {
       const preferences = await UserPreferencesService.getUserPreferences(user.id);
       setTheme(preferences.theme || 'system');
@@ -37,7 +32,16 @@ export const ThemeProvider = ({ children }) => {
       console.error('Error loading user theme:', error);
       setTheme('system');
     }
-  };
+  }, [user?.id]);
+
+  // Load theme from Supabase when user is authenticated
+  useEffect(() => {
+    if (user) {
+      loadUserTheme();
+    } else {
+      setTheme('system');
+    }
+  }, [user, loadUserTheme]);
 
   // Resolve theme (convert 'system' to actual theme)
   useEffect(() => {
