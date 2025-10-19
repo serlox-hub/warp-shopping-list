@@ -35,7 +35,8 @@
     "aisleProgress": "{{completed}}/{{total}} completados",
     "clearCompleted": "Limpiar Completados ({{count}})",
     "clearAll": "Limpiar Todo",
-    "manageAisles": "Gestionar Pasillos"
+    "manageAisles": "Gestionar Pasillos",
+    "itemActions": "Acciones del artículo"
   },
   "topItems": {
     "title": "Comprados con frecuencia",

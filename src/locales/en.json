@@ -35,7 +35,8 @@
     "aisleProgress": "{{completed}}/{{total}} completed",
     "clearCompleted": "Clear Completed ({{count}})",
     "clearAll": "Clear All",
-    "manageAisles": "Manage Aisles"
+    "manageAisles": "Manage Aisles",
+    "itemActions": "Item actions"
   },
   "topItems": {
     "title": "Frequently Bought",

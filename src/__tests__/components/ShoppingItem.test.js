@@ -13,7 +13,8 @@ jest.mock('../../components/AisleName', () => {
 
 const mockTranslations = {
   'common.edit': 'Edit',
-  'common.delete': 'Delete'
+  'common.delete': 'Delete',
+  'shoppingList.itemActions': 'Item actions'
 }
 
 describe('ShoppingItem', () => {
@@ -103,19 +104,25 @@ describe('ShoppingItem', () => {
     const user = userEvent.setup()
     render(<ShoppingItem {...defaultProps} />)
     
+    const actionsButton = screen.getByLabelText('Item actions')
+    await user.click(actionsButton)
+
     const editButton = screen.getByText('Edit')
     await user.click(editButton)
-    
+
     expect(mockOnEdit).toHaveBeenCalledWith(defaultItem)
   })
 
   it('should call onDelete when delete button is clicked', async () => {
     const user = userEvent.setup()
     render(<ShoppingItem {...defaultProps} />)
-    
+
+    const actionsButton = screen.getByLabelText('Item actions')
+    await user.click(actionsButton)
+
     const deleteButton = screen.getByText('Delete')
     await user.click(deleteButton)
-    
+
     expect(mockOnDelete).toHaveBeenCalledWith('1')
   })
 

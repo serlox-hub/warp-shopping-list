@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
 import AisleName from './AisleName';
@@ -16,6 +17,46 @@ export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit,
     dark: FALLBACK_TEXT_DARK
   });
   const badgeBorderColor = getBorderColorFromHex(badgeColor, 0.45) || 'rgba(107, 114, 128, 0.45)';
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMenuOpen]);
+
+  const toggleMenu = () => {
+    setIsMenuOpen((prev) => !prev);
+  };
+
+  const handleEdit = () => {
+    setIsMenuOpen(false);
+    onEdit?.(item);
+  };
+
+  const handleDelete = () => {
+    setIsMenuOpen(false);
+    onDelete?.(item.id);
+  };
 
   return (
     <div className={`p-3 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors duration-200 ${
@@ -51,7 +92,7 @@ export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit,
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <span
             className="text-xs px-2 py-1 rounded font-medium border border-transparent"
             style={{
@@ -62,18 +103,39 @@ export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit,
           >
             <AisleName aisle={item.aisle} />
           </span>
-          <button
-            onClick={() => onEdit(item)}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm transition-colors duration-200"
-          >
-            {t('common.edit')}
-          </button>
-          <button
-            onClick={() => onDelete(item.id)}
-            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm transition-colors duration-200"
-          >
-            {t('common.delete')}
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={toggleMenu}
+              className="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-haspopup="menu"
+              aria-expanded={isMenuOpen}
+              aria-label={t('shoppingList.itemActions')}
+            >
+              <span className="sr-only">{t('shoppingList.itemActions')}</span>
+              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
+              </svg>
+            </button>
+            {isMenuOpen && (
+              <div className="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20 py-1">
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 transition-colors duration-150"
+                >
+                  {t('common.edit')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors duration-150"
+                >
+                  {t('common.delete')}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
