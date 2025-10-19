@@ -3,8 +3,10 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 export const metadata = {
-  title: 'Pocuo',
+  title: `Pocuo${isDevelopment ? ' (Development)' : ''}`,
   description: 'Organize your shopping lists by aisles with Pocuo',
   icons: {
     icon: [
