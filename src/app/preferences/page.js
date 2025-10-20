@@ -208,8 +208,15 @@ export default function PreferencesPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {user.user_metadata?.full_name?.split(' ')?.[0] || user.email?.split('@')?.[0]}
+                    {user.user_metadata?.full_name ||
+                     user.user_metadata?.name ||
+                     user.email?.split('@')?.[0]}
                   </div>
+                  {user.email && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {user.email}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
