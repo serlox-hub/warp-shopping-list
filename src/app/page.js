@@ -430,9 +430,13 @@ export default function Home() {
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 transition-colors duration-200">
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
         <header className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <ListSelector currentList={shoppingList} onListChange={handleListChange} />
-            <Header />
+          <div className="flex flex-row items-center justify-between gap-3">
+            <div className="order-2">
+              <Header />
+            </div>
+            <div className="order-1 flex-1 min-w-0">
+              <ListSelector currentList={shoppingList} onListChange={handleListChange} />
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

@@ -109,5 +109,12 @@
       "title": "Cuenta",
       "subtitle": "Información de tu cuenta"
     }
+  },
+  "header": {
+    "menu": {
+      "open": "Abrir menú de usuario",
+      "preferences": "Preferencias de usuario",
+      "logout": "Cerrar sesión"
+    }
   }
 }

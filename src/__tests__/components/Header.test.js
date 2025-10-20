@@ -53,10 +53,8 @@ describe('Header', () => {
     
     render(<Header />)
     
-    expect(screen.getByText('Test')).toBeInTheDocument()
     expect(screen.getByAltText('User avatar')).toBeInTheDocument()
-    expect(screen.getByTitle('preferences.title')).toBeInTheDocument()
-    expect(screen.getByTitle('auth.logout')).toBeInTheDocument()
+    expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
   })
 
   it('should show email when full name is not available', () => {
@@ -68,7 +66,7 @@ describe('Header', () => {
     
     render(<Header />)
 
-    expect(screen.getByText('test')).toBeInTheDocument()
+    expect(screen.getByText('T')).toBeInTheDocument()
   })
 
   it('should not show avatar when avatar_url is not available', () => {
@@ -83,7 +81,7 @@ describe('Header', () => {
     render(<Header />)
     
     expect(screen.queryByAltText('User avatar')).not.toBeInTheDocument()
-    expect(screen.getByText('Test')).toBeInTheDocument()
+    expect(screen.getByText('T')).toBeInTheDocument()
   })
 
   it('should handle preferences button click', async () => {
@@ -92,7 +90,9 @@ describe('Header', () => {
     
     render(<Header />)
     
-    const preferencesButton = screen.getByTitle('preferences.title')
+    const menuButton = screen.getByLabelText('header.menu.open')
+    await user.click(menuButton)
+    const preferencesButton = screen.getByText('header.menu.preferences')
     await user.click(preferencesButton)
     
     expect(mockRouter.push).toHaveBeenCalledWith('/preferences')
@@ -104,7 +104,9 @@ describe('Header', () => {
     
     render(<Header />)
     
-    const signOutButton = screen.getByTitle('auth.logout')
+    const menuButton = screen.getByLabelText('header.menu.open')
+    await user.click(menuButton)
+    const signOutButton = screen.getByText('header.menu.logout')
     await user.click(signOutButton)
     
     expect(mockAuth.signOut).toHaveBeenCalled()
@@ -118,7 +120,9 @@ describe('Header', () => {
     
     render(<Header />)
     
-    const signOutButton = screen.getByTitle('auth.logout')
+    const menuButton = screen.getByLabelText('header.menu.open')
+    await user.click(menuButton)
+    const signOutButton = screen.getByText('header.menu.logout')
     await user.click(signOutButton)
     
     expect(mockAuth.signOut).toHaveBeenCalled()

@@ -109,5 +109,12 @@
       "title": "Account",
       "subtitle": "Your account information"
     }
+  },
+  "header": {
+    "menu": {
+      "open": "Open user menu",
+      "preferences": "User preferences",
+      "logout": "Sign out"
+    }
   }
 }
