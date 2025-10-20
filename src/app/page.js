@@ -468,19 +468,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className={`flex flex-col gap-2 sm:flex-row sm:items-center ${hasItems ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
-              </div>
-              <div className="w-full sm:w-64 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                <div
-                  className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300"
-                  style={{ width: `${progressPercentage}%` }}
-                />
-              </div>
-            </div>
-
+          <div className="flex flex-wrap items-center gap-2 justify-end">
             <div className="flex flex-wrap gap-2 ml-auto">
               <button
                 onClick={handleClearCompleted}
@@ -523,6 +511,20 @@ export default function Home() {
             aisleColors={aisleColors}
           />
         </div>
+
+        {hasItems && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-white/40 dark:bg-slate-900/40 rounded-2xl p-4 border border-slate-200 dark:border-slate-800">
+            <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
+              {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
+            </div>
+            <div className="w-full sm:w-72 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+              <div
+                className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Shopping List by Aisles */}
         <div className="space-y-6">
