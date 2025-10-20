@@ -572,7 +572,7 @@ export default function Home() {
       </div>
       {isTopItemsOpen && (
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-sm"
+          className="fixed inset-0 z-[120] flex justify-end bg-black/30 backdrop-blur-sm"
           onClick={() => setIsTopItemsOpen(false)}
         >
           <div
