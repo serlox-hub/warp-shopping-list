@@ -136,6 +136,8 @@ const buildHighlightSegments = (originalName, query, matchType) => {
   return segments;
 };
 
+const DEFAULT_QUANTITY = 1;
+
 const MAX_SUGGESTIONS = 20;
 
 export default function AddItemForm({
@@ -152,7 +154,7 @@ export default function AddItemForm({
   const t = useTranslations();
   const [name, setName] = useState('');
   const [aisle, setAisle] = useState('Other');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(DEFAULT_QUANTITY);
   const [comment, setComment] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -179,6 +181,26 @@ export default function AddItemForm({
     });
     return map;
   }, [englishToLocalized]);
+
+  const getDefaultLocalizedAisle = useCallback(() => {
+    const localizedOther = englishToLocalized.Other;
+    if (localizedOther && customAisles.includes(localizedOther)) {
+      return localizedOther;
+    }
+    return customAisles[0] || '';
+  }, [customAisles, englishToLocalized]);
+
+  const getDefaultEnglishAisle = useCallback(() => {
+    const defaultLocalized = getDefaultLocalizedAisle();
+    return localizedToEnglish[defaultLocalized] || defaultLocalized || 'Other';
+  }, [getDefaultLocalizedAisle, localizedToEnglish]);
+
+  const resetNewItemForm = useCallback(() => {
+    setName('');
+    setAisle(getDefaultLocalizedAisle());
+    setQuantity(DEFAULT_QUANTITY);
+    setComment('');
+  }, [getDefaultLocalizedAisle]);
 
   const existingItemsSet = useMemo(() => {
     const set = new Set();
@@ -273,6 +295,7 @@ export default function AddItemForm({
           matchType: type,
           isInCurrentList,
           displayAisle: localizedAisle,
+          englishAisle,
           badgeBackground,
           badgeTextColor,
           badgeBorderColor,
@@ -308,25 +331,23 @@ export default function AddItemForm({
         matchingLocalizedAisle ||
           englishToLocalized[editingItem.aisle] ||
           editingItem.aisle ||
-          (customAisles.includes(englishToLocalized.Other)
-            ? englishToLocalized.Other
-            : customAisles[0] || '')
+          getDefaultLocalizedAisle()
       );
       setQuantity(editingItem.quantity || 1);
       setComment(editingItem.comment || '');
     } else {
-      setName('');
-      setAisle(
-        customAisles.includes(englishToLocalized.Other)
-          ? englishToLocalized.Other
-          : customAisles[0] || ''
-      );
-      setQuantity(1);
-      setComment('');
+      resetNewItemForm();
     }
     setSuggestions([]);
     setShowSuggestions(false);
-  }, [editingItem, customAisles, englishToLocalized, localizedToEnglish]);
+  }, [
+    editingItem,
+    customAisles,
+    englishToLocalized,
+    localizedToEnglish,
+    getDefaultLocalizedAisle,
+    resetNewItemForm
+  ]);
 
   useEffect(() => {
     return () => {
@@ -363,14 +384,7 @@ export default function AddItemForm({
     }
 
     if (!editingItem) {
-      setName('');
-      setAisle(
-        customAisles.includes(englishToLocalized.Other)
-          ? englishToLocalized.Other
-          : customAisles[0] || ''
-      );
-      setQuantity(1);
-      setComment('');
+      resetNewItemForm();
     }
     setSuggestions([]);
     setShowSuggestions(false);
@@ -392,7 +406,34 @@ export default function AddItemForm({
   };
 
   const handleSuggestionSelection = (suggestion) => {
-    setName(suggestion.item_name);
+    if (!suggestion || suggestion.isInCurrentList) {
+      return;
+    }
+
+    if (editingItem) {
+      setName(suggestion.item_name);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    const currentQuantity = parseInt(quantity, 10);
+    const sanitizedQuantity =
+      Number.isNaN(currentQuantity) || currentQuantity < 1 ? DEFAULT_QUANTITY : currentQuantity;
+    const englishAisle =
+      suggestion.englishAisle ||
+      localizedToEnglish[aisle] ||
+      localizedToEnglish[suggestion.displayAisle] ||
+      getDefaultEnglishAisle();
+
+    onAddItem({
+      name: suggestion.item_name?.trim() || '',
+      aisle: englishAisle,
+      quantity: sanitizedQuantity,
+      comment: comment.trim()
+    });
+
+    resetNewItemForm();
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -480,10 +521,11 @@ export default function AddItemForm({
                     data-in-list={suggestion.isInCurrentList ? 'true' : 'false'}
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => handleSuggestionSelection(suggestion)}
+                    disabled={suggestion.isInCurrentList}
                     className={`w-full px-3 py-2 text-left transition-colors duration-150 flex items-center justify-between gap-3 ${
                       suggestion.isInCurrentList
-                        ? 'opacity-60 cursor-pointer'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'opacity-60 cursor-not-allowed'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
                     }`}
                   >
                     <div>

@@ -231,6 +231,7 @@ describe('AddItemForm', () => {
     const suggestionItems = within(suggestionsList).getAllByTestId('suggestion-item')
 
     expect(suggestionItems).toHaveLength(2)
+    expect(suggestionItems[0]).toBeDisabled()
     expect(suggestionItems[0]).toHaveTextContent('Manzana')
     expect(suggestionItems[0]).toHaveAttribute('data-in-list', 'true')
     expect(suggestionItems[0]).toHaveTextContent('Already in list')
@@ -275,6 +276,44 @@ describe('AddItemForm', () => {
     expect(highlightSegments.map((node) => node.textContent?.trim())).toEqual(['Café'])
   })
 
+  it('should add item immediately when selecting an available suggestion', async () => {
+    const user = userEvent.setup()
+    render(
+      <AddItemForm
+        {...defaultProps}
+        itemUsageHistory={[
+          { item_name: 'Café molido', purchase_count: 3, last_aisle: 'Other' }
+        ]}
+      />
+    )
+
+    const nameInput = screen.getByPlaceholderText('Enter item name')
+    const quantityInput = screen.getByDisplayValue('1')
+    const commentInput = screen.getByPlaceholderText('Add a note or comment...')
+
+    await user.type(nameInput, 'caf')
+    await user.clear(quantityInput)
+    await user.type(quantityInput, '4')
+    await user.type(commentInput, 'Morning brew')
+
+    const suggestionsList = await screen.findByTestId('item-suggestions')
+    const [firstSuggestion] = within(suggestionsList).getAllByTestId('suggestion-item')
+
+    expect(firstSuggestion).not.toBeDisabled()
+    await user.click(firstSuggestion)
+
+    expect(mockOnAddItem).toHaveBeenCalledWith({
+      name: 'Café molido',
+      aisle: 'Other',
+      quantity: 4,
+      comment: 'Morning brew'
+    })
+    expect(nameInput).toHaveValue('')
+    expect(screen.getByDisplayValue('1')).toHaveValue(1)
+    expect(commentInput).toHaveValue('')
+    expect(screen.queryByTestId('item-suggestions')).not.toBeInTheDocument()
+  })
+
   it('should treat identical names in different aisles as distinct suggestions', async () => {
     const user = userEvent.setup()
     render(
@@ -295,6 +334,8 @@ describe('AddItemForm', () => {
     const suggestionItems = within(suggestionsList).getAllByTestId('suggestion-item')
 
     expect(suggestionItems).toHaveLength(2)
+    expect(suggestionItems[0]).toBeDisabled()
+    expect(suggestionItems[1]).not.toBeDisabled()
     expect(suggestionItems[0]).toHaveAttribute('data-in-list', 'true')
     expect(suggestionItems[1]).toHaveAttribute('data-in-list', 'false')
   })
