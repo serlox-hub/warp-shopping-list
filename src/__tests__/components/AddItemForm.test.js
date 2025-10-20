@@ -251,6 +251,30 @@ describe('AddItemForm', () => {
     expect(secondaryHighlights.map((node) => node.textContent?.trim())).toEqual(['M', 'z', 'n'])
   })
 
+  it('should keep suggestions when diacritics differ on longer queries', async () => {
+    const user = userEvent.setup()
+    render(
+      <AddItemForm
+        {...defaultProps}
+        itemUsageHistory={[
+          { item_name: 'Café molido', purchase_count: 5, last_aisle: 'Other' }
+        ]}
+      />
+    )
+
+    const nameInput = screen.getByPlaceholderText('Enter item name')
+    await user.type(nameInput, 'cafe ')
+
+    const suggestionsList = await screen.findByTestId('item-suggestions')
+    const suggestionItems = within(suggestionsList).getAllByTestId('suggestion-item')
+
+    expect(suggestionItems).toHaveLength(1)
+    expect(suggestionItems[0]).toHaveTextContent('Café molido')
+
+    const highlightSegments = within(suggestionItems[0]).getAllByTestId('highlight-segment-match')
+    expect(highlightSegments.map((node) => node.textContent?.trim())).toEqual(['Café'])
+  })
+
   it('should treat identical names in different aisles as distinct suggestions', async () => {
     const user = userEvent.setup()
     render(

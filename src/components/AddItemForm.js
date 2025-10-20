@@ -5,7 +5,21 @@ import { DEFAULT_AISLES, getDefaultAisleColor } from '@/types/shoppingList';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
 
-const normalizeText = (value) => value?.trim().toLowerCase() || '';
+const stripDiacritics = (value) => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+
+const normalizeText = (value) => {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return stripDiacritics(String(value)).trim().toLowerCase();
+};
 
 const isSubsequence = (query, target) => {
   let queryIndex = 0;
@@ -25,10 +39,26 @@ const buildHighlightSegments = (originalName, query, matchType) => {
     return [];
   }
 
-  const lowerName = safeName.toLowerCase();
-  const lowerQuery = safeQuery.toLowerCase();
+  const { originalChars, accentlessName, accentlessPositions } = (() => {
+    const chars = Array.from(safeName);
+    let accentless = '';
+    const positions = [];
 
-  if (!safeQuery || lowerQuery.length === 0) {
+    chars.forEach((char, index) => {
+      const accentlessChar = stripDiacritics(char);
+      if (!accentlessChar) return;
+      accentless += accentlessChar;
+      for (let i = 0; i < accentlessChar.length; i += 1) {
+        positions.push(index);
+      }
+    });
+
+    return { originalChars: chars, accentlessName: accentless, accentlessPositions: positions };
+  })();
+
+  const normalizedQuery = stripDiacritics(safeQuery).toLowerCase();
+
+  if (!safeQuery || normalizedQuery.length === 0) {
     return [{ text: safeName, match: false }];
   }
 
@@ -36,60 +66,74 @@ const buildHighlightSegments = (originalName, query, matchType) => {
     return [{ text: safeName, match: true }];
   }
 
+  const markPositions = new Set();
+
   if (matchType === 'partial') {
-    const start = lowerName.indexOf(lowerQuery);
+    const lowerAccentlessName = accentlessName.toLowerCase();
+    const start = lowerAccentlessName.indexOf(normalizedQuery);
     if (start === -1) {
       return [{ text: safeName, match: false }];
     }
-    const end = start + lowerQuery.length;
-    const segments = [];
-    if (start > 0) {
-      segments.push({ text: safeName.slice(0, start), match: false });
+    for (let i = start; i < start + normalizedQuery.length; i += 1) {
+      const originalIndex = accentlessPositions[i];
+      if (originalIndex !== undefined) {
+        markPositions.add(originalIndex);
+      }
     }
-    segments.push({ text: safeName.slice(start, end), match: true });
-    if (end < safeName.length) {
-      segments.push({ text: safeName.slice(end), match: false });
-    }
-    return segments;
   }
 
   if (matchType === 'fuzzy') {
-    const segments = [];
-    let currentSegment = '';
-    let currentMatch = false;
-    const flush = () => {
-      if (!currentSegment) return;
-      segments.push({ text: currentSegment, match: currentMatch });
-      currentSegment = '';
-    };
+    const lowerAccentlessName = accentlessName.toLowerCase();
     let queryIndex = 0;
-    for (let i = 0; i < safeName.length; i += 1) {
-      const char = safeName[i];
-      const lowerChar = lowerName[i];
-      const isMatchChar = queryIndex < lowerQuery.length && lowerChar === lowerQuery[queryIndex];
-      if (isMatchChar) {
-        if (!currentMatch) {
-          flush();
-          currentMatch = true;
+    for (let i = 0; i < lowerAccentlessName.length && queryIndex < normalizedQuery.length; i += 1) {
+      if (lowerAccentlessName[i] === normalizedQuery[queryIndex]) {
+        const originalIndex = accentlessPositions[i];
+        if (originalIndex !== undefined) {
+          markPositions.add(originalIndex);
         }
-        currentSegment += char;
         queryIndex += 1;
-      } else {
-        if (currentMatch) {
-          flush();
-          currentMatch = false;
-        }
-        currentSegment += char;
       }
     }
-    flush();
-    if (segments.length === 0) {
+    if (markPositions.size === 0) {
       return [{ text: safeName, match: false }];
     }
-    return segments;
   }
 
-  return [{ text: safeName, match: false }];
+  if (markPositions.size === 0) {
+    return [{ text: safeName, match: false }];
+  }
+
+  const segments = [];
+  let currentSegment = '';
+  let currentMatch = null;
+
+  originalChars.forEach((char, index) => {
+    const isMatch = markPositions.has(index);
+    if (currentMatch === null) {
+      currentMatch = isMatch;
+      currentSegment = char;
+      return;
+    }
+
+    if (isMatch === currentMatch) {
+      currentSegment += char;
+      return;
+    }
+
+    segments.push({ text: currentSegment, match: currentMatch });
+    currentMatch = isMatch;
+    currentSegment = char;
+  });
+
+  if (currentSegment) {
+    segments.push({ text: currentSegment, match: currentMatch });
+  }
+
+  if (segments.length === 0) {
+    return [{ text: safeName, match: false }];
+  }
+
+  return segments;
 };
 
 const MAX_SUGGESTIONS = 20;
