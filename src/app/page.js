@@ -247,6 +247,35 @@ export default function Home() {
     }
   };
 
+  const handleChangeItemAisle = async (itemId, newAisle) => {
+    const item = items.find(entry => entry.id === itemId);
+    if (!item || !newAisle || item.aisle === newAisle) return;
+
+    try {
+      const updated = await ShoppingListService.updateShoppingItem(itemId, {
+        aisle: newAisle
+      });
+
+      setItems(prev => prev.map(entry =>
+        entry.id === updated.id ? updated : entry
+      ));
+
+      if (user) {
+        await ShoppingListService.updateItemUsageMetadata(user.id, updated.name, {
+          aisle: updated.aisle,
+          quantity: updated.quantity,
+          previousAisle: item.aisle,
+          previousName: item.name
+        });
+      }
+
+      await loadTopItems();
+      await loadItemUsageHistory();
+    } catch (error) {
+      console.error('Error changing item aisle:', error);
+    }
+  };
+
   const handleDeleteItem = async (itemId) => {
     try {
       await ShoppingListService.deleteShoppingItem(itemId);
@@ -512,6 +541,8 @@ export default function Home() {
                 onToggleComplete={handleToggleComplete}
                 onDelete={handleDeleteItem}
                 onEdit={handleEditItem}
+                availableAisles={englishCustomAisles}
+                onChangeAisle={handleChangeItemAisle}
               />
             ))
           )}

@@ -9,7 +9,12 @@ jest.mock('../../contexts/LanguageContext')
 const mockTranslations = {
   'common.edit': 'Edit',
   'common.delete': 'Delete',
-  'shoppingList.itemActions': 'Item actions'
+  'shoppingList.itemActions': 'Item actions',
+  'shoppingList.changeAisle': 'Change aisle',
+  'shoppingList.currentAisle': 'Current aisle',
+  'aisles.produce': 'Produce',
+  'aisles.bakery': 'Bakery',
+  'aisles.pantry': 'Pantry'
 }
 
 describe('ShoppingItem', () => {
@@ -17,6 +22,7 @@ describe('ShoppingItem', () => {
   const mockOnToggleComplete = jest.fn()
   const mockOnDelete = jest.fn()
   const mockOnEdit = jest.fn()
+  const mockOnChangeAisle = jest.fn()
 
   const defaultItem = {
     id: '1',
@@ -31,7 +37,14 @@ describe('ShoppingItem', () => {
     item: defaultItem,
     onToggleComplete: mockOnToggleComplete,
     onDelete: mockOnDelete,
-    onEdit: mockOnEdit
+    onEdit: mockOnEdit,
+    availableAisles: ['Produce', 'Bakery', 'Pantry'],
+    onChangeAisle: mockOnChangeAisle,
+    aisleColors: {
+      Produce: '#22c55e',
+      Bakery: '#f59e0b',
+      Pantry: '#6366f1'
+    }
   }
 
   beforeEach(() => {
@@ -128,6 +141,32 @@ describe('ShoppingItem', () => {
     await user.click(deleteButton)
 
     expect(mockOnDelete).toHaveBeenCalledWith('1')
+  })
+
+  it('should open aisle selector and call onChangeAisle when selecting a different aisle', async () => {
+    const user = userEvent.setup()
+    render(<ShoppingItem {...defaultProps} />)
+
+    const changeAisleButton = screen.getByLabelText('Change aisle')
+    await user.click(changeAisleButton)
+
+    const bakeryOption = screen.getByRole('button', { name: 'Bakery' })
+    await user.click(bakeryOption)
+
+    expect(mockOnChangeAisle).toHaveBeenCalledWith('1', 'Bakery')
+  })
+
+  it('should not call onChangeAisle when selecting the current aisle', async () => {
+    const user = userEvent.setup()
+    render(<ShoppingItem {...defaultProps} />)
+
+    const changeAisleButton = screen.getByLabelText('Change aisle')
+    await user.click(changeAisleButton)
+
+    const currentOption = screen.getByRole('button', { name: 'Produce' })
+    await user.click(currentOption)
+
+    expect(mockOnChangeAisle).not.toHaveBeenCalled()
   })
 
   it('should handle item without comment gracefully', () => {

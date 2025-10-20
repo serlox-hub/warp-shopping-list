@@ -24,7 +24,9 @@
     "clearCompleted": "Clear Completed ({{count}})",
     "clearAll": "Clear All",
     "manageAisles": "Manage Aisles",
-    "itemActions": "Item actions"
+    "itemActions": "Item actions",
+    "changeAisle": "Change aisle",
+    "currentAisle": "Current aisle"
   },
   "topItems": {
     "title": "Frequently Bought",

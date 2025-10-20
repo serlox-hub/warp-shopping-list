@@ -11,7 +11,9 @@ export default function AisleSection({
   onToggleComplete,
   onDelete,
   onEdit,
-  aisleColors = {}
+  aisleColors = {},
+  availableAisles = [],
+  onChangeAisle
 }) {
   const t = useTranslations();
   const sortedItems = sortItemsInAisle([...items]);
@@ -45,6 +47,9 @@ export default function AisleSection({
             onToggleComplete={onToggleComplete}
             onDelete={onDelete}
             onEdit={onEdit}
+            availableAisles={availableAisles}
+            onChangeAisle={onChangeAisle}
+            aisleColors={aisleColors}
           />
         ))}
       </div>
