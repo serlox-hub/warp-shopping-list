@@ -3,13 +3,8 @@ import userEvent from '@testing-library/user-event'
 import ShoppingItem from '../../components/ShoppingItem'
 import { useTranslations } from '../../contexts/LanguageContext'
 
-// Mock contexts and components
+// Mock contexts
 jest.mock('../../contexts/LanguageContext')
-jest.mock('../../components/AisleName', () => {
-  return function MockAisleName({ aisle }) {
-    return <span data-testid="aisle-name">{aisle}</span>
-  }
-})
 
 const mockTranslations = {
   'common.edit': 'Edit',
@@ -36,8 +31,7 @@ describe('ShoppingItem', () => {
     item: defaultItem,
     onToggleComplete: mockOnToggleComplete,
     onDelete: mockOnDelete,
-    onEdit: mockOnEdit,
-    aisleColor: '#22c55e'
+    onEdit: mockOnEdit
   }
 
   beforeEach(() => {
@@ -51,16 +45,15 @@ describe('ShoppingItem', () => {
     expect(screen.getByText('Apples')).toBeInTheDocument()
     expect(screen.getByText('(3)')).toBeInTheDocument()
     expect(screen.getByText('Red apples')).toBeInTheDocument()
-    expect(screen.getByTestId('aisle-name')).toHaveTextContent('Produce')
-    expect(screen.getByTestId('aisle-name').parentElement.style.backgroundColor).toBe('rgb(34, 197, 94)')
+    expect(screen.queryByText('Produce')).not.toBeInTheDocument()
   })
 
   it('should show item as completed when completed is true', () => {
     const completedItem = { ...defaultItem, completed: true }
     render(<ShoppingItem {...defaultProps} item={completedItem} />)
     
-    const checkbox = screen.getByRole('checkbox')
-    expect(checkbox).toBeChecked()
+    const itemContainer = screen.getByText('Apples').closest('[role="button"]')
+    expect(itemContainer).toHaveAttribute('aria-pressed', 'true')
     
     const itemName = screen.getByText('Apples')
     expect(itemName.parentElement).toHaveClass('line-through')
@@ -69,8 +62,8 @@ describe('ShoppingItem', () => {
   it('should show item as incomplete when completed is false', () => {
     render(<ShoppingItem {...defaultProps} />)
     
-    const checkbox = screen.getByRole('checkbox')
-    expect(checkbox).not.toBeChecked()
+    const itemContainer = screen.getByText('Apples').closest('[role="button"]')
+    expect(itemContainer).toHaveAttribute('aria-pressed', 'false')
     
     const itemName = screen.getByText('Apples')
     expect(itemName.parentElement).not.toHaveClass('line-through')
@@ -90,12 +83,13 @@ describe('ShoppingItem', () => {
     expect(screen.queryByText('Red apples')).not.toBeInTheDocument()
   })
 
-  it('should call onToggleComplete when checkbox is clicked', async () => {
+  it('should call onToggleComplete when item container is clicked', async () => {
     const user = userEvent.setup()
     render(<ShoppingItem {...defaultProps} />)
     
-    const checkbox = screen.getByRole('checkbox')
-    await user.click(checkbox)
+    const itemContainer = screen.getByText('Apples').closest('div[role="button"]')
+    expect(itemContainer).not.toBeNull()
+    await user.click(itemContainer)
     
     expect(mockOnToggleComplete).toHaveBeenCalledWith('1')
   })

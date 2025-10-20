@@ -42,7 +42,6 @@ export default function AisleSection({
           <ShoppingItem
             key={item.id}
             item={item}
-            aisleColor={aisleColors[item.aisle]}
             onToggleComplete={onToggleComplete}
             onDelete={onDelete}
             onEdit={onEdit}

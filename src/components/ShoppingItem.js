@@ -2,24 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useTranslations } from '@/contexts/LanguageContext';
-import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
-import AisleName from './AisleName';
 
-const FALLBACK_BADGE_COLOR = '#e5e7eb';
-const FALLBACK_TEXT_DARK = '#111827';
-
-export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit, aisleColor }) {
+export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit }) {
   const t = useTranslations();
-  const normalizedColor = normalizeHexColor(aisleColor) || FALLBACK_BADGE_COLOR;
-  const badgeColor = normalizedColor;
-  const badgeTextColor = getContrastingTextColor(badgeColor, {
-    light: '#f9fafb',
-    dark: FALLBACK_TEXT_DARK
-  });
-  const badgeBorderColor = getBorderColorFromHex(badgeColor, 0.45) || 'rgba(107, 114, 128, 0.45)';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
-  const checkboxId = `shopping-item-${item.id}`;
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -87,45 +74,25 @@ export default function ShoppingItem({ item, onToggleComplete, onDelete, onEdit,
       onKeyDown={handleKeyDown}
     >
       <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3 flex-1 cursor-pointer select-none">
-          <input
-            id={checkboxId}
-            type="checkbox"
-            checked={item.completed}
-            onChange={() => onToggleComplete(item.id)}
-            onClick={(event) => event.stopPropagation()}
-            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-0.5 cursor-pointer"
-          />
-          <div className="flex-1">
-            <div className={item.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}>
-              <span className="font-medium">{item.name}</span>
-              {item.quantity > 1 && (
-                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">({item.quantity})</span>
-              )}
-            </div>
-            {item.comment && item.comment.trim() && (
-              <div className={`mt-1 text-sm ${
-                item.completed
-                  ? 'text-gray-400 dark:text-gray-500'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}>
-                <svg className="w-3 h-3 inline mr-1 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                </svg>
-                {item.comment.trim()}
-              </div>
+        <div className="flex-1 cursor-pointer select-none">
+          <div className={item.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}>
+            <span className="font-medium">{item.name}</span>
+            {item.quantity > 1 && (
+              <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">({item.quantity})</span>
             )}
           </div>
-          <span
-            className="text-xs px-2 py-1 rounded font-medium border border-transparent self-start"
-            style={{
-              backgroundColor: badgeColor,
-              color: badgeTextColor,
-              borderColor: badgeBorderColor
-            }}
-          >
-            <AisleName aisle={item.aisle} />
-          </span>
+          {item.comment && item.comment.trim() && (
+            <div className={`mt-1 text-sm ${
+              item.completed
+                ? 'text-gray-400 dark:text-gray-500'
+                : 'text-gray-600 dark:text-gray-400'
+            }`}>
+              <svg className="w-3 h-3 inline mr-1 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              {item.comment.trim()}
+            </div>
+          )}
         </div>
 
         <div className="relative flex-shrink-0 ml-3" ref={menuRef}>
