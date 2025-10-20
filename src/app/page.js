@@ -485,6 +485,17 @@ export default function Home() {
                 {t('shoppingList.clearAll')}
               </button>
               <button
+                type="button"
+                onClick={() => canOpenTopItems && setIsTopItemsOpen(true)}
+                disabled={!canOpenTopItems}
+                className={subtleActionClass}
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a3 3 0 013-3h2a3 3 0 013 3v2m-1 4h-8m2 4h4m-9-8h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a2 2 0 012-2z" />
+                </svg>
+                <span>{t('topItems.openButton')}</span>
+              </button>
+              <button
                 onClick={() => setShowAisleManager(true)}
                 className={primaryActionClass}
               >
@@ -559,20 +570,6 @@ export default function Home() {
           />
         )}
       </div>
-      <button
-        type="button"
-        onClick={() => canOpenTopItems && setIsTopItemsOpen(true)}
-        disabled={!canOpenTopItems}
-        className="fixed bottom-6 right-6 flex items-center gap-2 px-5 py-3 rounded-full shadow-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 disabled:bg-slate-400 disabled:cursor-not-allowed text-white transition-colors duration-200 z-40"
-      >
-        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a3 3 0 013-3h2a3 3 0 013 3v2m-1 4h-8m2 4h4m-9-8h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a2 2 0 012-2z" />
-        </svg>
-        <span className="text-sm font-medium">
-          {t('topItems.openButton')}
-        </span>
-      </button>
-
       {isTopItemsOpen && (
         <div
           className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-sm"
