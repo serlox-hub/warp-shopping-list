@@ -364,7 +364,7 @@ describe('Home', () => {
     mockShoppingListService.getShoppingItems.mockResolvedValue(mockItems)
 
     render(<Home />)
-    
+
     await waitFor(() => {
       expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
       expect(screen.getByTestId('aisle-section-Produce')).toBeInTheDocument()
@@ -372,7 +372,8 @@ describe('Home', () => {
     })
 
     expect(screen.getByText('1/2 completed')).toBeInTheDocument()
-    expect(screen.getByText('Clear Completed (1)')).toBeInTheDocument()
+    // Kebab menu button should be present (actions are now in menu)
+    expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
   })
 
   it('should handle adding new item', async () => {
@@ -439,9 +440,10 @@ describe('Home', () => {
       last_quantity: 2
     }
 
+    // Mock with at least one item so kebab menu is visible
     mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
-    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+    mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
     mockShoppingListService.addShoppingItem.mockResolvedValue({
       id: '4',
       name: 'Bananas',
@@ -458,6 +460,10 @@ describe('Home', () => {
       expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1')
     })
 
+    // Open kebab menu first
+    await user.click(screen.getByLabelText('Acciones'))
+
+    // Click "Top Items" button in the menu
     await user.click(screen.getByText('Top Items'))
 
     const quickAddButton = await screen.findByText('Add Bananas')
@@ -488,6 +494,8 @@ describe('Home', () => {
       loading: false
     })
 
+    const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
+
     const usageItem = {
       item_name: 'Apples',
       purchase_count: 8,
@@ -495,7 +503,7 @@ describe('Home', () => {
       last_quantity: 4
     }
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
     mockShoppingListService.getMostPurchasedItems.mockResolvedValue([usageItem])
@@ -506,6 +514,10 @@ describe('Home', () => {
       expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1')
     })
 
+    // Open kebab menu first
+    await user.click(screen.getByLabelText('Acciones'))
+
+    // Click "Top Items" button in the menu
     await user.click(screen.getByText('Top Items'))
 
     await waitFor(() => {
@@ -655,13 +667,17 @@ describe('Home', () => {
     mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
 
     render(<Home />)
-    
+
     await waitFor(() => {
-      expect(screen.getByText('Clear Completed (1)')).toBeInTheDocument()
+      expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
     })
 
+    // Open kebab menu
+    await user.click(screen.getByLabelText('Acciones'))
+
+    // Click "Clear Completed" in the menu
     await user.click(screen.getByText('Clear Completed (1)'))
-    
+
     await waitFor(() => {
       expect(mockShoppingListService.clearCompletedItems).toHaveBeenCalledWith('list-1')
     })
@@ -680,13 +696,17 @@ describe('Home', () => {
     mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
 
     render(<Home />)
-    
+
     await waitFor(() => {
-      expect(screen.getByText('Clear All')).toBeInTheDocument()
+      expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
     })
 
+    // Open kebab menu
+    await user.click(screen.getByLabelText('Acciones'))
+
+    // Click "Clear All" in the menu
     await user.click(screen.getByText('Clear All'))
-    
+
     await waitFor(() => {
       expect(mockShoppingListService.clearAllItems).toHaveBeenCalledWith('list-1')
     })
@@ -699,24 +719,29 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
+
+    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
-    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+    mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
 
     render(<Home />)
-    
+
     await waitFor(() => {
-      expect(screen.getByText('Manage Aisles')).toBeInTheDocument()
+      expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
     })
 
-    // Open aisle manager
+    // Open kebab menu
+    await user.click(screen.getByLabelText('Acciones'))
+
+    // Click "Manage Aisles" in the menu
     await user.click(screen.getByText('Manage Aisles'))
-    
+
     expect(screen.getByTestId('aisle-manager')).toBeInTheDocument()
 
     // Close aisle manager
     await user.click(screen.getByText('Close'))
-    
+
     await waitFor(() => {
       expect(screen.queryByTestId('aisle-manager')).not.toBeInTheDocument()
     })
@@ -739,16 +764,19 @@ describe('Home', () => {
 
     mockShoppingListService.getUserAisles.mockResolvedValue(mockAisles)
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
-    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+    mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
     mockShoppingListService.updateUserAisles.mockResolvedValue(mockUpdatedAisles)
 
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByText('Manage Aisles')).toBeInTheDocument()
+      expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
     })
 
-    // Open aisle manager
+    // Open kebab menu
+    await user.click(screen.getByLabelText('Acciones'))
+
+    // Click "Manage Aisles" in the menu
     await user.click(screen.getByText('Manage Aisles'))
 
     // Update aisles

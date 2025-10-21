@@ -426,44 +426,6 @@ export default function Home() {
               <ListSelector currentList={shoppingList} onListChange={handleListChange} />
             </div>
             <Header />
-
-            {/* Desktop: Show all buttons */}
-            <div className="hidden lg:flex items-center gap-2">
-              <button
-                onClick={handleClearCompleted}
-                disabled={completedCount === 0}
-                className={subtleActionClass}
-              >
-                {t('shoppingList.clearCompleted', { count: completedCount })}
-              </button>
-              <button
-                onClick={handleClearAll}
-                disabled={totalCount === 0}
-                className={dangerActionClass}
-              >
-                {t('shoppingList.clearAll')}
-              </button>
-              <button
-                type="button"
-                onClick={() => canOpenTopItems && setIsTopItemsOpen(true)}
-                disabled={!canOpenTopItems}
-                className={subtleActionClass}
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a3 3 0 013-3h2a3 3 0 013 3v2m-1 4h-8m2 4h4m-9-8h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a2 2 0 012-2z" />
-                </svg>
-                <span>{t('topItems.openButton')}</span>
-              </button>
-              <button
-                onClick={() => setShowAisleManager(true)}
-                className={primaryActionClass}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-                <span>{t('shoppingList.manageAisles')}</span>
-              </button>
-            </div>
           </div>
         </header>
 
@@ -521,8 +483,8 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Kebab Menu - Mobile only */}
-              <div className="relative lg:hidden">
+              {/* Kebab Menu - Always visible */}
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowActionsMenu(!showActionsMenu)}
