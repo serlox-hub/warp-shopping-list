@@ -83,11 +83,44 @@ src/
 
 ### Adding New Features
 
-1. Database changes require SQL migrations in Supabase dashboard
-2. Add service methods to `ShoppingListService` for data operations
-3. Use existing context hooks for auth, theme, and language
-4. Follow the component patterns: controlled components, loading states, error handling
-5. Add translations to both `src/locales/en.json` and `src/locales/es.json`
+**IMPORTANT: Test-Driven Development Workflow**
+
+When implementing any new feature or making changes to existing functionality, you MUST follow this workflow:
+
+1. **Write/Update Tests First**:
+   - Create new tests for new features in `__tests__/` directory
+   - Update existing tests if modifying functionality
+   - Ensure test coverage for all new code paths
+
+2. **Implement the Feature**:
+   - Database changes require SQL migrations in Supabase dashboard
+   - Add service methods to `ShoppingListService` for data operations
+   - Use existing context hooks for auth, theme, and language
+   - Follow the component patterns: controlled components, loading states, error handling
+   - Add translations to both `src/locales/en.json` and `src/locales/es.json`
+
+3. **Run Tests**:
+   ```bash
+   npm test                 # Run all tests
+   ```
+   - All tests MUST pass before proceeding
+   - Fix any failing tests immediately
+   - Aim for 88%+ code coverage
+
+4. **Verify Build**:
+   ```bash
+   npm run build            # Production build must succeed
+   ```
+   - Build MUST complete without errors
+   - Fix any TypeScript/build errors before committing
+
+5. **Final Checks**:
+   - Run `npm run lint` to check code quality
+   - Test the feature manually in the browser
+   - Verify dark mode and responsive design
+   - Test in both languages (English/Spanish)
+
+**Never skip the testing and build verification steps. Code without tests or that breaks the build should not be committed.**
 
 ### Testing Conventions
 
