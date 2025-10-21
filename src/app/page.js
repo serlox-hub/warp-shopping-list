@@ -35,6 +35,7 @@ export default function Home() {
   const [topItemsLoading, setTopItemsLoading] = useState(false);
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
   const [itemUsageHistory, setItemUsageHistory] = useState([]);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const englishCustomAisles = useMemo(() => mapLocalizedToEnglish(customAisles, t), [customAisles, t]);
   const primaryActionClass = 'inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed';
   const subtleActionClass = 'inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
@@ -461,16 +462,13 @@ export default function Home() {
       <div className="max-w-5xl mx-auto px-6 py-8 pb-32 space-y-8">
         <header className="flex flex-col gap-4">
           <div className="flex flex-row items-center justify-between gap-3">
-            <div className="order-2">
-              <Header />
-            </div>
-            <div className="order-1 flex-1 min-w-0">
+            <div className="flex-1 min-w-0">
               <ListSelector currentList={shoppingList} onListChange={handleListChange} />
             </div>
-          </div>
+            <Header />
 
-          <div className="flex flex-wrap items-center gap-2 justify-end">
-            <div className="flex flex-wrap gap-2 ml-auto">
+            {/* Desktop: Show all buttons */}
+            <div className="hidden lg:flex items-center gap-2">
               <button
                 onClick={handleClearCompleted}
                 disabled={completedCount === 0}
@@ -511,7 +509,7 @@ export default function Home() {
 
 
         {hasItems && (
-          <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/40 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-800">
+          <div className="relative flex items-center justify-between bg-white/40 dark:bg-slate-900/40 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-2">
               {/* Circular Progress Indicator */}
               <div className="relative w-8 h-8">
@@ -552,15 +550,106 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Completion badge - only show when all done */}
-            {completedCount === totalCount && (
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-semibold hidden sm:inline">¡Completado!</span>
+            <div className="flex items-center gap-2">
+              {/* Completion badge - only show when all done */}
+              {completedCount === totalCount && (
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm font-semibold hidden sm:inline">¡Completado!</span>
+                </div>
+              )}
+
+              {/* Kebab Menu - Mobile only */}
+              <div className="relative lg:hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowActionsMenu(!showActionsMenu)}
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Acciones"
+                  aria-haspopup="menu"
+                  aria-expanded={showActionsMenu}
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                  </svg>
+                </button>
+                {showActionsMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowActionsMenu(false)}
+                    ></div>
+                    <div
+                      className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 z-20"
+                      role="menu"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          setShowAisleManager(true);
+                        }}
+                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                      >
+                        <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <span>{t('shoppingList.manageAisles')}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          canOpenTopItems && setIsTopItemsOpen(true);
+                        }}
+                        disabled={!canOpenTopItems}
+                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a3 3 0 013-3h2a3 3 0 013 3v2m-1 4h-8m2 4h4m-9-8h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a2 2 0 012-2z" />
+                        </svg>
+                        <span>{t('topItems.openButton')}</span>
+                      </button>
+
+                      <div className="border-t border-slate-200 dark:border-slate-700 my-1"></div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          handleClearCompleted();
+                        }}
+                        disabled={completedCount === 0}
+                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{t('shoppingList.clearCompleted', { count: completedCount })}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          handleClearAll();
+                        }}
+                        disabled={totalCount === 0}
+                        className="w-full px-4 py-3 text-left text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span>{t('shoppingList.clearAll')}</span>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
 

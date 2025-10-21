@@ -87,7 +87,7 @@ export default function Header() {
               <div
                 role="menu"
                 aria-label={t('header.menu.open')}
-                className="absolute right-0 top-full mt-2 w-44 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-2 z-[80]"
+                className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 z-[80]"
               >
                 <button
                   type="button"
