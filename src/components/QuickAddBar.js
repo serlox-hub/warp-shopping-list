@@ -325,6 +325,7 @@ export default function QuickAddBar({
     });
 
     setName('');
+    setAisle(getDefaultLocalizedAisle());
     setSuggestions([]);
     setShowSuggestions(false);
     inputRef.current?.focus();
@@ -352,6 +353,7 @@ export default function QuickAddBar({
     });
 
     setName('');
+    setAisle(getDefaultLocalizedAisle());
     setSuggestions([]);
     setShowSuggestions(false);
     inputRef.current?.focus();
