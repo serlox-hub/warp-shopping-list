@@ -511,16 +511,56 @@ export default function Home() {
 
 
         {hasItems && (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-white/40 dark:bg-slate-900/40 rounded-2xl p-4 border border-slate-200 dark:border-slate-800">
-            <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
-              {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
+          <div className="flex items-center justify-between bg-white/40 dark:bg-slate-900/40 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              {/* Circular Progress Indicator */}
+              <div className="relative w-8 h-8">
+                <svg className="w-8 h-8 transform -rotate-90">
+                  {/* Background circle */}
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="14"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    className="text-slate-200 dark:text-slate-700"
+                  />
+                  {/* Progress circle */}
+                  <circle
+                    cx="16"
+                    cy="16"
+                    r="14"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 14}`}
+                    strokeDashoffset={`${2 * Math.PI * 14 * (1 - progressPercentage / 100)}`}
+                    className="text-emerald-500 dark:text-emerald-400 transition-all duration-300"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    {Math.round(progressPercentage)}
+                  </span>
+                </div>
+              </div>
+
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
+              </span>
             </div>
-            <div className="w-full sm:w-72 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-              <div
-                className="h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 transition-all duration-300"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
+
+            {/* Completion badge - only show when all done */}
+            {completedCount === totalCount && (
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-semibold hidden sm:inline">¡Completado!</span>
+              </div>
+            )}
           </div>
         )}
 
