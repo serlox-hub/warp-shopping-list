@@ -113,7 +113,7 @@ export default function ShoppingItem({
       onClick={handleToggle}
       onKeyDown={handleKeyDown}
     >
-      <div className="flex items-start justify-between">
+      <div className={`flex justify-between ${item.comment && item.comment.trim() ? 'items-start' : 'items-center'}`}>
         <div className="flex-1 cursor-pointer select-none">
           <div className={item.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}>
             <span className="font-medium">{item.name}</span>
