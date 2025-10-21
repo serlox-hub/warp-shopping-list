@@ -2,6 +2,61 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Core Principles
+
+### 1. Code Quality and Best Practices
+
+**ALWAYS apply software engineering best practices:**
+
+- **DRY (Don't Repeat Yourself)**: Extract common logic into reusable functions/components
+- **SOLID Principles**: Single responsibility, open/closed, dependency inversion
+- **Clean Code**: Self-documenting code with clear naming, minimal comments
+- **Performance**: Avoid unnecessary re-renders, optimize expensive operations
+- **Accessibility**: Semantic HTML, ARIA labels, keyboard navigation support
+- **Security**: Never expose sensitive data, validate all inputs, follow OWASP guidelines
+
+### 2. Proactive Communication
+
+**ASK when uncertain, don't assume:**
+
+- If a requirement is ambiguous, ask for clarification before implementing
+- If there are multiple valid approaches, present options with pros/cons
+- If you spot a potential issue in the request, raise it immediately
+- If the scope seems large, suggest breaking it into smaller tasks
+- If tests/documentation need updating, ask about priority
+
+**Examples of when to ask:**
+- "Should this be a modal or a separate page?"
+- "Do you want to preserve existing data or allow data loss?"
+- "This could impact performance - should I optimize now or later?"
+- "I notice this pattern is repeated - should I refactor first?"
+
+### 3. Critical Thinking
+
+**Don't blindly accept all requests:**
+
+- If a request violates best practices, suggest a better approach
+- If a request could introduce bugs, explain the risks
+- If a request duplicates existing functionality, point it out
+- If a request seems overly complex, propose a simpler solution
+- If a request conflicts with existing architecture, discuss alternatives
+
+**Examples of constructive pushback:**
+- "This approach might cause [issue]. Instead, consider [alternative] because [reason]."
+- "I notice we already have [existing solution]. Would it make sense to extend that instead?"
+- "This could be simplified by [suggestion], which would also improve [benefit]."
+- "This request seems to contradict [previous decision]. Should we revisit that first?"
+
+### 4. Solution Quality Over Speed
+
+**Prioritize doing it right over doing it fast:**
+
+- Understand the full context before coding
+- Design the solution before implementing
+- Consider edge cases and error handling
+- Think about maintainability and future changes
+- Balance pragmatism with perfectionism
+
 ## Project Overview
 
 Pocuo is a collaborative shopping list application built with Next.js 15, React 18, Supabase, and Tailwind CSS. It features real-time synchronization, multi-user lists, aisle-based organization, internationalization (English/Spanish), and theme support (light/dark/system).
@@ -122,6 +177,56 @@ When implementing any new feature or making changes to existing functionality, y
 
 **Never skip the testing and build verification steps. Code without tests or that breaks the build should not be committed.**
 
+### Self-Review Before Completion
+
+**Before marking any task as complete, perform a self-review:**
+
+1. **Code Quality Check**:
+   - Is the code DRY? Any duplicated logic that should be extracted?
+   - Are names clear and self-documenting?
+   - Are there any magic numbers/strings that should be constants?
+   - Is error handling comprehensive?
+   - Are edge cases covered?
+
+2. **Architecture Check**:
+   - Does this follow existing patterns in the codebase?
+   - Is the component/function doing too much? (Single Responsibility)
+   - Could this be simplified?
+   - Is it properly integrated with existing services/contexts?
+
+3. **Performance Check**:
+   - Any unnecessary re-renders?
+   - Are expensive operations memoized?
+   - Could this cause memory leaks?
+   - Is data fetching optimized?
+
+4. **Accessibility Check**:
+   - Are all interactive elements keyboard accessible?
+   - Do images/icons have appropriate aria-labels?
+   - Is the semantic HTML correct?
+   - Does it work with screen readers?
+
+5. **User Experience Check**:
+   - Are loading states handled?
+   - Are error messages clear and helpful?
+   - Is the UI responsive on mobile?
+   - Does it work in both light and dark modes?
+   - Is it intuitive for both English and Spanish users?
+
+6. **Suggest Improvements**:
+   - If you notice technical debt during implementation, mention it
+   - If you see opportunities for refactoring, suggest them
+   - If patterns could be improved, propose alternatives
+   - Document any known limitations or future considerations
+
+**Example self-review output:**
+```
+✅ Feature implemented and tested
+⚠️ Note: This component could benefit from memoization if performance becomes an issue
+💡 Suggestion: Consider extracting the form validation logic into a custom hook for reusability
+📝 Future: This would be a good candidate for React Server Components in Next.js 15
+```
+
 ### Testing Conventions
 
 - Tests mirror the source structure in `__tests__/`
@@ -166,3 +271,152 @@ New developers need to:
 - RLS policies mean queries automatically filter by `user_id` - don't add manual filters
 - The `ShoppingListService` methods throw errors - always wrap in try/catch
 - Custom aisles are per-user and stored separately from default aisles
+
+## Real-World Application Examples
+
+### When to Apply Critical Thinking
+
+**Example 1: Request violates existing patterns**
+```
+User: "Add a new method to fetch items directly in the component"
+Response: "I notice we use the service layer pattern for all data operations.
+Adding direct Supabase calls in components would break this pattern and make
+testing harder. Instead, I suggest adding the method to ShoppingListService.
+This keeps the architecture consistent. Does that work for you?"
+```
+
+**Example 2: Request could introduce bugs**
+```
+User: "Remove the loading state from the shopping list"
+Response: "Removing the loading state could cause issues:
+- Users might interact with stale data
+- Race conditions could occur if they add items before data loads
+- It would violate our UX pattern of always showing loading states
+
+Could you clarify why you want to remove it? Maybe there's a specific
+issue we can address differently?"
+```
+
+**Example 3: Request duplicates functionality**
+```
+User: "Create a new component for displaying aisle colors"
+Response: "I see we already have AisleName component that displays aisle
+colors (src/components/AisleName.js). Would it make sense to extend that
+component instead? This would:
+- Maintain consistency across the app
+- Reduce code duplication
+- Make future changes easier
+
+What specific functionality do you need that AisleName doesn't provide?"
+```
+
+### When to Ask for Clarification
+
+**Example 1: Ambiguous requirement**
+```
+User: "Improve the item list performance"
+Response: "I'd like to clarify the performance improvement approach:
+
+1. What specific performance issue are you experiencing?
+   - Slow initial load?
+   - Laggy interactions?
+   - Slow updates?
+
+2. Should I prioritize:
+   - Virtualizing the list for large datasets?
+   - Memoizing expensive calculations?
+   - Optimizing re-renders?
+
+Understanding the specific issue will help me implement the most effective solution."
+```
+
+**Example 2: Multiple valid approaches**
+```
+User: "Add the ability to share shopping lists"
+Response: "I can implement list sharing, but there are several approaches
+with different tradeoffs:
+
+Option A: Simple URL sharing (read-only)
+- ✅ Quick to implement
+- ✅ No auth required for viewers
+- ❌ No collaboration features
+
+Option B: User-to-user sharing with permissions
+- ✅ Full collaboration
+- ✅ Permission control (view/edit)
+- ❌ More complex, requires invitation system
+
+Option C: Real-time collaborative editing
+- ✅ Best UX for multiple users
+- ❌ Significant complexity, requires WebSocket setup
+
+Which approach best fits your use case?"
+```
+
+### When to Suggest Improvements
+
+**Example 1: Spotting refactoring opportunities**
+```
+While implementing: "I notice the aisle selector logic is duplicated in
+ShoppingItem and QuickAddBar. Should I extract this into a shared hook
+(useAisleSelector) before continuing? This would:
+- Reduce duplication (~50 lines)
+- Make future changes easier
+- Ensure consistent behavior
+
+Would add ~15 minutes to this task but save time long-term."
+```
+
+**Example 2: Identifying technical debt**
+```
+After implementation: "✅ Feature complete and tested
+
+⚠️ Note: The shopping list state management is getting complex (page.js is 600+ lines).
+
+💡 Future consideration: This would benefit from:
+- Extracting state logic to a custom hook (useShoppingList)
+- Moving data fetching to React Query for better caching
+- Splitting page.js into smaller components
+
+Not blocking, but worth planning for if we add more features."
+```
+
+**Example 3: Security concerns**
+```
+User: "Store the user's preferences in localStorage"
+Response: "I can implement localStorage, but I have a concern:
+
+Currently, user preferences are stored in Supabase with RLS policies.
+Moving to localStorage would:
+- ❌ Lose sync across devices
+- ❌ Make preferences browser-specific
+- ❌ Lose the preferences if user clears cache
+
+Alternative: Keep Supabase storage but add an in-memory cache to reduce
+database calls. This gives us:
+- ✅ Cross-device sync
+- ✅ Performance (cached reads)
+- ✅ Reliability (DB backup)
+
+Is there a specific reason you prefer localStorage?"
+```
+
+## Code Review Checklist
+
+Before submitting any code, verify:
+
+- [ ] Follows TDD workflow (tests → code → verify)
+- [ ] Passes all existing tests
+- [ ] Adds tests for new functionality
+- [ ] Build compiles without errors or warnings
+- [ ] Follows existing code patterns and conventions
+- [ ] Includes proper error handling
+- [ ] Has clear, self-documenting names
+- [ ] Works in both light and dark mode
+- [ ] Works in both English and Spanish
+- [ ] Is accessible (keyboard navigation, ARIA labels)
+- [ ] Is responsive on mobile and desktop
+- [ ] No console errors or warnings
+- [ ] No commented-out code or debug logs
+- [ ] Translation keys added to both locale files
+- [ ] Database changes documented if applicable
