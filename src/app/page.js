@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import AddItemForm from '@/components/AddItemForm';
+import QuickAddBar from '@/components/QuickAddBar';
 import EditItemModal from '@/components/EditItemModal';
 import AisleSection from '@/components/AisleSection';
 import AisleManager from '@/components/AisleManager';
@@ -458,7 +458,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 transition-colors duration-200">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-6 py-8 pb-32 space-y-8">
         <header className="flex flex-col gap-4">
           <div className="flex flex-row items-center justify-between gap-3">
             <div className="order-2">
@@ -509,17 +509,6 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Add Item Form */}
-        <div className="mb-8">
-          <AddItemForm
-            onAddItem={handleAddItem}
-            customAisles={customAisles}
-            itemUsageHistory={itemUsageHistory}
-            existingItemNames={items.map(item => item.name)}
-            existingItems={items}
-            aisleColors={aisleColors}
-          />
-        </div>
 
         {hasItems && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-white/40 dark:bg-slate-900/40 rounded-2xl p-4 border border-slate-200 dark:border-slate-800">
@@ -599,6 +588,16 @@ export default function Home() {
           customAisles={customAisles}
         />
       )}
+
+      {/* Quick Add Bar */}
+      <QuickAddBar
+        onAddItem={handleAddItem}
+        customAisles={customAisles}
+        itemUsageHistory={itemUsageHistory}
+        existingItems={items}
+        aisleColors={aisleColors}
+        availableAisles={englishCustomAisles}
+      />
     </div>
   );
 }

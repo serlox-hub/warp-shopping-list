@@ -12,12 +12,12 @@ jest.mock('../../lib/shoppingListService')
 let addItemFormPropsLog = []
 let aisleSectionRenderLog = []
 
-jest.mock('../../components/AddItemForm', () => {
-  return function MockAddItemForm({ onAddItem, customAisles, aisleColors, existingItems }) {
+jest.mock('../../components/QuickAddBar', () => {
+  return function MockQuickAddBar({ onAddItem, customAisles, aisleColors, existingItems }) {
     addItemFormPropsLog.push({ customAisles, aisleColors, existingItems })
     return (
-      <div data-testid="add-item-form">
-        <button onClick={() => onAddItem({ name: 'Test Item', aisle: 'Produce', quantity: 1 })}>
+      <div data-testid="quick-add-bar">
+        <button onClick={() => onAddItem({ name: 'Test Item', aisle: 'Produce', quantity: 1, comment: '' })}>
           Add Item
         </button>
       </div>
@@ -368,7 +368,7 @@ describe('Home', () => {
     render(<Home />)
     
     await waitFor(() => {
-      expect(screen.getByTestId('add-item-form')).toBeInTheDocument()
+      expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
       expect(screen.getByTestId('aisle-section-Produce')).toBeInTheDocument()
       expect(screen.getByTestId('aisle-section-Dairy')).toBeInTheDocument()
     })
@@ -393,7 +393,7 @@ describe('Home', () => {
     render(<Home />)
     
     await waitFor(() => {
-      expect(screen.getByTestId('add-item-form')).toBeInTheDocument()
+      expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
     })
 
     await user.click(screen.getByText('Add Item'))
@@ -402,7 +402,7 @@ describe('Home', () => {
       expect(mockShoppingListService.addShoppingItem).toHaveBeenCalledWith(
         'list-1',
         'user-1',
-        { name: 'Test Item', aisle: 'Produce', quantity: 1 }
+        { name: 'Test Item', aisle: 'Produce', quantity: 1, comment: '' }
       )
     })
 
