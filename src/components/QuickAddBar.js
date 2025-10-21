@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DEFAULT_AISLES, getDefaultAisleColor } from '@/types/shoppingList';
 import { useTranslations } from '@/contexts/LanguageContext';
-import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
+import { normalizeHexColor } from '@/utils/colors';
 
 const stripDiacritics = (value) => {
   if (value === null || value === undefined) {
@@ -380,22 +380,6 @@ export default function QuickAddBar({
     setShowAisleSelector(false);
   };
 
-  const currentAisleColor = useMemo(() => {
-    const englishAisle = localizedToEnglish[aisle] || aisle;
-    return normalizeHexColor(aisleColors[aisle]) || getDefaultAisleColor(englishAisle) || '#6b7280';
-  }, [aisle, aisleColors, localizedToEnglish]);
-
-  const currentAisleTextColor = useMemo(() => {
-    return getContrastingTextColor(currentAisleColor, {
-      light: '#f9fafb',
-      dark: '#111827'
-    });
-  }, [currentAisleColor]);
-
-  const currentAisleBorderColor = useMemo(() => {
-    return getBorderColorFromHex(currentAisleColor, 0.45) || 'rgba(107,114,128,0.45)';
-  }, [currentAisleColor]);
-
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-lg">
       <div className="max-w-5xl mx-auto px-6 py-4">
@@ -482,18 +466,27 @@ export default function QuickAddBar({
               )}
             </div>
 
-            {/* Aisle Tag */}
+            {/* Aisle Tag with Dropdown */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowAisleSelector(!showAisleSelector)}
-                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all duration-200 hover:shadow-md"
-                style={{
-                  backgroundColor: currentAisleColor,
-                  color: currentAisleTextColor,
-                  borderColor: currentAisleBorderColor
-                }}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+                aria-haspopup="menu"
+                aria-expanded={showAisleSelector}
+                aria-label={t('shoppingList.changeAisle')}
               >
+                {(() => {
+                  const englishAisle = localizedToEnglish[aisle] || aisle;
+                  const aisleColor = normalizeHexColor(aisleColors[aisle]) || getDefaultAisleColor(englishAisle);
+                  return aisleColor ? (
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: aisleColor }}
+                      aria-hidden="true"
+                    />
+                  ) : null;
+                })()}
                 <span>{aisle}</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -507,29 +500,44 @@ export default function QuickAddBar({
                     className="fixed inset-0 z-40"
                     onClick={() => setShowAisleSelector(false)}
                   />
-                  <div className="absolute bottom-full right-0 mb-2 w-48 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl z-50 max-h-64 overflow-y-auto">
-                    {customAisles.map((aisleOption) => {
-                      const englishAisle = localizedToEnglish[aisleOption] || aisleOption;
-                      const aisleColor = normalizeHexColor(aisleColors[aisleOption]) || getDefaultAisleColor(englishAisle);
-                      const isSelected = aisleOption === aisle;
+                  <div className="absolute bottom-full right-0 mb-2 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50 py-2">
+                    <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {t('shoppingList.currentAisle')}
+                    </div>
+                    <div className="px-3 pb-2 text-sm text-gray-700 dark:text-gray-200">
+                      {aisle}
+                    </div>
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                    <div className="max-h-60 overflow-y-auto">
+                      {customAisles.map((aisleOption) => {
+                        const englishAisle = localizedToEnglish[aisleOption] || aisleOption;
+                        const aisleColor = normalizeHexColor(aisleColors[aisleOption]) || getDefaultAisleColor(englishAisle);
+                        const isSelected = aisleOption === aisle;
 
-                      return (
-                        <button
-                          key={aisleOption}
-                          type="button"
-                          onClick={() => handleAisleChange(aisleOption)}
-                          className={`w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-2 ${
-                            isSelected ? 'bg-slate-50 dark:bg-slate-750' : ''
-                          }`}
-                        >
-                          <span
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: aisleColor }}
-                          />
-                          <span className="text-slate-900 dark:text-slate-100">{aisleOption}</span>
-                        </button>
-                      );
-                    })}
+                        return (
+                          <button
+                            key={aisleOption}
+                            type="button"
+                            onClick={() => handleAisleChange(aisleOption)}
+                            className={`w-full px-3 py-2 text-left text-sm transition-colors duration-150 flex items-center gap-2 ${
+                              isSelected
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
+                            }`}
+                            aria-current={isSelected ? 'true' : undefined}
+                          >
+                            {aisleColor && (
+                              <span
+                                className="inline-flex h-2.5 w-2.5 rounded-full border border-gray-200 dark:border-gray-700"
+                                style={{ backgroundColor: aisleColor }}
+                                aria-hidden="true"
+                              ></span>
+                            )}
+                            <span>{aisleOption}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </>
               )}
