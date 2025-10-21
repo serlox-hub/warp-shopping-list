@@ -13,22 +13,29 @@ let addItemFormPropsLog = []
 let aisleSectionRenderLog = []
 
 jest.mock('../../components/AddItemForm', () => {
-  return function MockAddItemForm({ onAddItem, editingItem, onUpdateItem, onCancelEdit, customAisles, aisleColors, existingItems }) {
+  return function MockAddItemForm({ onAddItem, customAisles, aisleColors, existingItems }) {
     addItemFormPropsLog.push({ customAisles, aisleColors, existingItems })
     return (
       <div data-testid="add-item-form">
         <button onClick={() => onAddItem({ name: 'Test Item', aisle: 'Produce', quantity: 1 })}>
           Add Item
         </button>
-        {editingItem && (
-          <div>
-            <span>Editing: {editingItem.name}</span>
-            <button onClick={() => onUpdateItem({ ...editingItem, name: 'Updated Item' })}>
-              Update
-            </button>
-            <button onClick={onCancelEdit}>Cancel</button>
-          </div>
-        )}
+      </div>
+    )
+  }
+})
+
+jest.mock('../../components/EditItemModal', () => {
+  return function MockEditItemModal({ item, onUpdateItem, onClose }) {
+    return (
+      <div data-testid="edit-item-modal">
+        <h2>Edit Item</h2>
+        <span>Editing: {item.name}</span>
+        <input defaultValue={item.name} data-testid="edit-name-input" />
+        <button onClick={() => onUpdateItem({ ...item, name: 'Updated Item' })}>
+          Update Item
+        </button>
+        <button onClick={onClose}>Cancel</button>
       </div>
     )
   }
@@ -554,16 +561,17 @@ describe('Home', () => {
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
 
     render(<Home />)
-    
+
     await waitFor(() => {
       expect(screen.getByTestId('item-1')).toBeInTheDocument()
     })
 
     const editButton = screen.getByText('Edit')
     await user.click(editButton)
-    
+
+    // Should show edit modal with Edit Item title
     await waitFor(() => {
-      expect(screen.getByText('Editing: Apples')).toBeInTheDocument()
+      expect(screen.getByText('Edit Item')).toBeInTheDocument()
     })
   })
 
@@ -581,30 +589,35 @@ describe('Home', () => {
     mockShoppingListService.updateShoppingItem.mockResolvedValue(updatedItem)
 
     render(<Home />)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Edit')).toBeInTheDocument()
     })
 
     // First click edit
     await user.click(screen.getByText('Edit'))
-    
+
+    // Should show modal with Update Item button
     await waitFor(() => {
-      expect(screen.getByText('Update')).toBeInTheDocument()
+      expect(screen.getByText('Update Item')).toBeInTheDocument()
     })
 
+    // Edit the name field
+    const nameInput = screen.getByDisplayValue('Apples')
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Updated Item')
+
     // Then click update
-    await user.click(screen.getByText('Update'))
-    
+    await user.click(screen.getByText('Update Item'))
+
     await waitFor(() => {
       expect(mockShoppingListService.updateShoppingItem).toHaveBeenCalledWith(
         '1',
-        {
+        expect.objectContaining({
           name: 'Updated Item',
           aisle: 'Produce',
-          quantity: 3,
-          comment: undefined
-        }
+          quantity: 3
+        })
       )
     })
 

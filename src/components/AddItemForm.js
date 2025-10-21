@@ -142,9 +142,6 @@ const MAX_SUGGESTIONS = 20;
 
 export default function AddItemForm({
   onAddItem,
-  editingItem,
-  onUpdateItem,
-  onCancelEdit,
   customAisles = DEFAULT_AISLES,
   itemUsageHistory = [],
   existingItemNames = [],
@@ -318,37 +315,6 @@ export default function AddItemForm({
     return rankedSuggestions.slice(0, MAX_SUGGESTIONS);
   }, [normalizedUsageHistory, existingItemsSet, englishToLocalized, aisleColors]);
 
-  // Update form values when editingItem changes
-  useEffect(() => {
-    if (editingItem) {
-      setName(editingItem.name || '');
-      // Find the localized aisle name that matches the stored English aisle
-      const matchingLocalizedAisle = customAisles.find(
-        (localizedAisle) => localizedToEnglish[localizedAisle] === editingItem.aisle
-      );
-
-      setAisle(
-        matchingLocalizedAisle ||
-          englishToLocalized[editingItem.aisle] ||
-          editingItem.aisle ||
-          getDefaultLocalizedAisle()
-      );
-      setQuantity(editingItem.quantity || 1);
-      setComment(editingItem.comment || '');
-    } else {
-      resetNewItemForm();
-    }
-    setSuggestions([]);
-    setShowSuggestions(false);
-  }, [
-    editingItem,
-    customAisles,
-    englishToLocalized,
-    localizedToEnglish,
-    getDefaultLocalizedAisle,
-    resetNewItemForm
-  ]);
-
   useEffect(() => {
     return () => {
       if (suggestionCloseTimeout.current) {
@@ -366,34 +332,14 @@ export default function AddItemForm({
     };
     const englishAisle = aisleTranslationMap[aisle] || aisle;
 
-    if (editingItem) {
-      onUpdateItem({
-        ...editingItem,
-        name: name.trim(),
-        aisle: englishAisle,
-        quantity: parseInt(quantity, 10),
-        comment: comment.trim()
-      });
-    } else {
-      onAddItem({
-        name: name.trim(),
-        aisle: englishAisle,
-        quantity: parseInt(quantity, 10),
-        comment: comment.trim()
-      });
-    }
+    onAddItem({
+      name: name.trim(),
+      aisle: englishAisle,
+      quantity: parseInt(quantity, 10),
+      comment: comment.trim()
+    });
 
-    if (!editingItem) {
-      resetNewItemForm();
-    }
-    setSuggestions([]);
-    setShowSuggestions(false);
-  };
-
-  const handleCancel = () => {
-    if (editingItem) {
-      onCancelEdit();
-    }
+    resetNewItemForm();
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -407,13 +353,6 @@ export default function AddItemForm({
 
   const handleSuggestionSelection = (suggestion) => {
     if (!suggestion || suggestion.isInCurrentList) {
-      return;
-    }
-
-    if (editingItem) {
-      setName(suggestion.item_name);
-      setSuggestions([]);
-      setShowSuggestions(false);
       return;
     }
 
@@ -454,40 +393,17 @@ export default function AddItemForm({
     }, 120);
   };
 
-  const isEditing = !!editingItem;
   const labelClass = 'block text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300 mb-2';
-  const controlClass = `w-full px-3 py-2 rounded-lg border bg-white dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 transition-colors duration-200`;
-  const controlBorderClass = isEditing
-    ? 'border-indigo-200 dark:border-indigo-500/40'
-    : 'border-slate-200 dark:border-slate-700';
+  const controlClass = 'w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 transition-colors duration-200';
 
   return (
     <form
       onSubmit={handleSubmit}
-      className={`rounded-2xl border transition-colors duration-200 shadow-sm backdrop-blur ${
-        isEditing
-          ? 'border-indigo-200 dark:border-indigo-500/40 bg-white/85 dark:bg-slate-900/70 ring-1 ring-indigo-500/30'
-          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'
-      } p-6`}
+      className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 transition-colors duration-200 shadow-sm p-6"
     >
       <div className="flex items-center gap-3 mb-6">
-        {isEditing && (
-          <svg
-            className="w-5 h-5 text-indigo-500 dark:text-indigo-300"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
-        )}
-        <h3 className={`text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100`}>
-          {editingItem ? t('addItemForm.editTitle') : t('addItemForm.addTitle')}
+        <h3 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+          {t('addItemForm.addTitle')}
         </h3>
       </div>
 
@@ -504,7 +420,7 @@ export default function AddItemForm({
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
               placeholder={t('addItemForm.itemNamePlaceholder')}
-              className={`${controlClass} ${controlBorderClass}`}
+              className={controlClass}
               required
               autoComplete="off"
             />
@@ -582,7 +498,7 @@ export default function AddItemForm({
           <select
             value={aisle}
             onChange={(e) => setAisle(e.target.value)}
-            className={`${controlClass} ${controlBorderClass}`}
+            className={controlClass}
           >
             {customAisles.map((aisleOption) => (
               <option key={aisleOption} value={aisleOption}>
@@ -601,7 +517,7 @@ export default function AddItemForm({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             min="1"
-            className={`${controlClass} ${controlBorderClass}`}
+            className={controlClass}
           />
         </div>
       </div>
@@ -615,7 +531,7 @@ export default function AddItemForm({
           onChange={(e) => setComment(e.target.value)}
           placeholder={t('addItemForm.commentPlaceholder')}
           rows={2}
-          className={`${controlClass} ${controlBorderClass} resize-none`}
+          className={`${controlClass} resize-none`}
           maxLength={200}
         />
         <div className="flex justify-between items-center mt-1">
@@ -628,21 +544,12 @@ export default function AddItemForm({
         </div>
       </div>
 
-      <div className="flex justify-end space-x-2 mt-4">
-        {editingItem && (
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200"
-          >
-            {t('common.cancel')}
-          </button>
-        )}
+      <div className="flex justify-end mt-4">
         <button
           type="submit"
           className="px-5 py-2 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
         >
-          {editingItem ? t('addItemForm.updateButton') : t('addItemForm.addButton')}
+          {t('addItemForm.addButton')}
         </button>
       </div>
     </form>

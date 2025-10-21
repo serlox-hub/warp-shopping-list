@@ -44,22 +44,11 @@ describe('AddItemForm', () => {
 
   const defaultProps = {
     onAddItem: mockOnAddItem,
-    editingItem: null,
-    onUpdateItem: mockOnUpdateItem,
-    onCancelEdit: mockOnCancelEdit,
     customAisles: ['Produce', 'Dairy', 'Bakery', 'Other'],
     itemUsageHistory: [],
     existingItemNames: [],
     existingItems: [],
     aisleColors: {}
-  }
-
-  const mockEditingItem = {
-    id: '1',
-    name: 'Apples',
-    aisle: 'Produce',
-    quantity: 3,
-    comment: 'Red apples'
   }
 
   beforeEach(() => {
@@ -77,17 +66,6 @@ describe('AddItemForm', () => {
     expect(screen.getByPlaceholderText('Add a note or comment...')).toBeInTheDocument()
     expect(screen.getByText('Add Item')).toBeInTheDocument()
     expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
-  })
-
-  it('should render edit form correctly', () => {
-    render(<AddItemForm {...defaultProps} editingItem={mockEditingItem} />)
-    
-    expect(screen.getByText('Edit Item')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Apples')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('3')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Red apples')).toBeInTheDocument()
-    expect(screen.getByText('Update Item')).toBeInTheDocument()
-    expect(screen.getByText('Cancel')).toBeInTheDocument()
   })
 
   it('should handle form input changes', async () => {
@@ -137,34 +115,6 @@ describe('AddItemForm', () => {
       quantity: 2,
       comment: 'Whole milk'
     })
-  })
-
-  it('should update existing item with correct data', async () => {
-    const user = userEvent.setup()
-    render(<AddItemForm {...defaultProps} editingItem={mockEditingItem} />)
-    
-    const nameInput = screen.getByDisplayValue('Apples')
-    await user.clear(nameInput)
-    await user.type(nameInput, 'Green Apples')
-    
-    await user.click(screen.getByText('Update Item'))
-    
-    expect(mockOnUpdateItem).toHaveBeenCalledWith({
-      ...mockEditingItem,
-      name: 'Green Apples',
-      aisle: 'Produce',
-      quantity: 3,
-      comment: 'Red apples'
-    })
-  })
-
-  it('should handle cancel edit', async () => {
-    const user = userEvent.setup()
-    render(<AddItemForm {...defaultProps} editingItem={mockEditingItem} />)
-    
-    await user.click(screen.getByText('Cancel'))
-    
-    expect(mockOnCancelEdit).toHaveBeenCalled()
   })
 
   it('should not submit with empty name', async () => {
@@ -400,16 +350,4 @@ describe('AddItemForm', () => {
     expect(screen.getByText('Custom Aisle 2')).toBeInTheDocument()
   })
 
-  it('should have different styling when editing', () => {
-    const { rerender } = render(<AddItemForm {...defaultProps} />)
-    
-    // Check add mode styling
-    let form = screen.getByText('Add New Item').closest('form')
-    expect(form).toHaveClass('bg-white')
-    
-    // Check edit mode styling
-    rerender(<AddItemForm {...defaultProps} editingItem={mockEditingItem} />)
-    form = screen.getByText('Edit Item').closest('form')
-    expect(form).toHaveClass('border-indigo-200')
-  })
 })

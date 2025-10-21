@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import AddItemForm from '@/components/AddItemForm';
+import EditItemModal from '@/components/EditItemModal';
 import AisleSection from '@/components/AisleSection';
 import AisleManager from '@/components/AisleManager';
 import Header from '@/components/Header';
@@ -11,7 +12,7 @@ import TopPurchasedItems from '@/components/TopPurchasedItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
-import { 
+import {
   groupItemsByAisle,
   updateItemsAisle,
   mapLocalizedToEnglish,
@@ -508,13 +509,10 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Add/Edit Item Form */}
+        {/* Add Item Form */}
         <div className="mb-8">
           <AddItemForm
             onAddItem={handleAddItem}
-            editingItem={editingItem}
-            onUpdateItem={handleUpdateItem}
-            onCancelEdit={handleCancelEdit}
             customAisles={customAisles}
             itemUsageHistory={itemUsageHistory}
             existingItemNames={items.map(item => item.name)}
@@ -590,6 +588,16 @@ export default function Home() {
             />
           </div>
         </div>
+      )}
+
+      {/* Edit Item Modal */}
+      {editingItem && (
+        <EditItemModal
+          item={editingItem}
+          onUpdateItem={handleUpdateItem}
+          onClose={handleCancelEdit}
+          customAisles={customAisles}
+        />
       )}
     </div>
   );
