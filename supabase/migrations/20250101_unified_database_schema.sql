@@ -1,14 +1,11 @@
 -- =============================================================================
--- UNIFIED DATABASE SCHEMA FOR SHOPPING LIST APPLICATION
--- =============================================================================
--- Created: 2025-01-15
--- Description: Complete database schema with all tables, functions, and policies
--- Features: Shopping lists, items, user preferences, custom aisles, RLS security
--- =============================================================================
-
--- =============================================================================
 -- 1. CORE TABLES
 -- =============================================================================
+-- NOTE: Tables must be created in dependency order:
+-- 1. shopping_lists (no dependencies)
+-- 2. user_preferences (no dependencies)
+-- 3. user_aisles (no dependencies, but needed before shopping_items)
+-- 4. shopping_items (depends on shopping_lists and user_aisles)
 
 -- Shopping Lists table
 CREATE TABLE IF NOT EXISTS public.shopping_lists (
@@ -17,20 +14,6 @@ CREATE TABLE IF NOT EXISTS public.shopping_lists (
     name TEXT NOT NULL DEFAULT 'My Shopping List',
     is_active BOOLEAN NOT NULL DEFAULT false,
     list_order INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Shopping Items table
-CREATE TABLE IF NOT EXISTS public.shopping_items (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    shopping_list_id UUID REFERENCES public.shopping_lists(id) ON DELETE CASCADE NOT NULL,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    name TEXT NOT NULL,
-    aisle TEXT NOT NULL DEFAULT 'Other',
-    quantity INTEGER NOT NULL DEFAULT 1,
-    completed BOOLEAN NOT NULL DEFAULT false,
-    comment TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -46,7 +29,7 @@ CREATE TABLE IF NOT EXISTS public.user_preferences (
     UNIQUE(user_id)
 );
 
--- User Aisles table
+-- User Aisles table (must be created before shopping_items due to FK constraint)
 CREATE TABLE IF NOT EXISTS public.user_aisles (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -58,18 +41,22 @@ CREATE TABLE IF NOT EXISTS public.user_aisles (
     UNIQUE(user_id, name)
 );
 
--- Shopping Item Usage table
-CREATE TABLE IF NOT EXISTS public.shopping_item_usage (
+-- Shopping Items table
+-- BREAKING CHANGE: aisle is now FK to user_aisles.id (was TEXT)
+-- BREAKING CHANGE: added purchase_count (replaces shopping_item_usage table)
+CREATE TABLE IF NOT EXISTS public.shopping_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    shopping_list_id UUID REFERENCES public.shopping_lists(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    item_name TEXT NOT NULL,
+    name TEXT NOT NULL,
+    aisle_id UUID REFERENCES public.user_aisles(id) ON DELETE SET NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    completed BOOLEAN NOT NULL DEFAULT false,
     purchase_count INTEGER NOT NULL DEFAULT 0,
-    last_aisle TEXT,
-    last_quantity INTEGER,
-    last_purchased_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    comment TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    UNIQUE(user_id, item_name)
+    last_purchased_at TIMESTAMP WITH TIME ZONE
 );
 
 -- =============================================================================
@@ -83,6 +70,8 @@ CREATE INDEX IF NOT EXISTS shopping_lists_user_order_idx ON public.shopping_list
 -- Shopping Items indexes
 CREATE INDEX IF NOT EXISTS shopping_items_shopping_list_id_idx ON public.shopping_items(shopping_list_id);
 CREATE INDEX IF NOT EXISTS shopping_items_user_id_idx ON public.shopping_items(user_id);
+CREATE INDEX IF NOT EXISTS shopping_items_aisle_id_idx ON public.shopping_items(aisle_id);
+CREATE INDEX IF NOT EXISTS shopping_items_purchase_count_idx ON public.shopping_items(user_id, purchase_count DESC);
 CREATE INDEX IF NOT EXISTS idx_shopping_items_comment ON public.shopping_items USING gin(to_tsvector('english', comment)) WHERE comment IS NOT NULL;
 
 -- User Preferences indexes
@@ -91,10 +80,6 @@ CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON public.user_preferenc
 -- User Aisles indexes
 CREATE INDEX IF NOT EXISTS idx_user_aisles_user_id ON public.user_aisles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_aisles_user_order ON public.user_aisles(user_id, display_order);
-
--- Shopping Item Usage indexes
-CREATE INDEX IF NOT EXISTS shopping_item_usage_user_id_idx ON public.shopping_item_usage(user_id);
-CREATE INDEX IF NOT EXISTS shopping_item_usage_user_count_idx ON public.shopping_item_usage(user_id, purchase_count DESC);
 
 -- =============================================================================
 -- 3. UNIQUE CONSTRAINTS
@@ -159,48 +144,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Function to increment item usage counts
-CREATE OR REPLACE FUNCTION public.increment_item_usage(
-    p_user_id UUID,
-    p_item_name TEXT,
-    p_last_aisle TEXT DEFAULT NULL,
-    p_last_quantity INTEGER DEFAULT NULL
-)
-RETURNS public.shopping_item_usage AS $$
-DECLARE
-    v_item_name TEXT := trim(both FROM p_item_name);
-    v_usage public.shopping_item_usage;
+-- Function to increment purchase count when item is marked as completed
+CREATE OR REPLACE FUNCTION public.increment_purchase_count()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF v_item_name IS NULL OR v_item_name = '' THEN
-        RAISE EXCEPTION 'Item name cannot be empty';
+    -- Only increment if item is being marked as completed (not already completed)
+    IF NEW.completed = true AND OLD.completed = false THEN
+        NEW.purchase_count = OLD.purchase_count + 1;
+        NEW.last_purchased_at = timezone('utc'::text, now());
     END IF;
-
-    INSERT INTO public.shopping_item_usage (
-        user_id,
-        item_name,
-        purchase_count,
-        last_aisle,
-        last_quantity,
-        last_purchased_at
-    )
-    VALUES (
-        p_user_id,
-        v_item_name,
-        1,
-        p_last_aisle,
-        p_last_quantity,
-        timezone('utc'::text, now())
-    )
-    ON CONFLICT (user_id, item_name)
-    DO UPDATE SET
-        purchase_count = public.shopping_item_usage.purchase_count + 1,
-        last_aisle = COALESCE(EXCLUDED.last_aisle, public.shopping_item_usage.last_aisle),
-        last_quantity = COALESCE(EXCLUDED.last_quantity, public.shopping_item_usage.last_quantity),
-        last_purchased_at = timezone('utc'::text, now()),
-        updated_at = timezone('utc'::text, now())
-    RETURNING * INTO v_usage;
-
-    RETURN v_usage;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -221,12 +174,13 @@ CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.user_preferences
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.user_aisles
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
-CREATE TRIGGER handle_updated_at BEFORE UPDATE ON public.shopping_item_usage
-    FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
 -- Trigger for setting list order on new lists
 CREATE TRIGGER set_list_order_trigger BEFORE INSERT ON public.shopping_lists
     FOR EACH ROW EXECUTE FUNCTION public.set_new_list_order();
+
+-- Trigger to increment purchase count when item is completed
+CREATE TRIGGER increment_purchase_count_trigger BEFORE UPDATE ON public.shopping_items
+    FOR EACH ROW EXECUTE FUNCTION public.increment_purchase_count();
 
 -- =============================================================================
 -- 6. ROW LEVEL SECURITY (RLS)
@@ -237,7 +191,6 @@ ALTER TABLE public.shopping_lists ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shopping_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_aisles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.shopping_item_usage ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================================
 -- 7. RLS POLICIES - SHOPPING LISTS
@@ -272,28 +225,21 @@ CREATE POLICY "Users can delete their own shopping items" ON public.shopping_ite
     FOR DELETE USING (auth.uid() = user_id);
 
 -- =============================================================================
--- 9. RLS POLICIES - SHOPPING ITEM USAGE
--- =============================================================================
-
-CREATE POLICY "Users can manage their own item usage" ON public.shopping_item_usage
-    FOR ALL USING (auth.uid() = user_id);
-
--- =============================================================================
--- 10. RLS POLICIES - USER PREFERENCES
+-- 9. RLS POLICIES - USER PREFERENCES
 -- =============================================================================
 
 CREATE POLICY "Users can manage their own preferences" ON public.user_preferences
     FOR ALL USING (auth.uid() = user_id);
 
 -- =============================================================================
--- 11. RLS POLICIES - USER AISLES
+-- 10. RLS POLICIES - USER AISLES
 -- =============================================================================
 
 CREATE POLICY "Users can manage their own aisles" ON public.user_aisles
     FOR ALL USING (auth.uid() = user_id);
 
 -- =============================================================================
--- 12. INITIAL DATA SETUP
+-- 11. INITIAL DATA SETUP
 -- =============================================================================
 
 -- Update existing data to ensure consistency
@@ -326,28 +272,30 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- 13. TABLE COMMENTS
+-- 12. TABLE COMMENTS
 -- =============================================================================
 
 COMMENT ON TABLE public.shopping_lists IS 'Shopping lists with RLS - users can only access their own lists';
-COMMENT ON TABLE public.shopping_items IS 'Shopping items with RLS - users can only access their own items';
+COMMENT ON TABLE public.shopping_items IS 'Shopping items with RLS - users can only access their own items. Includes purchase tracking.';
 COMMENT ON TABLE public.user_preferences IS 'User preferences with RLS - users can only access their own preferences';
 COMMENT ON TABLE public.user_aisles IS 'User custom aisles with RLS - users can only access their own aisles';
-COMMENT ON TABLE public.shopping_item_usage IS 'Aggregated counts tracking how often a user has added each item';
 
--- Column comments
-COMMENT ON COLUMN public.shopping_items.comment IS 'Optional comment or note for the shopping item';
-COMMENT ON COLUMN public.user_preferences.language IS 'User preferred language (en, es, etc.)';
-COMMENT ON COLUMN public.user_preferences.theme IS 'User preferred theme (light, dark, system)';
+-- Column comments for shopping_lists
 COMMENT ON COLUMN public.shopping_lists.is_active IS 'Indicates the currently active list for the user';
 COMMENT ON COLUMN public.shopping_lists.list_order IS 'Display order of lists for the user';
-COMMENT ON COLUMN public.shopping_item_usage.purchase_count IS 'Number of times the user has added this item';
-COMMENT ON COLUMN public.shopping_item_usage.last_purchased_at IS 'Timestamp of the most recent time the user added this item';
-COMMENT ON COLUMN public.shopping_item_usage.last_aisle IS 'Most recent aisle selected when adding this item';
-COMMENT ON COLUMN public.shopping_item_usage.last_quantity IS 'Most recent quantity selected when adding this item';
+
+-- Column comments for shopping_items
+COMMENT ON COLUMN public.shopping_items.aisle_id IS 'Foreign key to user_aisles table. NULL allowed if aisle was deleted.';
+COMMENT ON COLUMN public.shopping_items.comment IS 'Optional comment or note for the shopping item';
+COMMENT ON COLUMN public.shopping_items.purchase_count IS 'Number of times this item has been marked as completed';
+COMMENT ON COLUMN public.shopping_items.last_purchased_at IS 'Timestamp of the most recent time this item was marked as completed';
+
+-- Column comments for user_preferences
+COMMENT ON COLUMN public.user_preferences.language IS 'User preferred language (en, es, etc.)';
+COMMENT ON COLUMN public.user_preferences.theme IS 'User preferred theme (light, dark, system)';
 
 -- =============================================================================
--- 14. GRANTS
+-- 13. GRANTS
 -- =============================================================================
 grant usage on schema public to anon, authenticated, service_role;
 grant select on all tables in schema public to anon;

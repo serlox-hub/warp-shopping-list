@@ -36,7 +36,13 @@ export default function Home() {
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
   const [itemUsageHistory, setItemUsageHistory] = useState([]);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const englishCustomAisles = useMemo(() => mapLocalizedToEnglish(customAisles, t), [customAisles, t]);
+  // customAisles are now objects with {id, name, color, display_order}
+  // Extract names for compatibility with components expecting string arrays
+  const englishCustomAisles = useMemo(() => customAisles.filter(a => a && a.name).map(a => a.name), [customAisles]);
+  const localizedCustomAisles = useMemo(() => {
+    const englishNames = customAisles.filter(a => a && a.name).map(a => a.name);
+    return mapEnglishToLocalized(englishNames, t);
+  }, [customAisles, t]);
   const primaryActionClass = 'inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed';
   const subtleActionClass = 'inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
   const dangerActionClass = 'inline-flex items-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-400 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50 disabled:cursor-not-allowed';
@@ -48,17 +54,22 @@ export default function Home() {
       return;
     }
 
-    const englishNames = rawAisles.map(aisle => aisle.name);
-    const localizedNames = mapEnglishToLocalized(englishNames, t);
-    const colorMap = localizedNames.reduce((acc, localizedName, index) => {
-      const englishName = englishNames[index];
-      const aisleColor = rawAisles[index]?.color || getDefaultAisleColor(englishName);
+    // Store full aisle objects (with id, name, color, display_order)
+    // This preserves IDs needed for proper FK relationships when updating
+    setCustomAisles(rawAisles);
+
+    // Build color map for quick lookup (both English and localized names)
+    const colorMap = rawAisles.reduce((acc, aisle) => {
+      const englishName = aisle.name;
+      const localizedNames = mapEnglishToLocalized([englishName], t);
+      const localizedName = localizedNames[0];
+      const aisleColor = aisle.color || getDefaultAisleColor(englishName);
+
       acc[localizedName] = aisleColor;
       acc[englishName] = aisleColor;
       return acc;
     }, {});
 
-    setCustomAisles(localizedNames);
     setAisleColors(colorMap);
   }, [t]);
 
@@ -120,20 +131,12 @@ export default function Home() {
     }
   }, [userId]);
 
+  // Item usage history is no longer needed as purchase_count is on items themselves
   const loadItemUsageHistory = useCallback(async () => {
-    if (!userId) {
-      setItemUsageHistory([]);
-      return;
-    }
-
-    try {
-      const history = await ShoppingListService.getItemUsageHistory(userId);
-      setItemUsageHistory(history);
-    } catch (error) {
-      console.error('Error loading item usage history:', error);
-      setItemUsageHistory([]);
-    }
-  }, [userId]);
+    // This function is kept for backward compatibility but does nothing
+    // Purchase counts are now tracked directly on shopping_items
+    setItemUsageHistory([]);
+  }, []);
 
   useEffect(() => {
     if (userId) {
@@ -172,60 +175,54 @@ export default function Home() {
 
   const handleAddItem = async (itemData) => {
     if (!shoppingList || !user) return;
-    
+
     try {
+      // Convert aisle name to aisle_id if aisle is provided as a name
+      let aisleId = itemData.aisle_id;
+      if (!aisleId && itemData.aisle) {
+        const aisleObj = customAisles.find(a => a.name === itemData.aisle);
+        aisleId = aisleObj?.id || null;
+      }
+
       const newItem = await ShoppingListService.addShoppingItem(
         shoppingList.id,
         user.id,
-        itemData
+        {
+          ...itemData,
+          aisle_id: aisleId
+        }
       );
       setItems(prev => [newItem, ...prev]);
       await loadTopItems();
-      await loadItemUsageHistory();
     } catch (error) {
       console.error('Error adding item:', error);
     }
   };
 
   const handleUpdateItem = async (updatedItem) => {
-    const previousItem = editingItem;
-
     try {
+      // Convert aisle name to aisle_id if aisle is provided as a name
+      let aisleId = updatedItem.aisle_id;
+      if (!aisleId && updatedItem.aisle) {
+        const aisleObj = customAisles.find(a => a.name === updatedItem.aisle);
+        aisleId = aisleObj?.id || null;
+      }
+
       const updated = await ShoppingListService.updateShoppingItem(updatedItem.id, {
         name: updatedItem.name,
-        aisle: updatedItem.aisle,
+        aisle_id: aisleId,
         quantity: updatedItem.quantity,
         comment: updatedItem.comment
       });
-      
-      setItems(prev => prev.map(item => 
+
+      setItems(prev => prev.map(item =>
         item.id === updated.id ? updated : item
       ));
 
-      if (user && previousItem) {
-        const previousName = previousItem.name?.trim() || '';
-        const updatedName = updated.name?.trim() || '';
-        const nameChanged = previousName.toLowerCase() !== updatedName.toLowerCase();
-        const metadataChanged = previousItem.aisle !== updated.aisle || previousItem.quantity !== updated.quantity;
-
-        if (nameChanged) {
-          await ShoppingListService.renameItemUsage(user.id, previousItem.name, updated.name, {
-            oldAisle: previousItem.aisle,
-            newAisle: updated.aisle,
-            quantity: updated.quantity
-          });
-        } else if (metadataChanged) {
-          await ShoppingListService.updateItemUsageMetadata(user.id, updated.name, {
-            aisle: updated.aisle,
-            quantity: updated.quantity,
-            previousAisle: previousItem.aisle,
-            previousName: previousItem.name
-          });
-        }
+      // Refresh top items if the purchase count may have changed
+      if (updated.completed) {
+        await loadTopItems();
       }
-
-      await loadTopItems();
-      await loadItemUsageHistory();
       setEditingItem(null);
     } catch (error) {
       console.error('Error updating item:', error);
@@ -235,44 +232,44 @@ export default function Home() {
   const handleToggleComplete = async (itemId) => {
     const item = items.find(item => item.id === itemId);
     if (!item) return;
-    
+
     try {
       const updated = await ShoppingListService.updateShoppingItem(itemId, {
         completed: !item.completed
       });
-      
+
       setItems(prev => prev.map(item =>
         item.id === updated.id ? updated : item
       ));
+
+      // If item was just completed, refresh top items (purchase_count was incremented)
+      if (updated.completed) {
+        await loadTopItems();
+      }
     } catch (error) {
       console.error('Error toggling item completion:', error);
     }
   };
 
-  const handleChangeItemAisle = async (itemId, newAisle) => {
+  const handleChangeItemAisle = async (itemId, newAisleName) => {
     const item = items.find(entry => entry.id === itemId);
-    if (!item || !newAisle || item.aisle === newAisle) return;
+    if (!item || !newAisleName || item.aisle?.name === newAisleName) return;
 
     try {
+      // Find aisle_id from name
+      const aisleObj = customAisles.find(a => a.name === newAisleName);
+      if (!aisleObj) {
+        console.error('Aisle not found:', newAisleName);
+        return;
+      }
+
       const updated = await ShoppingListService.updateShoppingItem(itemId, {
-        aisle: newAisle
+        aisle_id: aisleObj.id
       });
 
       setItems(prev => prev.map(entry =>
         entry.id === updated.id ? updated : entry
       ));
-
-      if (user) {
-        await ShoppingListService.updateItemUsageMetadata(user.id, updated.name, {
-          aisle: updated.aisle,
-          quantity: updated.quantity,
-          previousAisle: item.aisle,
-          previousName: item.name
-        });
-      }
-
-      await loadTopItems();
-      await loadItemUsageHistory();
     } catch (error) {
       console.error('Error changing item aisle:', error);
     }
@@ -322,6 +319,7 @@ export default function Home() {
   };
 
   const handleUpdateAisles = async (pendingAisles) => {
+    // Normalize pending aisles to objects with {name, color}
     const normalizedAisles = (pendingAisles || []).map((entry) => {
       if (typeof entry === 'string') {
         return {
@@ -332,77 +330,39 @@ export default function Home() {
       return entry;
     });
 
-    const oldAisles = customAisles;
-    const newAisleNames = normalizedAisles.map(aisle => aisle.name);
-    const englishAisles = mapLocalizedToEnglish(newAisleNames, t);
-    const englishPayload = englishAisles.map((name, index) => ({
-      name,
-      color: normalizedAisles[index]?.color || getDefaultAisleColor(name)
-    }));
-    const updatedColorMap = newAisleNames.reduce((acc, localizedName, index) => {
-      const englishName = englishAisles[index];
-      const color = normalizedAisles[index]?.color || getDefaultAisleColor(englishName);
-      acc[localizedName] = color;
-      acc[englishName] = color;
-      return acc;
-    }, {});
+    // Map localized names back to English and match with existing IDs BY INDEX
+    // AisleManager preserves order, so index position = identity
+    const englishPayload = normalizedAisles.map((localizedAisle, index) => {
+      const englishNames = mapLocalizedToEnglish([localizedAisle.name], t);
+      const englishName = englishNames[0];
+
+      // IMPORTANT: Match by index, not by name (allows renaming!)
+      // If user renamed "Produce" to "Fruits", it's still at the same index
+      const existing = customAisles[index];
+
+      return {
+        id: existing?.id, // Preserve ID using index-based matching
+        name: englishName,
+        color: localizedAisle.color || getDefaultAisleColor(englishName),
+        display_order: index + 1
+      };
+    });
 
     try {
-      // Update aisles in database
-      await ShoppingListService.updateUserAisles(user.id, englishPayload);
-      setCustomAisles(newAisleNames);
-      setAisleColors(updatedColorMap);
+      // Update aisles in database - service handles renames by ID automatically!
+      // Items with aisle_id FK will automatically show the new name on next fetch
+      const updatedAisles = await ShoppingListService.updateUserAisles(user.id, englishPayload);
+
+      // Apply the updated aisles to state
+      applyAisleState(updatedAisles);
+
+      // Reload items to reflect any aisle name changes (FK preserved, name updated)
+      if (shoppingList) {
+        const refreshedItems = await ShoppingListService.getShoppingItems(shoppingList.id);
+        setItems(refreshedItems);
+      }
     } catch (error) {
       console.error('Error updating user aisles:', error);
-      return; // Don't proceed with item updates if aisle update failed
-    }
-
-    // Update existing items if any aisles were renamed
-    // We need to detect renames by checking which aisles disappeared and which are new
-    const removedAisles = oldAisles.filter(aisle => !newAisleNames.includes(aisle));
-    const addedAisles = newAisleNames.filter(aisle => !oldAisles.includes(aisle));
-    
-    if (removedAisles.length === 1 && addedAisles.length === 1) {
-      // Likely a rename operation
-      const oldAisleName = removedAisles[0];
-      const newAisleName = addedAisles[0];
-      
-      const updatedItems = updateItemsAisle(items, oldAisleName, newAisleName);
-      setItems(updatedItems);
-      
-      // Update items in database for items that were renamed
-      const itemsToUpdate = items.filter(item => item.aisle === oldAisleName);
-      itemsToUpdate.forEach(async (item) => {
-        try {
-          await ShoppingListService.updateShoppingItem(item.id, {
-            aisle: newAisleName
-          });
-        } catch (error) {
-          console.error('Error updating item aisle in database:', error);
-        }
-      });
-    } else if (removedAisles.length > 0) {
-      // Multiple aisles removed, move items to "Other" if it exists, or first available aisle
-      const fallbackAisle = newAisleNames.includes('Other') ? 'Other' : newAisleNames[0];
-      
-      let updatedItems = items;
-      removedAisles.forEach(removedAisle => {
-        updatedItems = updateItemsAisle(updatedItems, removedAisle, fallbackAisle);
-        
-        // Update in database
-        const itemsToUpdate = items.filter(item => item.aisle === removedAisle);
-        itemsToUpdate.forEach(async (item) => {
-          try {
-            await ShoppingListService.updateShoppingItem(item.id, {
-              aisle: fallbackAisle
-            });
-          } catch (error) {
-            console.error('Error updating item aisle in database:', error);
-          }
-        });
-      });
-      
-      setItems(updatedItems);
     }
   };
 
@@ -431,7 +391,7 @@ export default function Home() {
   const canOpenTopItems = hasTopItemsData || topItemsLoading;
 
   const managerAisles = useMemo(() => {
-    return customAisles.map((localizedName, index) => {
+    return localizedCustomAisles.map((localizedName, index) => {
       const englishName = englishCustomAisles[index] || localizedName;
       const mappedColor = aisleColors[localizedName] || aisleColors[englishName];
       return {
@@ -439,7 +399,7 @@ export default function Home() {
         color: mappedColor || getDefaultAisleColor(englishName)
       };
     });
-  }, [customAisles, aisleColors, englishCustomAisles]);
+  }, [localizedCustomAisles, aisleColors, englishCustomAisles]);
 
   // Show loading while checking authentication or loading data
   if (loading || (user && dataLoading)) {
@@ -699,7 +659,7 @@ export default function Home() {
               items={topItems}
               loading={topItemsLoading}
               onAddItem={handleQuickAddFromUsage}
-              customAisles={customAisles}
+              customAisles={localizedCustomAisles}
               existingItemNames={items.map(item => item.name)}
               onClose={() => setIsTopItemsOpen(false)}
               aisleColors={aisleColors}
@@ -714,14 +674,14 @@ export default function Home() {
           item={editingItem}
           onUpdateItem={handleUpdateItem}
           onClose={handleCancelEdit}
-          customAisles={customAisles}
+          customAisles={localizedCustomAisles}
         />
       )}
 
       {/* Quick Add Bar */}
       <QuickAddBar
         onAddItem={handleAddItem}
-        customAisles={customAisles}
+        customAisles={localizedCustomAisles}
         itemUsageHistory={itemUsageHistory}
         existingItems={items}
         aisleColors={aisleColors}

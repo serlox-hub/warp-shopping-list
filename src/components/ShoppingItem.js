@@ -76,7 +76,8 @@ export default function ShoppingItem({
   const handleSelectAisle = (event, selectedAisle) => {
     event?.stopPropagation();
     setOpenMenu(null);
-    if (!selectedAisle || selectedAisle === item.aisle) return;
+    const currentAisleName = item.aisle?.name || item.aisle;
+    if (!selectedAisle || selectedAisle === currentAisleName) return;
     onChangeAisle?.(item.id, selectedAisle);
   };
 
@@ -89,13 +90,19 @@ export default function ShoppingItem({
 
   const getAisleLabel = (aisle) => {
     if (!aisle) return '';
-    const translationKey = aisleTranslationMap[aisle];
-    return translationKey ? t(translationKey) : aisle;
+    // Handle both string and object aisle
+    const aisleName = typeof aisle === 'string' ? aisle : aisle.name;
+    const translationKey = aisleTranslationMap[aisleName];
+    return translationKey ? t(translationKey) : aisleName;
   };
 
   const getAisleColor = (aisle) => {
     if (!aisle) return null;
-    return aisleColors[aisle] || null;
+    // Handle both string and object aisle
+    const aisleName = typeof aisle === 'string' ? aisle : aisle.name;
+    // First try from item's aisle object (if it has color), then fallback to aisleColors prop
+    if (typeof aisle === 'object' && aisle.color) return aisle.color;
+    return aisleColors[aisleName] || null;
   };
 
   const canChangeAisle = availableAisles.length > 0;

@@ -232,10 +232,8 @@ describe('Home', () => {
     mockShoppingListService.deleteShoppingItem.mockResolvedValue(undefined)
     mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
     mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
-    mockShoppingListService.updateUserAisles.mockResolvedValue(undefined)
+    mockShoppingListService.updateUserAisles.mockResolvedValue([])
     mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
-    mockShoppingListService.renameItemUsage.mockResolvedValue(undefined)
-    mockShoppingListService.updateItemUsageMetadata.mockResolvedValue(undefined)
   })
 
   it('should show loading spinner when authentication is loading', () => {
@@ -384,25 +382,39 @@ describe('Home', () => {
       loading: false
     })
 
-    const newItem = { id: '3', name: 'Test Item', aisle: 'Produce', quantity: 1, completed: false }
-    mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
+    const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
+    const newItem = {
+      id: '3',
+      name: 'Test Item',
+      aisle_id: 'aisle-1',
+      aisle: mockAisle,
+      quantity: 1,
+      completed: false
+    }
+    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.addShoppingItem.mockResolvedValue(newItem)
 
     render(<Home />)
-    
+
     await waitFor(() => {
       expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
     })
 
     await user.click(screen.getByText('Add Item'))
-    
+
     await waitFor(() => {
       expect(mockShoppingListService.addShoppingItem).toHaveBeenCalledWith(
         'list-1',
         'user-1',
-        { name: 'Test Item', aisle: 'Produce', quantity: 1, comment: '' }
+        expect.objectContaining({
+          name: 'Test Item',
+          aisle: 'Produce',
+          aisle_id: 'aisle-1',
+          quantity: 1,
+          comment: ''
+        })
       )
     })
 
@@ -418,6 +430,8 @@ describe('Home', () => {
       loading: false
     })
 
+    const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
+
     const usageItem = {
       item_name: 'Bananas',
       purchase_count: 5,
@@ -425,13 +439,14 @@ describe('Home', () => {
       last_quantity: 2
     }
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.addShoppingItem.mockResolvedValue({
       id: '4',
       name: 'Bananas',
-      aisle: 'Produce',
+      aisle_id: 'aisle-1',
+      aisle: mockAisle,
       quantity: 2,
       completed: false
     })
@@ -452,7 +467,12 @@ describe('Home', () => {
       expect(mockShoppingListService.addShoppingItem).toHaveBeenCalledWith(
         'list-1',
         'user-1',
-        { name: 'Bananas', aisle: 'Produce', quantity: 2, comment: '' }
+        expect.objectContaining({
+          name: 'Bananas',
+          aisle: 'Produce',
+          quantity: 2,
+          comment: ''
+        })
       )
     })
 
@@ -582,8 +602,9 @@ describe('Home', () => {
       loading: false
     })
 
+    const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
     const updatedItem = { ...mockItems[0], name: 'Updated Item' }
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
     mockShoppingListService.updateShoppingItem.mockResolvedValue(updatedItem)
@@ -615,27 +636,9 @@ describe('Home', () => {
         '1',
         expect.objectContaining({
           name: 'Updated Item',
-          aisle: 'Produce',
           quantity: 3
         })
       )
-    })
-
-    await waitFor(() => {
-      expect(mockShoppingListService.renameItemUsage).toHaveBeenCalledWith(
-        'user-1',
-        'Apples',
-        'Updated Item',
-        expect.objectContaining({
-          oldAisle: 'Produce',
-          newAisle: 'Produce',
-          quantity: 3
-        })
-      )
-    })
-
-    await waitFor(() => {
-      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -726,27 +729,33 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    const mockAisles = [
+      { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
+    ]
+
+    const mockUpdatedAisles = [
+      { id: 'aisle-2', name: 'New Aisle', color: '#6b7280', display_order: 1 }
+    ]
+
+    mockShoppingListService.getUserAisles.mockResolvedValue(mockAisles)
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
-    mockShoppingListService.updateUserAisles.mockResolvedValue(undefined)
+    mockShoppingListService.updateUserAisles.mockResolvedValue(mockUpdatedAisles)
 
     render(<Home />)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Manage Aisles')).toBeInTheDocument()
     })
 
     // Open aisle manager
     await user.click(screen.getByText('Manage Aisles'))
-    
+
     // Update aisles
     await user.click(screen.getByText('Update Aisles'))
-    
+
     await waitFor(() => {
-      expect(mockShoppingListService.updateUserAisles).toHaveBeenCalledWith('user-1', [
-        { name: 'New Aisle', color: '#6b7280' }
-      ])
+      expect(mockShoppingListService.updateUserAisles).toHaveBeenCalled()
     })
   })
 

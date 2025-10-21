@@ -91,37 +91,54 @@ export const createShoppingList = (name, items = []) => ({
 });
 
 // Group items by aisle using custom or default aisles
+// customAisles can be either an array of strings (legacy) or array of aisle objects with {name}
 export const groupItemsByAisle = (items, customAisles = DEFAULT_AISLES) => {
   const grouped = {};
-  
+
+  // Normalize customAisles to array of names
+  const aisleNames = customAisles.map(aisle =>
+    typeof aisle === 'string' ? aisle : aisle.name
+  );
+
   // Initialize with custom aisles
-  customAisles.forEach(aisle => {
+  aisleNames.forEach(aisle => {
     grouped[aisle] = [];
   });
-  
+
   items.forEach(item => {
-    if (grouped[item.aisle]) {
-      grouped[item.aisle].push(item);
+    // item.aisle can be:
+    // - An object with {name, color, etc} (new structure from DB join)
+    // - A string (legacy or from components)
+    // - null/undefined (no aisle assigned)
+    const itemAisleName = item.aisle?.name || item.aisle || null;
+
+    if (itemAisleName && grouped[itemAisleName]) {
+      grouped[itemAisleName].push(item);
     } else {
       // If item has an aisle not in our list, add it to 'Other' or create the aisle
-      if (customAisles.includes('Other')) {
+      if (aisleNames.includes('Other')) {
         if (!grouped['Other']) grouped['Other'] = [];
         grouped['Other'].push(item);
-      } else {
+      } else if (itemAisleName) {
         // Create the aisle if it doesn't exist
-        if (!grouped[item.aisle]) grouped[item.aisle] = [];
-        grouped[item.aisle].push(item);
+        if (!grouped[itemAisleName]) grouped[itemAisleName] = [];
+        grouped[itemAisleName].push(item);
+      } else {
+        // No aisle, put in 'Other' if it exists
+        if (grouped['Other']) {
+          grouped['Other'].push(item);
+        }
       }
     }
   });
-  
+
   // Remove empty aisles
   Object.keys(grouped).forEach(aisle => {
     if (grouped[aisle].length === 0) {
       delete grouped[aisle];
     }
   });
-  
+
   return grouped;
 };
 

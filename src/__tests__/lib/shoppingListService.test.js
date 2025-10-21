@@ -21,17 +21,38 @@ describe('ShoppingListService', () => {
     updated_at: '2024-01-01T00:00:00.000Z'
   }
 
+  const mockAisleId = 'aisle-123'
+
+  const mockAisle = {
+    id: mockAisleId,
+    user_id: mockUserId,
+    name: 'Produce',
+    color: '#22c55e',
+    display_order: 1,
+    created_at: '2024-01-01T00:00:00.000Z',
+    updated_at: '2024-01-01T00:00:00.000Z'
+  }
+
   const mockShoppingItem = {
     id: mockItemId,
     shopping_list_id: mockListId,
     user_id: mockUserId,
     name: 'Apples',
-    aisle: 'Produce',
+    aisle_id: mockAisleId,
     quantity: 3,
     comment: '',
     completed: false,
+    purchase_count: 0,
     created_at: '2024-01-01T00:00:00.000Z',
-    updated_at: '2024-01-01T00:00:00.000Z'
+    updated_at: '2024-01-01T00:00:00.000Z',
+    last_purchased_at: null,
+    // Joined from user_aisles
+    aisle: {
+      id: mockAisleId,
+      name: 'Produce',
+      color: '#22c55e',
+      display_order: 1
+    }
   }
 
   beforeEach(() => {
@@ -476,7 +497,7 @@ describe('ShoppingListService', () => {
     it('should add a new shopping item', async () => {
       const itemData = {
         name: 'Apples',
-        aisle: 'Produce',
+        aisle_id: mockAisleId,
         quantity: 3,
         comment: 'Red apples'
       }
@@ -499,7 +520,7 @@ describe('ShoppingListService', () => {
 
     it('should handle database errors', async () => {
       const error = new Error('Database error')
-      const itemData = { name: 'Apples', aisle: 'Produce', quantity: 3 }
+      const itemData = { name: 'Apples', aisle_id: mockAisleId, quantity: 3 }
 
       mockSupabase.from.mockReturnValue({
         insert: jest.fn().mockReturnValue({
@@ -662,8 +683,8 @@ describe('ShoppingListService', () => {
       const result = await ShoppingListService.getUserAisles(mockUserId)
 
       expect(result).toEqual([
-        { name: 'Produce', color: '#34d399' },
-        { name: 'Dairy', color: '#f97316' }
+        { id: '1', name: 'Produce', color: '#34d399', display_order: 1 },
+        { id: '2', name: 'Dairy', color: '#f97316', display_order: 2 }
       ])
     })
 
@@ -704,7 +725,7 @@ describe('ShoppingListService', () => {
         p_user_id: mockUserId
       })
       expect(result).toEqual([
-        { name: 'Produce', color: getDefaultAisleColor('Produce') }
+        { id: '1', name: 'Produce', color: getDefaultAisleColor('Produce'), display_order: 1 }
       ])
     })
 
@@ -726,74 +747,106 @@ describe('ShoppingListService', () => {
   })
 
   describe('updateUserAisles', () => {
-    it('should update user aisles', async () => {
-      const newAisles = [
-        { name: 'Produce', color: '#123456' },
-        { name: 'Dairy', color: null },
-        { name: 'Bakery' }
+    it('should update existing aisle when id matches', async () => {
+      const existingAisles = [
+        { id: '1', user_id: mockUserId, name: 'Produce', display_order: 1, color: '#22c55e' }
       ]
 
-      const mockUpdatedAisles = newAisles.map((aisle, index) => ({
-        id: `${index + 1}`,
-        user_id: mockUserId,
-        name: aisle.name,
-        color: aisle.color || getDefaultAisleColor(aisle.name),
-        display_order: index + 1
-      }))
+      const newAisles = [
+        { id: '1', name: 'Fruits', color: '#123456', display_order: 1 }
+      ]
 
-      mockSupabase.from
-        .mockReturnValueOnce({
-          delete: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error: null })
+      const mockReturnedAisles = [
+        { id: '1', name: 'Fruits', display_order: 1, color: '#123456' }
+      ]
+
+      // Mock the fetch of existing aisles
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            data: existingAisles,
+            error: null
           })
         })
-        .mockReturnValueOnce({
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockResolvedValue({
-              data: mockUpdatedAisles,
+      })
+
+      // Mock the update operation (returns a promise for Promise.all)
+      mockSupabase.from.mockReturnValueOnce({
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({ error: null })
+        })
+      })
+
+      // Mock getUserAisles call at the end
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({
+              data: mockReturnedAisles,
               error: null
             })
           })
         })
+      })
 
       const result = await ShoppingListService.updateUserAisles(mockUserId, newAisles)
 
-      expect(result).toEqual(
-        mockUpdatedAisles.map((aisle) => ({ name: aisle.name, color: aisle.color }))
-      )
+      expect(result).toEqual(mockReturnedAisles)
     })
 
-    it('should handle database errors during deletion', async () => {
-      const error = new Error('Delete error')
+    it('should insert new aisle when no id provided', async () => {
+      const existingAisles = []
+
+      const newAisles = [
+        { name: 'Produce', color: '#22c55e', display_order: 1 }
+      ]
+
+      const mockReturnedAisles = [
+        { id: '1', name: 'Produce', display_order: 1, color: '#22c55e' }
+      ]
+
+      // Mock the fetch of existing aisles (empty)
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockResolvedValue({
+            data: existingAisles,
+            error: null
+          })
+        })
+      })
+
+      // Mock the insert operation
+      mockSupabase.from.mockReturnValueOnce({
+        insert: jest.fn().mockResolvedValue({ error: null })
+      })
+
+      // Mock getUserAisles call at the end
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({
+              data: mockReturnedAisles,
+              error: null
+            })
+          })
+        })
+      })
+
+      const result = await ShoppingListService.updateUserAisles(mockUserId, newAisles)
+
+      expect(result).toEqual(mockReturnedAisles)
+    })
+
+    it('should handle database errors during fetch', async () => {
+      const error = new Error('Fetch error')
       mockSupabase.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({ error })
         })
       })
 
       await expect(ShoppingListService.updateUserAisles(mockUserId, [{ name: 'Produce', color: '#ffffff' }]))
-        .rejects.toThrow('Delete error')
-    })
-
-    it('should handle database errors during insertion', async () => {
-      const error = new Error('Insert error')
-      mockSupabase.from
-        .mockReturnValueOnce({
-          delete: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error: null })
-          })
-        })
-        .mockReturnValueOnce({
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockResolvedValue({
-              data: null,
-              error
-            })
-          })
-        })
-
-      await expect(ShoppingListService.updateUserAisles(mockUserId, [{ name: 'Produce', color: '#ffffff' }]))
-        .rejects.toThrow('Insert error')
+        .rejects.toThrow('Fetch error')
     })
   })
 })

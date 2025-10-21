@@ -1,26 +1,14 @@
 import { supabase } from './supabase'
 import { getDefaultAisleColor } from '@/types/shoppingList'
 
-const ITEM_USAGE_DELIMITER = '::'
-
 // Table structures needed in Supabase:
-// 
+//
 // shopping_lists table:
 // - id: uuid (primary key)
 // - user_id: uuid (foreign key to auth.users)
 // - name: text
-// - created_at: timestamp
-// - updated_at: timestamp
-//
-// shopping_items table:
-// - id: uuid (primary key) 
-// - shopping_list_id: uuid (foreign key to shopping_lists)
-// - user_id: uuid (foreign key to auth.users)
-// - name: text
-// - aisle: text
-// - quantity: integer
-// - completed: boolean
-// - comment: text (optional)
+// - is_active: boolean
+// - list_order: integer
 // - created_at: timestamp
 // - updated_at: timestamp
 //
@@ -32,6 +20,20 @@ const ITEM_USAGE_DELIMITER = '::'
 // - color: text (hex)
 // - created_at: timestamp
 // - updated_at: timestamp
+//
+// shopping_items table:
+// - id: uuid (primary key)
+// - shopping_list_id: uuid (foreign key to shopping_lists)
+// - user_id: uuid (foreign key to auth.users)
+// - name: text
+// - aisle_id: uuid (foreign key to user_aisles, nullable)
+// - quantity: integer
+// - completed: boolean
+// - purchase_count: integer (auto-incremented when completed)
+// - comment: text (optional)
+// - created_at: timestamp
+// - updated_at: timestamp
+// - last_purchased_at: timestamp (nullable)
 
 export class ShoppingListService {
   // Get all shopping lists for a user
@@ -196,12 +198,20 @@ export class ShoppingListService {
     }
   }
 
-  // Get all items for a shopping list
+  // Get all items for a shopping list with aisle info
   static async getShoppingItems(listId) {
     try {
       const { data, error } = await supabase
         .from('shopping_items')
-        .select('*')
+        .select(`
+          *,
+          aisle:user_aisles (
+            id,
+            name,
+            color,
+            display_order
+          )
+        `)
         .eq('shopping_list_id', listId)
         .order('created_at', { ascending: false });
 
@@ -214,6 +224,7 @@ export class ShoppingListService {
   }
 
   // Add a new shopping item
+  // itemData should contain: { name, aisle_id, quantity, comment }
   static async addShoppingItem(listId, userId, itemData) {
     try {
       const { data, error } = await supabase
@@ -223,21 +234,25 @@ export class ShoppingListService {
             shopping_list_id: listId,
             user_id: userId,
             name: itemData.name,
-            aisle: itemData.aisle,
-            quantity: itemData.quantity,
+            aisle_id: itemData.aisle_id || null,
+            quantity: itemData.quantity || 1,
             comment: itemData.comment || '',
             completed: false,
+            purchase_count: 0
           }
         ])
-        .select()
+        .select(`
+          *,
+          aisle:user_aisles (
+            id,
+            name,
+            color,
+            display_order
+          )
+        `)
         .single();
 
       if (error) throw error;
-      // Fire-and-forget analytics update
-      this.recordItemUsage(userId, itemData).catch((usageError) => {
-        console.error('Error recording item usage analytics:', usageError);
-      });
-
       return data;
     } catch (error) {
       console.error('Error adding shopping item:', error);
@@ -246,13 +261,22 @@ export class ShoppingListService {
   }
 
   // Update a shopping item
+  // updates can contain: { name, aisle_id, quantity, comment, completed }
   static async updateShoppingItem(itemId, updates) {
     try {
       const { data, error } = await supabase
         .from('shopping_items')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', itemId)
-        .select()
+        .select(`
+          *,
+          aisle:user_aisles (
+            id,
+            name,
+            color,
+            display_order
+          )
+        `)
         .single();
 
       if (error) throw error;
@@ -324,16 +348,19 @@ export class ShoppingListService {
         .order('display_order', { ascending: true });
 
       if (error) throw error;
-      
+
       // If user has no aisles, create default ones
       if (!data || data.length === 0) {
         await this.createDefaultUserAisles(userId);
         return this.getUserAisles(userId);
       }
-      
+
+      // Return full aisle objects including id
       return data.map(aisle => ({
+        id: aisle.id,
         name: aisle.name,
-        color: aisle.color || getDefaultAisleColor(aisle.name)
+        color: aisle.color || getDefaultAisleColor(aisle.name),
+        display_order: aisle.display_order
       }));
     } catch (error) {
       console.error('Error getting user aisles:', error);
@@ -356,35 +383,84 @@ export class ShoppingListService {
     }
   }
 
-  // Update user's aisles (replace all)
+  // Update user's aisles (intelligent UPSERT - preserves IDs and FK relationships)
+  // aisles: array of { id?, name, color?, display_order? }
+  // - If aisle has id: UPDATE that aisle (allows renaming!)
+  // - If aisle has no id: INSERT new aisle
+  // - Aisles not in the array: DELETE
   static async updateUserAisles(userId, aisles) {
     try {
-      // Delete existing aisles
-      const { error: deleteError } = await supabase
+      // Get existing aisles
+      const { data: existingAisles, error: fetchError } = await supabase
         .from('user_aisles')
-        .delete()
+        .select('*')
         .eq('user_id', userId);
 
-      if (deleteError) throw deleteError;
+      if (fetchError) throw fetchError;
 
-      // Insert new aisles
-      const aisleData = aisles.map((aisle, index) => ({
-        user_id: userId,
-        name: aisle.name,
-        color: aisle.color || getDefaultAisleColor(aisle.name),
-        display_order: index + 1
-      }));
+      const existingAislesMap = new Map(
+        (existingAisles || []).map(aisle => [aisle.id, aisle])
+      );
 
-      const { data, error } = await supabase
-        .from('user_aisles')
-        .insert(aisleData)
-        .select();
+      const incomingAisleIds = new Set(
+        aisles.filter(a => a.id).map(a => a.id)
+      );
 
-      if (error) throw error;
-      return data.map(aisle => ({
-        name: aisle.name,
-        color: aisle.color || getDefaultAisleColor(aisle.name)
-      }));
+      const operations = [];
+
+      // Process incoming aisles: update existing (by ID) or insert new
+      for (let index = 0; index < aisles.length; index++) {
+        const aisle = aisles[index];
+
+        if (aisle.id && existingAislesMap.has(aisle.id)) {
+          // Update existing aisle (can change name, color, order)
+          const existing = existingAislesMap.get(aisle.id);
+          operations.push(
+            supabase
+              .from('user_aisles')
+              .update({
+                name: aisle.name,
+                color: aisle.color || existing.color || getDefaultAisleColor(aisle.name),
+                display_order: aisle.display_order ?? index + 1,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', aisle.id)
+          );
+        } else {
+          // Insert new aisle (no id, or id not found)
+          operations.push(
+            supabase
+              .from('user_aisles')
+              .insert({
+                user_id: userId,
+                name: aisle.name,
+                color: aisle.color || getDefaultAisleColor(aisle.name),
+                display_order: aisle.display_order ?? index + 1
+              })
+          );
+        }
+      }
+
+      // Delete aisles that are no longer in the list
+      const aislesToDelete = existingAisles.filter(
+        existing => !incomingAisleIds.has(existing.id)
+      );
+
+      if (aislesToDelete.length > 0) {
+        const idsToDelete = aislesToDelete.map(a => a.id);
+        operations.push(
+          supabase
+            .from('user_aisles')
+            .delete()
+            .in('id', idsToDelete)
+        );
+      }
+
+      // Execute all operations
+      await Promise.all(operations);
+
+      // Fetch and return updated aisles
+      return this.getUserAisles(userId);
     } catch (error) {
       console.error('Error updating user aisles:', error);
       throw error;
@@ -393,242 +469,36 @@ export class ShoppingListService {
 
   // ============== ITEM USAGE ANALYTICS ==============
 
-  static buildItemUsageKey(name, aisle) {
-    const trimmedName = typeof name === 'string' ? name.trim() : ''
-    if (!trimmedName) return ''
-
-    const sanitizedAisle =
-      typeof aisle === 'string' && aisle.trim().length > 0
-        ? aisle.trim()
-        : null
-
-    return sanitizedAisle ? `${trimmedName}${ITEM_USAGE_DELIMITER}${sanitizedAisle}` : trimmedName
-  }
-
-  static parseItemUsageKey(key) {
-    if (typeof key !== 'string' || key.length === 0) {
-      return { name: '', aisle: null }
-    }
-    const delimiterIndex = key.indexOf(ITEM_USAGE_DELIMITER)
-    if (delimiterIndex === -1) {
-      return { name: key, aisle: null }
-    }
-    const name = key.slice(0, delimiterIndex)
-    const aisle = key.slice(delimiterIndex + ITEM_USAGE_DELIMITER.length) || null
-    return { name, aisle }
-  }
-
-  static mapUsageRow(row) {
-    if (!row) return row
-    const { name, aisle } = this.parseItemUsageKey(row.item_name)
-    return {
-      ...row,
-      usage_key: row.item_name,
-      item_name: name || row.item_name,
-      usage_aisle: aisle || row.last_aisle || null
-    }
-  }
-
-  static async recordItemUsage(userId, itemData) {
-    if (!userId || !itemData?.name) return;
-
-    const trimmedName = itemData.name.trim();
-    if (!trimmedName) return;
-
-    const usageKey = this.buildItemUsageKey(trimmedName, itemData.aisle);
-
-    try {
-      await supabase.rpc('increment_item_usage', {
-        p_user_id: userId,
-        p_item_name: usageKey || trimmedName,
-        p_last_aisle: itemData.aisle ?? null,
-        p_last_quantity: itemData.quantity ?? null
-      });
-    } catch (error) {
-      console.error('Error incrementing item usage:', error);
-    }
-  }
-
+  // Get most purchased items (based on purchase_count in shopping_items)
   static async getMostPurchasedItems(userId, limit = 8) {
     if (!userId) return [];
 
     try {
       const { data, error } = await supabase
-        .from('shopping_item_usage')
-        .select('*')
+        .from('shopping_items')
+        .select(`
+          id,
+          name,
+          quantity,
+          purchase_count,
+          last_purchased_at,
+          aisle:user_aisles (
+            id,
+            name,
+            color
+          )
+        `)
         .eq('user_id', userId)
+        .gt('purchase_count', 0)
         .order('purchase_count', { ascending: false })
         .order('last_purchased_at', { ascending: false })
         .limit(limit);
 
       if (error) throw error;
-      return (data ?? []).map((row) => this.mapUsageRow(row));
+      return data || [];
     } catch (error) {
       console.error('Error fetching most purchased items:', error);
       return [];
-    }
-  }
-
-  static async getItemUsageHistory(userId, limit = 200) {
-    if (!userId) return [];
-
-    try {
-      const { data, error } = await supabase
-        .from('shopping_item_usage')
-        .select('*')
-        .eq('user_id', userId)
-        .order('purchase_count', { ascending: false })
-        .order('last_purchased_at', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return (data ?? []).map((row) => this.mapUsageRow(row));
-    } catch (error) {
-      console.error('Error fetching item usage history:', error);
-      return [];
-    }
-  }
-
-  static async updateItemUsageMetadata(userId, itemName, metadata = {}) {
-    if (!userId || !itemName) return;
-
-    const previousName = metadata.previousName ?? itemName;
-    const previousAisle = metadata.previousAisle ?? metadata.aisle ?? null;
-    const targetKey = this.buildItemUsageKey(itemName, metadata.aisle);
-    const previousKey = this.buildItemUsageKey(previousName, previousAisle);
-    const fallbackPreviousKey = previousName?.trim() || '';
-
-    const payload = {};
-    if (metadata.aisle !== undefined) payload.last_aisle = metadata.aisle;
-    if (metadata.quantity !== undefined) payload.last_quantity = metadata.quantity;
-
-    const hasUpdates = Object.keys(payload).length > 0 || (targetKey && targetKey !== previousKey);
-    if (!hasUpdates) return;
-
-    if (targetKey && targetKey !== previousKey) {
-      payload.item_name = targetKey;
-    }
-
-    payload.updated_at = new Date().toISOString();
-
-    const attemptUpdate = async (key) => {
-      if (!key) return { data: [], error: null };
-      return await supabase
-        .from('shopping_item_usage')
-        .update(payload)
-        .eq('user_id', userId)
-        .eq('item_name', key)
-        .select();
-    };
-
-    try {
-      let { data, error } = await attemptUpdate(previousKey || fallbackPreviousKey);
-      if (error) throw error;
-
-      if ((!data || data.length === 0) && previousKey && previousKey !== fallbackPreviousKey) {
-        const fallbackResult = await attemptUpdate(fallbackPreviousKey);
-        if (fallbackResult.error) throw fallbackResult.error;
-      }
-    } catch (error) {
-      console.error('Error updating item usage metadata:', error);
-    }
-  }
-
-  static async renameItemUsage(userId, oldName, newName, metadata = {}) {
-    if (!userId || !oldName || !newName) return;
-
-    const trimmedOld = oldName.trim();
-    const trimmedNew = newName.trim();
-
-    if (!trimmedOld || !trimmedNew || trimmedOld.toLowerCase() === trimmedNew.toLowerCase()) {
-      return;
-    }
-
-    const oldAisle = metadata.oldAisle ?? metadata.previousAisle ?? metadata.aisle ?? null;
-    const newAisle = metadata.newAisle ?? metadata.aisle ?? oldAisle;
-
-    const oldKey = this.buildItemUsageKey(trimmedOld, oldAisle);
-    const fallbackOldKey = trimmedOld;
-    const newKey = this.buildItemUsageKey(trimmedNew, newAisle);
-    const fallbackNewKey = trimmedNew;
-
-    const fetchUsage = async (key) => {
-      return await supabase
-        .from('shopping_item_usage')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('item_name', key)
-        .single();
-    };
-
-    try {
-      let { data: oldUsage, error: oldError } = await fetchUsage(oldKey || fallbackOldKey);
-      if (oldError && oldError.code === 'PGRST116' && oldKey && oldKey !== fallbackOldKey) {
-        const fallbackOldResult = await fetchUsage(fallbackOldKey);
-        oldUsage = fallbackOldResult.data;
-        oldError = fallbackOldResult.error;
-      }
-
-      if (oldError) {
-        await this.updateItemUsageMetadata(userId, trimmedNew, {
-          ...metadata,
-          previousName: trimmedOld,
-          previousAisle: oldAisle,
-          aisle: newAisle
-        });
-        return;
-      }
-
-      const { data: newUsage, error: newError } = await fetchUsage(newKey || fallbackNewKey);
-
-      if (newError && newError.code !== 'PGRST116') {
-        throw newError;
-      }
-
-      if (newUsage) {
-        const combinedCount = (newUsage.purchase_count || 0) + (oldUsage.purchase_count || 0);
-        const latestPurchaseAt = new Date(
-          Math.max(
-            new Date(newUsage.last_purchased_at || 0).getTime(),
-            new Date(oldUsage.last_purchased_at || 0).getTime()
-          )
-        ).toISOString();
-
-        const { error: mergeError } = await supabase
-          .from('shopping_item_usage')
-          .update({
-            item_name: newKey || fallbackNewKey,
-            purchase_count: combinedCount,
-            last_aisle: newAisle ?? oldUsage.last_aisle ?? newUsage.last_aisle,
-            last_quantity: metadata.quantity ?? oldUsage.last_quantity ?? newUsage.last_quantity,
-            last_purchased_at: latestPurchaseAt,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', newUsage.id);
-
-        if (mergeError) throw mergeError;
-
-        await supabase
-          .from('shopping_item_usage')
-          .delete()
-          .eq('id', oldUsage.id);
-
-        return;
-      }
-
-      const { error: renameError } = await supabase
-        .from('shopping_item_usage')
-        .update({
-          item_name: newKey || fallbackNewKey,
-          last_aisle: newAisle ?? oldUsage.last_aisle,
-          last_quantity: metadata.quantity ?? oldUsage.last_quantity,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', oldUsage.id);
-
-      if (renameError) throw renameError;
-    } catch (error) {
-      console.error('Error renaming item usage:', error);
     }
   }
 }
