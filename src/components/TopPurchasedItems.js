@@ -25,26 +25,28 @@ export default function TopPurchasedItems({
   }, [existingItemNames]);
 
   const normalizedItems = useMemo(() => {
-    return items.map((item) => {
-      const localizedAisle = item.last_aisle
-        ? mapEnglishToLocalized([item.last_aisle], t)[0]
-        : null;
+    return items
+      .filter((item) => item && item.item_name) // Filter out invalid items
+      .map((item) => {
+        const localizedAisle = item.last_aisle
+          ? mapEnglishToLocalized([item.last_aisle], t)[0]
+          : null;
 
-      const fallbackAisle =
-        !item.last_aisle && customAisles.length > 0 ? customAisles[0] : null;
+        const fallbackAisle =
+          !item.last_aisle && customAisles.length > 0 ? customAisles[0] : null;
 
-      const displayAisle = localizedAisle || fallbackAisle;
-      const colorFromMap = displayAisle ? aisleColors[displayAisle] : null;
-      const defaultColor = item.last_aisle ? getDefaultAisleColor(item.last_aisle) : null;
-      const displayColor = normalizeHexColor(colorFromMap) || defaultColor || '#6b7280';
+        const displayAisle = localizedAisle || fallbackAisle;
+        const colorFromMap = displayAisle ? aisleColors[displayAisle] : null;
+        const defaultColor = item.last_aisle ? getDefaultAisleColor(item.last_aisle) : null;
+        const displayColor = normalizeHexColor(colorFromMap) || defaultColor || '#6b7280';
 
-      return {
-        ...item,
-        displayAisle,
-        displayColor,
-        isInCurrentList: existingItemsSet.has(item.item_name.trim().toLowerCase()),
-      };
-    });
+        return {
+          ...item,
+          displayAisle,
+          displayColor,
+          isInCurrentList: existingItemsSet.has(item.item_name.trim().toLowerCase()),
+        };
+      });
   }, [items, customAisles, aisleColors, t, existingItemsSet]);
 
   const hasItems = normalizedItems.length > 0;

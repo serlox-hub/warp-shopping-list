@@ -446,9 +446,11 @@ describe('ShoppingListService', () => {
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
-              data: mockItems,
-              error: null
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: mockItems,
+                error: null
+              })
             })
           })
         })
@@ -463,9 +465,11 @@ describe('ShoppingListService', () => {
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
-              data: null,
-              error: null
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: null,
+                error: null
+              })
             })
           })
         })
@@ -481,9 +485,11 @@ describe('ShoppingListService', () => {
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
-              data: null,
-              error
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({
+                data: null,
+                error
+              })
             })
           })
         })
@@ -502,7 +508,30 @@ describe('ShoppingListService', () => {
         comment: 'Red apples'
       }
 
-      mockSupabase.from.mockReturnValue({
+      // Mock the check for existing inactive items (returns null - no inactive item found)
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  order: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                      maybeSingle: jest.fn().mockResolvedValue({
+                        data: null,
+                        error: null
+                      })
+                    })
+                  })
+                })
+              })
+            })
+          })
+        })
+      })
+
+      // Mock the insert for new item
+      mockSupabase.from.mockReturnValueOnce({
         insert: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({
             single: jest.fn().mockResolvedValue({
@@ -522,7 +551,30 @@ describe('ShoppingListService', () => {
       const error = new Error('Database error')
       const itemData = { name: 'Apples', aisle_id: mockAisleId, quantity: 3 }
 
-      mockSupabase.from.mockReturnValue({
+      // Mock the check for existing inactive items (returns null)
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  order: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockReturnValue({
+                      maybeSingle: jest.fn().mockResolvedValue({
+                        data: null,
+                        error: null
+                      })
+                    })
+                  })
+                })
+              })
+            })
+          })
+        })
+      })
+
+      // Mock the insert with error
+      mockSupabase.from.mockReturnValueOnce({
         insert: jest.fn().mockReturnValue({
           select: jest.fn().mockReturnValue({
             single: jest.fn().mockResolvedValue({
@@ -586,7 +638,7 @@ describe('ShoppingListService', () => {
   describe('deleteShoppingItem', () => {
     it('should delete a shopping item', async () => {
       mockSupabase.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue({
+        update: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({ error: null })
         })
       })
@@ -599,7 +651,7 @@ describe('ShoppingListService', () => {
     it('should handle database errors', async () => {
       const error = new Error('Database error')
       mockSupabase.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue({
+        update: jest.fn().mockReturnValue({
           eq: jest.fn().mockResolvedValue({ error })
         })
       })
@@ -611,9 +663,11 @@ describe('ShoppingListService', () => {
   describe('clearCompletedItems', () => {
     it('should clear completed items', async () => {
       mockSupabase.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue({
+        update: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error: null })
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValue({ error: null })
+            })
           })
         })
       })
@@ -626,9 +680,11 @@ describe('ShoppingListService', () => {
     it('should handle database errors', async () => {
       const error = new Error('Database error')
       mockSupabase.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue({
+        update: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error })
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValue({ error })
+            })
           })
         })
       })
@@ -640,8 +696,10 @@ describe('ShoppingListService', () => {
   describe('clearAllItems', () => {
     it('should clear all items', async () => {
       mockSupabase.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: null })
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null })
+          })
         })
       })
 
@@ -653,8 +711,10 @@ describe('ShoppingListService', () => {
     it('should handle database errors', async () => {
       const error = new Error('Database error')
       mockSupabase.from.mockReturnValue({
-        delete: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error })
+        update: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error })
+          })
         })
       })
 

@@ -198,7 +198,7 @@ export class ShoppingListService {
     }
   }
 
-  // Get all items for a shopping list with aisle info
+  // Get all active items for a shopping list with aisle info
   static async getShoppingItems(listId) {
     try {
       const { data, error } = await supabase
@@ -213,6 +213,7 @@ export class ShoppingListService {
           )
         `)
         .eq('shopping_list_id', listId)
+        .eq('active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -227,6 +228,55 @@ export class ShoppingListService {
   // itemData should contain: { name, aisle_id, quantity, comment }
   static async addShoppingItem(listId, userId, itemData) {
     try {
+      // Check if there's an inactive item with the same name that we can reactivate
+      const { data: existingItem } = await supabase
+        .from('shopping_items')
+        .select(`
+          *,
+          aisle:user_aisles (
+            id,
+            name,
+            color,
+            display_order
+          )
+        `)
+        .eq('shopping_list_id', listId)
+        .eq('user_id', userId)
+        .eq('name', itemData.name)
+        .eq('active', false)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // If we found an inactive item, reactivate it
+      if (existingItem) {
+        const { data, error } = await supabase
+          .from('shopping_items')
+          .update({
+            active: true,
+            aisle_id: itemData.aisle_id || existingItem.aisle_id,
+            quantity: itemData.quantity || 1,
+            comment: itemData.comment || '',
+            completed: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingItem.id)
+          .select(`
+            *,
+            aisle:user_aisles (
+              id,
+              name,
+              color,
+              display_order
+            )
+          `)
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+
+      // Otherwise, create a new item
       const { data, error } = await supabase
         .from('shopping_items')
         .insert([
@@ -238,7 +288,8 @@ export class ShoppingListService {
             quantity: itemData.quantity || 1,
             comment: itemData.comment || '',
             completed: false,
-            purchase_count: 0
+            purchase_count: 0,
+            active: true
           }
         ])
         .select(`
@@ -287,12 +338,16 @@ export class ShoppingListService {
     }
   }
 
-  // Delete a shopping item
+  // Delete a shopping item (soft delete)
   static async deleteShoppingItem(itemId) {
     try {
+      // Soft delete: mark as inactive instead of deleting
       const { error } = await supabase
         .from('shopping_items')
-        .delete()
+        .update({
+          active: false,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', itemId);
 
       if (error) throw error;
@@ -306,11 +361,16 @@ export class ShoppingListService {
   // Clear completed items
   static async clearCompletedItems(listId) {
     try {
+      // Soft delete: mark completed items as inactive instead of deleting
       const { error } = await supabase
         .from('shopping_items')
-        .delete()
+        .update({
+          active: false,
+          updated_at: new Date().toISOString()
+        })
         .eq('shopping_list_id', listId)
-        .eq('completed', true);
+        .eq('completed', true)
+        .eq('active', true);
 
       if (error) throw error;
       return true;
@@ -323,10 +383,15 @@ export class ShoppingListService {
   // Clear all items
   static async clearAllItems(listId) {
     try {
+      // Soft delete: mark all items as inactive instead of deleting
       const { error } = await supabase
         .from('shopping_items')
-        .delete()
-        .eq('shopping_list_id', listId);
+        .update({
+          active: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('shopping_list_id', listId)
+        .eq('active', true);
 
       if (error) throw error;
       return true;

@@ -109,22 +109,24 @@ jest.mock('../../components/TopPurchasedItems', () => {
     return (
       <div data-testid="top-purchased-items">
         {loading && <span>Loading top items</span>}
-        {items.map(item => {
-          const isInList = existingSet.has(item.item_name.trim().toLowerCase())
+        {items
+          .filter(item => item && item.item_name) // Filter out invalid items
+          .map(item => {
+            const isInList = existingSet.has(item.item_name.trim().toLowerCase())
 
-          return (
-            <div key={item.item_name}>
-              <span>{item.item_name}</span>
-              {isInList ? (
-                <span>Already added {item.item_name}</span>
-              ) : (
-                <button onClick={() => onAddItem && onAddItem(item)}>
-                  Add {item.item_name}
-                </button>
-              )}
-            </div>
-          )
-        })}
+            return (
+              <div key={item.item_name}>
+                <span>{item.item_name}</span>
+                {isInList ? (
+                  <span>Already added {item.item_name}</span>
+                ) : (
+                  <button onClick={() => onAddItem && onAddItem(item)}>
+                    Add {item.item_name}
+                  </button>
+                )}
+              </div>
+            )
+          })}
       </div>
     )
   }
@@ -433,11 +435,13 @@ describe('Home', () => {
 
     const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
 
-    const usageItem = {
-      item_name: 'Bananas',
+    // Mock service returns data in database format (with 'name' not 'item_name')
+    const serviceItem = {
+      id: '99',
+      name: 'Bananas',
       purchase_count: 5,
-      last_aisle: 'Produce',
-      last_quantity: 2
+      aisle: mockAisle,
+      quantity: 2
     }
 
     // Mock with at least one item so kebab menu is visible
@@ -452,7 +456,7 @@ describe('Home', () => {
       quantity: 2,
       completed: false
     })
-    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([usageItem])
+    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([serviceItem])
 
     render(<Home />)
 
@@ -496,17 +500,19 @@ describe('Home', () => {
 
     const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
 
-    const usageItem = {
-      item_name: 'Apples',
+    // Mock service returns data in database format (with 'name' not 'item_name')
+    const serviceItem = {
+      id: '98',
+      name: 'Apples',
       purchase_count: 8,
-      last_aisle: 'Produce',
-      last_quantity: 4
+      aisle: mockAisle,
+      quantity: 4
     }
 
     mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
     mockShoppingListService.getShoppingItems.mockResolvedValue([mockItems[0]])
-    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([usageItem])
+    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([serviceItem])
 
     render(<Home />)
 
@@ -798,10 +804,102 @@ describe('Home', () => {
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
 
     render(<Home />)
-    
+
     await waitFor(() => {
       expect(screen.getByText('Your list is empty')).toBeInTheDocument()
       expect(screen.getByText('Add your first item above')).toBeInTheDocument()
+    })
+  })
+
+  it('should show frequent items button when list is empty and top items exist', async () => {
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
+
+    // Mock service returns data in database format (with 'name' not 'item_name')
+    const serviceItem = {
+      id: '97',
+      name: 'Bananas',
+      purchase_count: 5,
+      aisle: mockAisle,
+      quantity: 2
+    }
+
+    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
+    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([serviceItem])
+
+    render(<Home />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Your list is empty')).toBeInTheDocument()
+    })
+
+    // Should show button to open frequent items
+    expect(screen.getByText('Top Items')).toBeInTheDocument()
+  })
+
+  it('should not show frequent items button when list is empty and no top items exist', async () => {
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
+    mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
+    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
+
+    render(<Home />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Your list is empty')).toBeInTheDocument()
+    })
+
+    // Should not show button to open frequent items
+    expect(screen.queryByText('Top Items')).not.toBeInTheDocument()
+  })
+
+  it('should open frequent items modal from empty state button', async () => {
+    const user = userEvent.setup()
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
+
+    // Mock service returns data in database format (with 'name' not 'item_name')
+    const serviceItem = {
+      id: '96',
+      name: 'Bananas',
+      purchase_count: 5,
+      aisle: mockAisle,
+      quantity: 2
+    }
+
+    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getActiveShoppingList.mockResolvedValue(mockShoppingList)
+    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+    mockShoppingListService.getMostPurchasedItems.mockResolvedValue([serviceItem])
+
+    render(<Home />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Your list is empty')).toBeInTheDocument()
+    })
+
+    // Click the frequent items button in empty state
+    await user.click(screen.getByText('Top Items'))
+
+    // Should open the top purchased items modal
+    await waitFor(() => {
+      expect(screen.getByTestId('top-purchased-items')).toBeInTheDocument()
+      expect(screen.getByText('Bananas')).toBeInTheDocument()
     })
   })
 

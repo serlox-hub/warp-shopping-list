@@ -14,7 +14,6 @@ import { useTranslations } from '@/contexts/LanguageContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 import {
   groupItemsByAisle,
-  updateItemsAisle,
   mapLocalizedToEnglish,
   mapEnglishToLocalized,
   getDefaultAisleColor
@@ -44,8 +43,6 @@ export default function Home() {
     return mapEnglishToLocalized(englishNames, t);
   }, [customAisles, t]);
   const primaryActionClass = 'inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed';
-  const subtleActionClass = 'inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
-  const dangerActionClass = 'inline-flex items-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-400 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 disabled:opacity-50 disabled:cursor-not-allowed';
 
   const applyAisleState = useCallback((rawAisles) => {
     if (!rawAisles || rawAisles.length === 0) {
@@ -122,7 +119,14 @@ export default function Home() {
     setTopItemsLoading(true);
     try {
       const mostPurchased = await ShoppingListService.getMostPurchasedItems(userId);
-      setTopItems(mostPurchased);
+      // Map the data to the format expected by TopPurchasedItems component
+      const formattedItems = mostPurchased.map(item => ({
+        item_name: item.name,
+        purchase_count: item.purchase_count,
+        last_aisle: item.aisle?.name || null,
+        last_quantity: item.quantity || 1
+      }));
+      setTopItems(formattedItems);
     } catch (error) {
       console.error('Error loading top purchased items:', error);
       setTopItems([]);
@@ -578,9 +582,28 @@ export default function Home() {
         {/* Shopping List by Aisles */}
         <div className="space-y-6">
           {Object.keys(groupedItems).length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <p className="text-xl">{t('shoppingList.emptyTitle')}</p>
-              <p>{t('shoppingList.emptySubtitle')}</p>
+            <div className="text-center py-12 space-y-6">
+              <div className="text-gray-500 dark:text-gray-400">
+                <p className="text-xl">{t('shoppingList.emptyTitle')}</p>
+                <p>{t('shoppingList.emptySubtitle')}</p>
+              </div>
+
+              {/* Frequent Items Access */}
+              {canOpenTopItems && (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setIsTopItemsOpen(true)}
+                    className={primaryActionClass}
+                    disabled={!canOpenTopItems}
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a3 3 0 013-3h2a3 3 0 013 3v2m-1 4h-8m2 4h4m-9-8h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a2 2 0 012-2z" />
+                    </svg>
+                    <span>{t('topItems.openButton')}</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             Object.entries(groupedItems).map(([aisle, aisleItems]) => (

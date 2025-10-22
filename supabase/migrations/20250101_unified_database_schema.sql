@@ -42,8 +42,6 @@ CREATE TABLE IF NOT EXISTS public.user_aisles (
 );
 
 -- Shopping Items table
--- BREAKING CHANGE: aisle is now FK to user_aisles.id (was TEXT)
--- BREAKING CHANGE: added purchase_count (replaces shopping_item_usage table)
 CREATE TABLE IF NOT EXISTS public.shopping_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     shopping_list_id UUID REFERENCES public.shopping_lists(id) ON DELETE CASCADE NOT NULL,
@@ -53,11 +51,14 @@ CREATE TABLE IF NOT EXISTS public.shopping_items (
     quantity INTEGER NOT NULL DEFAULT 1,
     completed BOOLEAN NOT NULL DEFAULT false,
     purchase_count INTEGER NOT NULL DEFAULT 0,
+    active BOOLEAN NOT NULL DEFAULT true,
     comment TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     last_purchased_at TIMESTAMP WITH TIME ZONE
 );
+
+COMMENT ON COLUMN public.shopping_items.active IS 'Soft delete flag: true = item is active in list, false = item has been cleared but history is preserved';
 
 -- =============================================================================
 -- 2. INDEXES FOR PERFORMANCE
@@ -73,6 +74,10 @@ CREATE INDEX IF NOT EXISTS shopping_items_user_id_idx ON public.shopping_items(u
 CREATE INDEX IF NOT EXISTS shopping_items_aisle_id_idx ON public.shopping_items(aisle_id);
 CREATE INDEX IF NOT EXISTS shopping_items_purchase_count_idx ON public.shopping_items(user_id, purchase_count DESC);
 CREATE INDEX IF NOT EXISTS idx_shopping_items_comment ON public.shopping_items USING gin(to_tsvector('english', comment)) WHERE comment IS NOT NULL;
+
+-- Shopping Items active field indexes (for soft delete functionality)
+CREATE INDEX IF NOT EXISTS shopping_items_active_idx ON public.shopping_items(shopping_list_id, active) WHERE active = true;
+CREATE INDEX IF NOT EXISTS shopping_items_user_active_purchase_idx ON public.shopping_items(user_id, active, purchase_count DESC, last_purchased_at DESC) WHERE active = true AND purchase_count > 0;
 
 -- User Preferences indexes
 CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON public.user_preferences(user_id);
