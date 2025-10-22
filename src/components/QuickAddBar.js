@@ -367,17 +367,6 @@ export default function QuickAddBar({
       clearTimeout(suggestionCloseTimeout.current);
       suggestionCloseTimeout.current = null;
     }
-
-    // Scroll to input on mobile when keyboard appears
-    if (inputRef.current && window.innerWidth < 768) {
-      setTimeout(() => {
-        inputRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest'
-        });
-      }, 300); // Delay to allow keyboard to open
-    }
   };
 
   const handleInputBlur = () => {
@@ -392,7 +381,7 @@ export default function QuickAddBar({
   };
 
   return (
-    <div className="sticky md:fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shadow-lg">
       <div className="max-w-5xl mx-auto px-6 py-4">
         <form onSubmit={handleSubmit} className="relative">
           <div className="flex items-center gap-3">
