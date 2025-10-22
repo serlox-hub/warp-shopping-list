@@ -35,8 +35,6 @@ export default function Home() {
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
   const [itemUsageHistory, setItemUsageHistory] = useState([]);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
-  // customAisles are now objects with {id, name, color, display_order}
-  // Extract names for compatibility with components expecting string arrays
   const englishCustomAisles = useMemo(() => customAisles.filter(a => a && a.name).map(a => a.name), [customAisles]);
   const localizedCustomAisles = useMemo(() => {
     const englishNames = customAisles.filter(a => a && a.name).map(a => a.name);
@@ -51,11 +49,8 @@ export default function Home() {
       return;
     }
 
-    // Store full aisle objects (with id, name, color, display_order)
-    // This preserves IDs needed for proper FK relationships when updating
     setCustomAisles(rawAisles);
 
-    // Build color map for quick lookup (both English and localized names)
     const colorMap = rawAisles.reduce((acc, aisle) => {
       const englishName = aisle.name;
       const localizedNames = mapEnglishToLocalized([englishName], t);
@@ -94,13 +89,12 @@ export default function Home() {
       setDataLoading(false);
       return;
     }
-    
+
     setDataLoading(true);
     try {
-      const list = await ShoppingListService.getActiveShoppingList(userId);
-      setShoppingList(list);
+      const { list, items: listItems } = await ShoppingListService.getActiveShoppingListWithItems(userId);
 
-      const listItems = await ShoppingListService.getShoppingItems(list.id);
+      setShoppingList(list);
       setItems(listItems);
     } catch (error) {
       console.error('Error loading shopping list data:', error);
@@ -119,7 +113,6 @@ export default function Home() {
     setTopItemsLoading(true);
     try {
       const mostPurchased = await ShoppingListService.getMostPurchasedItems(userId);
-      // Map the data to the format expected by TopPurchasedItems component
       const formattedItems = mostPurchased.map(item => ({
         item_name: item.name,
         purchase_count: item.purchase_count,
@@ -135,20 +128,12 @@ export default function Home() {
     }
   }, [userId]);
 
-  // Item usage history is no longer needed as purchase_count is on items themselves
-  const loadItemUsageHistory = useCallback(async () => {
-    // This function is kept for backward compatibility but does nothing
-    // Purchase counts are now tracked directly on shopping_items
-    setItemUsageHistory([]);
-  }, []);
 
   useEffect(() => {
     if (userId) {
       Promise.all([
         loadUserAisles(),
-        loadShoppingListData(),
-        loadTopItems(),
-        loadItemUsageHistory()
+        loadShoppingListData()
       ]);
     } else {
       setItems([]);
@@ -160,7 +145,13 @@ export default function Home() {
       setIsTopItemsOpen(false);
       setItemUsageHistory([]);
     }
-  }, [userId, loadShoppingListData, loadTopItems, loadUserAisles, loadItemUsageHistory, t]);
+  }, [userId, loadShoppingListData, loadUserAisles, t]);
+
+  useEffect(() => {
+    if (userId && !dataLoading && items.length === 0 && topItems.length === 0) {
+      loadTopItems();
+    }
+  }, [userId, dataLoading, items.length, topItems.length, loadTopItems]);
 
 
   const handleListChange = async (newList) => {
@@ -323,7 +314,6 @@ export default function Home() {
   };
 
   const handleUpdateAisles = async (pendingAisles) => {
-    // Normalize pending aisles to objects with {name, color}
     const normalizedAisles = (pendingAisles || []).map((entry) => {
       if (typeof entry === 'string') {
         return {
@@ -334,18 +324,13 @@ export default function Home() {
       return entry;
     });
 
-    // Map localized names back to English and match with existing IDs BY INDEX
-    // AisleManager preserves order, so index position = identity
     const englishPayload = normalizedAisles.map((localizedAisle, index) => {
       const englishNames = mapLocalizedToEnglish([localizedAisle.name], t);
       const englishName = englishNames[0];
-
-      // IMPORTANT: Match by index, not by name (allows renaming!)
-      // If user renamed "Produce" to "Fruits", it's still at the same index
       const existing = customAisles[index];
 
       return {
-        id: existing?.id, // Preserve ID using index-based matching
+        id: existing?.id,
         name: englishName,
         color: localizedAisle.color || getDefaultAisleColor(englishName),
         display_order: index + 1
@@ -353,14 +338,9 @@ export default function Home() {
     });
 
     try {
-      // Update aisles in database - service handles renames by ID automatically!
-      // Items with aisle_id FK will automatically show the new name on next fetch
       const updatedAisles = await ShoppingListService.updateUserAisles(user.id, englishPayload);
-
-      // Apply the updated aisles to state
       applyAisleState(updatedAisles);
 
-      // Reload items to reflect any aisle name changes (FK preserved, name updated)
       if (shoppingList) {
         const refreshedItems = await ShoppingListService.getShoppingItems(shoppingList.id);
         setItems(refreshedItems);
@@ -384,6 +364,13 @@ export default function Home() {
     });
   };
 
+  const handleOpenTopItems = async () => {
+    if (topItems.length === 0 && !topItemsLoading) {
+      await loadTopItems();
+    }
+    setIsTopItemsOpen(true);
+  };
+
   const groupedItems = groupItemsByAisle(items, englishCustomAisles);
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
@@ -392,7 +379,7 @@ export default function Home() {
     ? (completedCount / totalCount) * 100
     : 0;
   const hasTopItemsData = topItems.length > 0;
-  const canOpenTopItems = hasTopItemsData || topItemsLoading;
+  const canOpenTopItems = hasItems ? true : (hasTopItemsData || topItemsLoading);
 
   const managerAisles = useMemo(() => {
     return localizedCustomAisles.map((localizedName, index) => {
@@ -529,7 +516,7 @@ export default function Home() {
                         type="button"
                         onClick={() => {
                           setShowActionsMenu(false);
-                          canOpenTopItems && setIsTopItemsOpen(true);
+                          canOpenTopItems && handleOpenTopItems();
                         }}
                         disabled={!canOpenTopItems}
                         className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -593,7 +580,7 @@ export default function Home() {
                 <div className="flex justify-center">
                   <button
                     type="button"
-                    onClick={() => setIsTopItemsOpen(true)}
+                    onClick={handleOpenTopItems}
                     className={primaryActionClass}
                     disabled={!canOpenTopItems}
                   >

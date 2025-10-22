@@ -1,42 +1,7 @@
 import { supabase } from './supabase'
 import { getDefaultAisleColor } from '@/types/shoppingList'
 
-// Table structures needed in Supabase:
-//
-// shopping_lists table:
-// - id: uuid (primary key)
-// - user_id: uuid (foreign key to auth.users)
-// - name: text
-// - is_active: boolean
-// - list_order: integer
-// - created_at: timestamp
-// - updated_at: timestamp
-//
-// user_aisles table:
-// - id: uuid (primary key)
-// - user_id: uuid (foreign key to auth.users)
-// - name: text
-// - display_order: integer
-// - color: text (hex)
-// - created_at: timestamp
-// - updated_at: timestamp
-//
-// shopping_items table:
-// - id: uuid (primary key)
-// - shopping_list_id: uuid (foreign key to shopping_lists)
-// - user_id: uuid (foreign key to auth.users)
-// - name: text
-// - aisle_id: uuid (foreign key to user_aisles, nullable)
-// - quantity: integer
-// - completed: boolean
-// - purchase_count: integer (auto-incremented when completed)
-// - comment: text (optional)
-// - created_at: timestamp
-// - updated_at: timestamp
-// - last_purchased_at: timestamp (nullable)
-
 export class ShoppingListService {
-  // Get all shopping lists for a user
   static async getUserShoppingLists(userId) {
     try {
       const { data, error } = await supabase
@@ -53,7 +18,6 @@ export class ShoppingListService {
     }
   }
 
-  // Get the active shopping list for a user
   static async getActiveShoppingList(userId) {
     try {
       const { data, error } = await supabase
@@ -64,7 +28,6 @@ export class ShoppingListService {
         .single();
 
       if (error) {
-        // If no active list exists, create a default one
         if (error.code === 'PGRST116') {
           return this.createShoppingList(userId, 'My Shopping List', true);
         }
@@ -78,10 +41,53 @@ export class ShoppingListService {
     }
   }
 
-  // Create a new shopping list
+  static async getActiveShoppingListWithItems(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('shopping_lists')
+        .select(`
+          *,
+          shopping_items (
+            *,
+            aisle:user_aisles (
+              id,
+              name,
+              color,
+              display_order
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .eq('shopping_items.active', true)
+        .order('created_at', { foreignTable: 'shopping_items', ascending: false })
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          const newList = await this.createShoppingList(userId, 'My Shopping List', true);
+          return {
+            list: newList,
+            items: []
+          };
+        }
+        throw error;
+      }
+
+      const { shopping_items, ...listData } = data;
+
+      return {
+        list: listData,
+        items: shopping_items || []
+      };
+    } catch (error) {
+      console.error('Error getting active shopping list with items:', error);
+      throw error;
+    }
+  }
+
   static async createShoppingList(userId, name, setAsActive = false) {
     try {
-      // If setting as active, deactivate other lists first
       if (setAsActive) {
         await this.deactivateAllLists(userId);
       }
@@ -106,13 +112,10 @@ export class ShoppingListService {
     }
   }
 
-  // Set a list as active (deactivates others)
   static async setActiveList(userId, listId) {
     try {
-      // Deactivate all lists for user
       await this.deactivateAllLists(userId);
 
-      // Activate the selected list
       const { data, error } = await supabase
         .from('shopping_lists')
         .update({ is_active: true, updated_at: new Date().toISOString() })
@@ -129,7 +132,6 @@ export class ShoppingListService {
     }
   }
 
-  // Deactivate all lists for a user
   static async deactivateAllLists(userId) {
     try {
       const { error } = await supabase
@@ -145,10 +147,8 @@ export class ShoppingListService {
     }
   }
 
-  // Delete a shopping list
   static async deleteShoppingList(userId, listId) {
     try {
-      // Check if this is the only list
       const allLists = await this.getUserShoppingLists(userId);
       if (allLists.length === 1) {
         throw new Error('Cannot delete the last remaining list');
@@ -165,7 +165,6 @@ export class ShoppingListService {
 
       if (error) throw error;
 
-      // If we deleted the active list, make the first remaining list active
       if (wasActive) {
         const remainingLists = allLists.filter(list => list.id !== listId);
         if (remainingLists.length > 0) {
@@ -180,7 +179,6 @@ export class ShoppingListService {
     }
   }
 
-  // Update shopping list name
   static async updateShoppingListName(listId, name) {
     try {
       const { data, error } = await supabase
@@ -198,7 +196,6 @@ export class ShoppingListService {
     }
   }
 
-  // Get all active items for a shopping list with aisle info
   static async getShoppingItems(listId) {
     try {
       const { data, error } = await supabase
@@ -224,11 +221,8 @@ export class ShoppingListService {
     }
   }
 
-  // Add a new shopping item
-  // itemData should contain: { name, aisle_id, quantity, comment }
   static async addShoppingItem(listId, userId, itemData) {
     try {
-      // Check if there's an inactive item with the same name that we can reactivate
       const { data: existingItem } = await supabase
         .from('shopping_items')
         .select(`
@@ -248,7 +242,6 @@ export class ShoppingListService {
         .limit(1)
         .maybeSingle();
 
-      // If we found an inactive item, reactivate it
       if (existingItem) {
         const { data, error } = await supabase
           .from('shopping_items')
@@ -276,7 +269,6 @@ export class ShoppingListService {
         return data;
       }
 
-      // Otherwise, create a new item
       const { data, error } = await supabase
         .from('shopping_items')
         .insert([
@@ -311,8 +303,6 @@ export class ShoppingListService {
     }
   }
 
-  // Update a shopping item
-  // updates can contain: { name, aisle_id, quantity, comment, completed }
   static async updateShoppingItem(itemId, updates) {
     try {
       const { data, error } = await supabase
@@ -338,10 +328,8 @@ export class ShoppingListService {
     }
   }
 
-  // Delete a shopping item (soft delete)
   static async deleteShoppingItem(itemId) {
     try {
-      // Soft delete: mark as inactive instead of deleting
       const { error } = await supabase
         .from('shopping_items')
         .update({
@@ -358,10 +346,8 @@ export class ShoppingListService {
     }
   }
 
-  // Clear completed items
   static async clearCompletedItems(listId) {
     try {
-      // Soft delete: mark completed items as inactive instead of deleting
       const { error } = await supabase
         .from('shopping_items')
         .update({
@@ -380,10 +366,8 @@ export class ShoppingListService {
     }
   }
 
-  // Clear all items
   static async clearAllItems(listId) {
     try {
-      // Soft delete: mark all items as inactive instead of deleting
       const { error } = await supabase
         .from('shopping_items')
         .update({
@@ -401,9 +385,6 @@ export class ShoppingListService {
     }
   }
 
-  // ============== USER AISLES METHODS ==============
-
-  // Get user's custom aisles
   static async getUserAisles(userId) {
     try {
       const { data, error } = await supabase
@@ -414,13 +395,11 @@ export class ShoppingListService {
 
       if (error) throw error;
 
-      // If user has no aisles, create default ones
       if (!data || data.length === 0) {
         await this.createDefaultUserAisles(userId);
         return this.getUserAisles(userId);
       }
 
-      // Return full aisle objects including id
       return data.map(aisle => ({
         id: aisle.id,
         name: aisle.name,
@@ -433,7 +412,6 @@ export class ShoppingListService {
     }
   }
 
-  // Create default aisles for new user
   static async createDefaultUserAisles(userId) {
     try {
       const { error } = await supabase.rpc('create_default_user_aisles', {
@@ -448,14 +426,8 @@ export class ShoppingListService {
     }
   }
 
-  // Update user's aisles (intelligent UPSERT - preserves IDs and FK relationships)
-  // aisles: array of { id?, name, color?, display_order? }
-  // - If aisle has id: UPDATE that aisle (allows renaming!)
-  // - If aisle has no id: INSERT new aisle
-  // - Aisles not in the array: DELETE
   static async updateUserAisles(userId, aisles) {
     try {
-      // Get existing aisles
       const { data: existingAisles, error: fetchError } = await supabase
         .from('user_aisles')
         .select('*')
@@ -473,12 +445,10 @@ export class ShoppingListService {
 
       const operations = [];
 
-      // Process incoming aisles: update existing (by ID) or insert new
       for (let index = 0; index < aisles.length; index++) {
         const aisle = aisles[index];
 
         if (aisle.id && existingAislesMap.has(aisle.id)) {
-          // Update existing aisle (can change name, color, order)
           const existing = existingAislesMap.get(aisle.id);
           operations.push(
             supabase
@@ -492,7 +462,6 @@ export class ShoppingListService {
               .eq('id', aisle.id)
           );
         } else {
-          // Insert new aisle (no id, or id not found)
           operations.push(
             supabase
               .from('user_aisles')
@@ -506,7 +475,6 @@ export class ShoppingListService {
         }
       }
 
-      // Delete aisles that are no longer in the list
       const aislesToDelete = existingAisles.filter(
         existing => !incomingAisleIds.has(existing.id)
       );
@@ -521,10 +489,8 @@ export class ShoppingListService {
         );
       }
 
-      // Execute all operations
       await Promise.all(operations);
 
-      // Fetch and return updated aisles
       return this.getUserAisles(userId);
     } catch (error) {
       console.error('Error updating user aisles:', error);
@@ -532,9 +498,6 @@ export class ShoppingListService {
     }
   }
 
-  // ============== ITEM USAGE ANALYTICS ==============
-
-  // Get most purchased items (based on purchase_count in shopping_items)
   static async getMostPurchasedItems(userId, limit = 8) {
     if (!userId) return [];
 
