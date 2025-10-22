@@ -14,30 +14,36 @@ export function LanguageProvider({ children }) {
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadUserLanguagePreference = useCallback(async () => {
-    if (!user?.id) return;
-
-    setIsLoading(true);
-    try {
-      const preferences = await UserPreferencesService.getUserPreferences(user.id);
-      const dbLanguage = preferences.language || 'en';
-
-      if (dbLanguage !== currentLanguage) {
-        await i18n.changeLanguage(dbLanguage);
-        setCurrentLanguage(dbLanguage);
-      }
-    } catch (error) {
-      console.error('Error loading user language preference:', error);
-      const fallbackLang = i18n.language || 'en';
-      await i18n.changeLanguage(fallbackLang);
-      setCurrentLanguage(fallbackLang);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentLanguage, i18n, user?.id]);
-
   // Load user's language preference from database when authenticated
   useEffect(() => {
+    let isMounted = true;
+
+    const loadUserLanguagePreference = async () => {
+      if (!user?.id) return;
+
+      setIsLoading(true);
+      try {
+        const preferences = await UserPreferencesService.getUserPreferences(user.id);
+        const dbLanguage = preferences.language || 'en';
+
+        if (isMounted && dbLanguage !== currentLanguage) {
+          await i18n.changeLanguage(dbLanguage);
+          setCurrentLanguage(dbLanguage);
+        }
+      } catch (error) {
+        console.error('Error loading user language preference:', error);
+        if (isMounted) {
+          const fallbackLang = i18n.language || 'en';
+          await i18n.changeLanguage(fallbackLang);
+          setCurrentLanguage(fallbackLang);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     if (user) {
       loadUserLanguagePreference();
     } else {
@@ -46,7 +52,12 @@ export function LanguageProvider({ children }) {
       setCurrentLanguage(detectedLang);
       i18n.changeLanguage(detectedLang);
     }
-  }, [user, i18n, loadUserLanguagePreference]);
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only depend on user.id, not currentLanguage or i18n
 
   // Listen for language changes from i18next
   useEffect(() => {

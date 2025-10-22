@@ -33,7 +33,8 @@ export default function ListSelector({ currentList, onListChange }) {
 
   useEffect(() => {
     loadLists();
-  }, [loadLists]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only trigger on user.id change
 
   const handleListSelect = async (list) => {
     if (!user?.id) {

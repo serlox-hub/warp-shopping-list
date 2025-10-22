@@ -722,4 +722,17 @@ describe('ListSelector', () => {
       expect(screen.queryByDisplayValue('Test List')).not.toBeInTheDocument()
     })
   })
+
+  it('should not make duplicate API calls on mount', async () => {
+    render(<ListSelector {...defaultProps} />)
+
+    // Wait for initial load
+    await waitFor(() => {
+      expect(mockShoppingListService.getUserShoppingLists).toHaveBeenCalled()
+    })
+
+    // Verify it was called exactly once with correct user ID
+    expect(mockShoppingListService.getUserShoppingLists).toHaveBeenCalledTimes(1)
+    expect(mockShoppingListService.getUserShoppingLists).toHaveBeenCalledWith(mockUser.id)
+  })
 })

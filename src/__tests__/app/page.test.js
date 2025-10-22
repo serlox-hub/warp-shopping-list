@@ -931,4 +931,28 @@ describe('Home', () => {
       expect(mockShoppingListService.getShoppingItems).toHaveBeenCalledWith('2')
     })
   })
+
+  it('should not make duplicate API calls on initial load', async () => {
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
+      list: mockShoppingList,
+      items: mockItems
+    })
+
+    render(<Home />)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('list-selector')).toBeInTheDocument()
+    })
+
+    // Verify each service method is called exactly once
+    expect(mockShoppingListService.getUserAisles).toHaveBeenCalledTimes(1)
+    expect(mockShoppingListService.getActiveShoppingListWithItems).toHaveBeenCalledTimes(1)
+    expect(mockShoppingListService.getUserAisles).toHaveBeenCalledWith(mockUser.id)
+    expect(mockShoppingListService.getActiveShoppingListWithItems).toHaveBeenCalledWith(mockUser.id)
+  })
 })

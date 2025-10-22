@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { UserPreferencesService } from '@/lib/userPreferencesService';
 
@@ -19,29 +19,37 @@ export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState('system');
   const [resolvedTheme, setResolvedTheme] = useState('light');
 
-  const loadUserTheme = useCallback(async () => {
-    if (!user?.id) {
-      setTheme('system');
-      return;
-    }
-
-    try {
-      const preferences = await UserPreferencesService.getUserPreferences(user.id);
-      setTheme(preferences.theme || 'system');
-    } catch (error) {
-      console.error('Error loading user theme:', error);
-      setTheme('system');
-    }
-  }, [user?.id]);
-
   // Load theme from Supabase when user is authenticated
   useEffect(() => {
+    let isMounted = true;
+
+    const loadUserTheme = async () => {
+      if (!user?.id) return;
+
+      try {
+        const preferences = await UserPreferencesService.getUserPreferences(user.id);
+        if (isMounted) {
+          setTheme(preferences.theme || 'system');
+        }
+      } catch (error) {
+        console.error('Error loading user theme:', error);
+        if (isMounted) {
+          setTheme('system');
+        }
+      }
+    };
+
     if (user) {
       loadUserTheme();
     } else {
       setTheme('system');
     }
-  }, [user, loadUserTheme]);
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]); // Only depend on user.id
 
   // Resolve theme (convert 'system' to actual theme)
   useEffect(() => {

@@ -80,7 +80,8 @@ export default function Home() {
       setCustomAisles([]);
       setAisleColors({});
     }
-  }, [userId, applyAisleState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]); // Only depend on userId, applyAisleState is stable
 
   const loadShoppingListData = useCallback(async () => {
     if (!userId) {
@@ -145,7 +146,8 @@ export default function Home() {
       setIsTopItemsOpen(false);
       setItemUsageHistory([]);
     }
-  }, [userId, loadShoppingListData, loadUserAisles, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]); // Only trigger on userId change
 
   useEffect(() => {
     if (userId && !dataLoading && items.length === 0 && topItems.length === 0) {

@@ -52,11 +52,11 @@ describe('LanguageContext', () => {
 
   it('should handle language change', async () => {
     const { result } = renderHook(() => useLanguage(), { wrapper })
-    
+
     await act(async () => {
       await result.current.changeLanguage('es')
     })
-    
+
     expect(result.current.changeLanguage).toBeDefined()
   })
 
