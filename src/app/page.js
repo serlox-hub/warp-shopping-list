@@ -108,6 +108,7 @@ export default function Home() {
   const loadTopItems = useCallback(async () => {
     if (!userId) {
       setTopItems([]);
+      setItemUsageHistory([]);
       return;
     }
 
@@ -118,12 +119,16 @@ export default function Home() {
         item_name: item.name,
         purchase_count: item.purchase_count,
         last_aisle: item.aisle?.name || null,
-        last_quantity: item.quantity || 1
+        last_quantity: item.quantity || 1,
+        usage_aisle: item.aisle?.name || null,
+        usage_key: `${item.name}::${item.aisle?.name || ''}`
       }));
       setTopItems(formattedItems);
+      setItemUsageHistory(formattedItems);
     } catch (error) {
       console.error('Error loading top purchased items:', error);
       setTopItems([]);
+      setItemUsageHistory([]);
     } finally {
       setTopItemsLoading(false);
     }

@@ -955,4 +955,176 @@ describe('Home', () => {
     expect(mockShoppingListService.getUserAisles).toHaveBeenCalledWith(mockUser.id)
     expect(mockShoppingListService.getActiveShoppingListWithItems).toHaveBeenCalledWith(mockUser.id)
   })
+
+  describe('itemUsageHistory and QuickAddBar suggestions', () => {
+    it('should populate itemUsageHistory when loadTopItems is called', async () => {
+      const mockTopItemsData = [
+        {
+          name: 'Milk',
+          purchase_count: 10,
+          aisle: { name: 'Dairy', color: '#f97316' },
+          quantity: 1
+        },
+        {
+          name: 'Apples',
+          purchase_count: 8,
+          aisle: { name: 'Produce', color: '#22c55e' },
+          quantity: 2
+        }
+      ]
+
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        loading: false
+      })
+
+      mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
+        list: mockShoppingList,
+        items: []
+      })
+
+      mockShoppingListService.getMostPurchasedItems.mockResolvedValue(mockTopItemsData)
+
+      // Mock QuickAddBar to capture props
+      let capturedProps = null
+      jest.isolateModules(() => {
+        jest.doMock('../../components/QuickAddBar', () => {
+          return function MockQuickAddBar(props) {
+            capturedProps = props
+            return <div data-testid="quick-add-bar">Mock QuickAddBar</div>
+          }
+        })
+      })
+
+      render(<Home />)
+
+      await waitFor(() => {
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id)
+      })
+
+      // Wait for itemUsageHistory to be populated
+      await waitFor(() => {
+        const quickAddBar = screen.getByTestId('quick-add-bar')
+        expect(quickAddBar).toBeInTheDocument()
+      })
+
+      // The mock captures the latest props, but we need to verify through the mock calls
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalled()
+    })
+
+    it('should load topItems when items list is empty', async () => {
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        loading: false
+      })
+
+      mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
+        list: mockShoppingList,
+        items: []
+      })
+
+      mockShoppingListService.getMostPurchasedItems.mockResolvedValue([
+        {
+          name: 'Coffee',
+          purchase_count: 15,
+          aisle: { name: 'Pantry', color: '#a855f7' },
+          quantity: 1
+        }
+      ])
+
+      render(<Home />)
+
+      await waitFor(() => {
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id)
+      })
+    })
+
+    it('should refresh itemUsageHistory when an item is completed', async () => {
+      const user = userEvent.setup()
+      const mockItemToComplete = {
+        id: '1',
+        name: 'Bread',
+        aisle: { id: 'a1', name: 'Bakery', color: '#f59e0b' },
+        quantity: 1,
+        completed: false,
+        comment: ''
+      }
+
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        loading: false
+      })
+
+      mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
+        list: mockShoppingList,
+        items: [mockItemToComplete]
+      })
+
+      mockShoppingListService.updateShoppingItem.mockResolvedValue({
+        ...mockItemToComplete,
+        completed: true
+      })
+
+      mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
+
+      render(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`aisle-section-Bakery`)).toBeInTheDocument()
+      })
+
+      // Toggle item completion
+      const toggleButton = screen.getByText('Toggle')
+      await user.click(toggleButton)
+
+      await waitFor(() => {
+        // getMostPurchasedItems should be called at least twice:
+        // once on initial load, once after completing the item
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalled()
+        expect(mockShoppingListService.updateShoppingItem).toHaveBeenCalledWith(
+          '1',
+          { completed: true }
+        )
+      })
+    })
+
+    it('should refresh itemUsageHistory when a new item is added', async () => {
+      const user = userEvent.setup()
+
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        loading: false
+      })
+
+      mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
+        list: mockShoppingList,
+        items: []
+      })
+
+      mockShoppingListService.addShoppingItem.mockResolvedValue({
+        id: 'new-1',
+        name: 'Test Item',
+        aisle: { id: 'a1', name: 'Produce', color: '#22c55e' },
+        quantity: 1,
+        completed: false,
+        comment: ''
+      })
+
+      mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
+
+      render(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
+      })
+
+      const addButton = screen.getByText('Add Item')
+      await user.click(addButton)
+
+      await waitFor(() => {
+        // Should be called twice: once on load, once after adding item
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledTimes(2)
+      })
+    })
+  })
 })

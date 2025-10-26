@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DEFAULT_AISLES, getDefaultAisleColor } from '@/types/shoppingList';
 import { useTranslations } from '@/contexts/LanguageContext';
-import { normalizeHexColor } from '@/utils/colors';
+import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
 
 const stripDiacritics = (value) => {
   if (value === null || value === undefined) {
@@ -194,7 +194,9 @@ export default function QuickAddBar({
     (existingItems || [])
       .filter((entry) => entry && entry.name)
       .forEach((entry) => {
-        const key = `${normalizeText(entry.name)}::${normalizeText(entry.aisle)}`;
+        // Handle both object and string aisle formats
+        const aisleNameEnglish = entry.aisle?.name || entry.aisle || '';
+        const key = `${normalizeText(entry.name)}::${normalizeText(aisleNameEnglish)}`;
         set.add(key);
       });
     return set;
