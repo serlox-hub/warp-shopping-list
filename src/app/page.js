@@ -11,6 +11,7 @@ import ListSelector from '@/components/ListSelector';
 import TopPurchasedItems from '@/components/TopPurchasedItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/contexts/LanguageContext';
+import { useNotification } from '@/contexts/NotificationContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 import {
   groupItemsByAisle,
@@ -22,6 +23,7 @@ import {
 export default function Home() {
   const { user, loading } = useAuth();
   const t = useTranslations();
+  const { showError, showSuccess } = useNotification();
   const userId = user?.id;
   const [items, setItems] = useState([]);
   const [editingItem, setEditingItem] = useState(null);
@@ -178,14 +180,36 @@ export default function Home() {
   const handleAddItem = async (itemData) => {
     if (!shoppingList || !user) return;
 
-    try {
-      // Convert aisle name to aisle_id if aisle is provided as a name
-      let aisleId = itemData.aisle_id;
-      if (!aisleId && itemData.aisle) {
-        const aisleObj = customAisles.find(a => a.name === itemData.aisle);
-        aisleId = aisleObj?.id || null;
-      }
+    // Convert aisle name to aisle_id and get aisle object
+    let aisleId = itemData.aisle_id;
+    let aisleObj = null;
+    if (!aisleId && itemData.aisle) {
+      aisleObj = customAisles.find(a => a.name === itemData.aisle);
+      aisleId = aisleObj?.id || null;
+    } else if (aisleId) {
+      aisleObj = customAisles.find(a => a.id === aisleId);
+    }
 
+    // Create optimistic item with temporary ID
+    const optimisticItem = {
+      id: `temp-${Date.now()}-${Math.random()}`,
+      name: itemData.name,
+      aisle: aisleObj || { id: aisleId, name: itemData.aisle || 'Other' },
+      aisle_id: aisleId,
+      quantity: itemData.quantity || 1,
+      comment: itemData.comment || '',
+      completed: false,
+      shopping_list_id: shoppingList.id,
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Optimistic update: Add item immediately
+    setItems(prev => [optimisticItem, ...prev]);
+
+    try {
+      // Make the actual server request
       const newItem = await ShoppingListService.addShoppingItem(
         shoppingList.id,
         user.id,
@@ -194,22 +218,63 @@ export default function Home() {
           aisle_id: aisleId
         }
       );
-      setItems(prev => [newItem, ...prev]);
-      await loadTopItems();
+
+      // Replace optimistic item with real item from server
+      setItems(prev => prev.map(item =>
+        item.id === optimisticItem.id ? newItem : item
+      ));
+
+      // Refresh top items in background
+      loadTopItems();
     } catch (error) {
       console.error('Error adding item:', error);
+      // Rollback: Remove the optimistic item
+      setItems(prev => prev.filter(item => item.id !== optimisticItem.id));
+      showError(t('errors.addItemFailed'));
     }
   };
 
   const handleUpdateItem = async (updatedItem) => {
-    try {
-      // Convert aisle name to aisle_id if aisle is provided as a name
-      let aisleId = updatedItem.aisle_id;
-      if (!aisleId && updatedItem.aisle) {
-        const aisleObj = customAisles.find(a => a.name === updatedItem.aisle);
-        aisleId = aisleObj?.id || null;
-      }
+    const previousItem = items.find(item => item.id === updatedItem.id);
+    if (!previousItem) return;
 
+    // Convert aisle name/object to aisle_id
+    let aisleId = updatedItem.aisle_id;
+    let aisleObj = null;
+
+    if (!aisleId && updatedItem.aisle) {
+      // Handle both string aisle names and aisle objects
+      const aisleName = typeof updatedItem.aisle === 'string'
+        ? updatedItem.aisle
+        : updatedItem.aisle?.name;
+
+      if (aisleName) {
+        aisleObj = customAisles.find(a => a.name === aisleName);
+        aisleId = aisleObj?.id || updatedItem.aisle?.id || null;
+      }
+    } else if (aisleId) {
+      aisleObj = customAisles.find(a => a.id === aisleId);
+    }
+
+    // Create optimistic updated item
+    const optimisticItem = {
+      ...previousItem,
+      name: updatedItem.name,
+      aisle: aisleObj || previousItem.aisle,
+      aisle_id: aisleId,
+      quantity: updatedItem.quantity,
+      comment: updatedItem.comment,
+      updated_at: new Date().toISOString()
+    };
+
+    // Optimistic update: Update item immediately
+    setItems(prev => prev.map(item =>
+      item.id === updatedItem.id ? optimisticItem : item
+    ));
+    setEditingItem(null);
+
+    try {
+      // Make the actual server request
       const updated = await ShoppingListService.updateShoppingItem(updatedItem.id, {
         name: updatedItem.name,
         aisle_id: aisleId,
@@ -217,17 +282,31 @@ export default function Home() {
         comment: updatedItem.comment
       });
 
+      // Update with server response
       setItems(prev => prev.map(item =>
         item.id === updated.id ? updated : item
       ));
 
-      // Refresh top items if the purchase count may have changed
-      if (updated.completed) {
-        await loadTopItems();
+      // Check if name or aisle changed to refresh suggestions
+      const nameChanged = previousItem.name !== updatedItem.name;
+      const previousAisleName = previousItem.aisle?.name;
+      const newAisleName = aisleObj?.name || updated.aisle?.name;
+      const aisleChanged = previousAisleName !== newAisleName;
+
+      // Refresh top items if item details changed or if completed
+      // This ensures suggestions always show current item names and aisles
+      if (nameChanged || aisleChanged || updated.completed) {
+        loadTopItems();
       }
-      setEditingItem(null);
     } catch (error) {
       console.error('Error updating item:', error);
+      // Rollback: Revert to previous state
+      setItems(prev => prev.map(item =>
+        item.id === updatedItem.id ? previousItem : item
+      ));
+      // Reopen edit modal on error
+      setEditingItem(previousItem);
+      showError(t('errors.updateItemFailed'));
     }
   };
 
@@ -235,21 +314,36 @@ export default function Home() {
     const item = items.find(item => item.id === itemId);
     if (!item) return;
 
+    const previousCompleted = item.completed;
+    const newCompleted = !previousCompleted;
+
+    // Optimistic update: Toggle completion immediately
+    setItems(prev => prev.map(i =>
+      i.id === itemId ? { ...i, completed: newCompleted, updated_at: new Date().toISOString() } : i
+    ));
+
     try {
+      // Make the actual server request
       const updated = await ShoppingListService.updateShoppingItem(itemId, {
-        completed: !item.completed
+        completed: newCompleted
       });
 
+      // Update with server response (in case server changed something)
       setItems(prev => prev.map(item =>
         item.id === updated.id ? updated : item
       ));
 
-      // If item was just completed, refresh top items (purchase_count was incremented)
+      // If item was just completed, refresh top items in background
       if (updated.completed) {
-        await loadTopItems();
+        loadTopItems();
       }
     } catch (error) {
       console.error('Error toggling item completion:', error);
+      // Rollback: Revert to previous state
+      setItems(prev => prev.map(i =>
+        i.id === itemId ? { ...i, completed: previousCompleted } : i
+      ));
+      showError(t('errors.toggleCompleteFailed'));
     }
   };
 
@@ -257,35 +351,72 @@ export default function Home() {
     const item = items.find(entry => entry.id === itemId);
     if (!item || !newAisleName || item.aisle?.name === newAisleName) return;
 
-    try {
-      // Find aisle_id from name
-      const aisleObj = customAisles.find(a => a.name === newAisleName);
-      if (!aisleObj) {
-        console.error('Aisle not found:', newAisleName);
-        return;
-      }
+    // Find aisle_id from name
+    const aisleObj = customAisles.find(a => a.name === newAisleName);
+    if (!aisleObj) {
+      console.error('Aisle not found:', newAisleName);
+      return;
+    }
 
+    const previousAisle = item.aisle;
+    const previousAisleId = item.aisle_id;
+
+    // Optimistic update: Change aisle immediately
+    setItems(prev => prev.map(entry =>
+      entry.id === itemId
+        ? { ...entry, aisle: aisleObj, aisle_id: aisleObj.id, updated_at: new Date().toISOString() }
+        : entry
+    ));
+
+    try {
+      // Make the actual server request
       const updated = await ShoppingListService.updateShoppingItem(itemId, {
         aisle_id: aisleObj.id
       });
 
+      // Update with server response
       setItems(prev => prev.map(entry =>
         entry.id === updated.id ? updated : entry
       ));
     } catch (error) {
       console.error('Error changing item aisle:', error);
+      // Rollback: Revert to previous aisle
+      setItems(prev => prev.map(entry =>
+        entry.id === itemId
+          ? { ...entry, aisle: previousAisle, aisle_id: previousAisleId }
+          : entry
+      ));
+      showError(t('errors.changeAisleFailed'));
     }
   };
 
   const handleDeleteItem = async (itemId) => {
+    const itemToDelete = items.find(item => item.id === itemId);
+    if (!itemToDelete) return;
+
+    // Optimistic update: Remove item immediately
+    setItems(prev => prev.filter(item => item.id !== itemId));
+    if (editingItem?.id === itemId) {
+      setEditingItem(null);
+    }
+
     try {
+      // Make the actual server request
       await ShoppingListService.deleteShoppingItem(itemId);
-      setItems(prev => prev.filter(item => item.id !== itemId));
-      if (editingItem?.id === itemId) {
-        setEditingItem(null);
-      }
     } catch (error) {
       console.error('Error deleting item:', error);
+      // Rollback: Restore the item
+      setItems(prev => {
+        // Find the correct position to insert back (try to maintain order)
+        const index = prev.findIndex(item =>
+          new Date(item.created_at) < new Date(itemToDelete.created_at)
+        );
+        if (index === -1) {
+          return [itemToDelete, ...prev];
+        }
+        return [...prev.slice(0, index), itemToDelete, ...prev.slice(index)];
+      });
+      showError(t('errors.deleteItemFailed'));
     }
   };
 
@@ -299,24 +430,42 @@ export default function Home() {
 
   const handleClearCompleted = async () => {
     if (!shoppingList) return;
-    
+
+    const completedItems = items.filter(item => item.completed);
+
+    // Optimistic update: Remove completed items immediately
+    setItems(prev => prev.filter(item => !item.completed));
+
     try {
+      // Make the actual server request
       await ShoppingListService.clearCompletedItems(shoppingList.id);
-      setItems(prev => prev.filter(item => !item.completed));
     } catch (error) {
       console.error('Error clearing completed items:', error);
+      // Rollback: Restore completed items
+      setItems(prev => [...prev, ...completedItems]);
+      showError(t('errors.clearCompletedFailed'));
     }
   };
 
   const handleClearAll = async () => {
     if (!shoppingList) return;
-    
+
+    const previousItems = items;
+    const wasEditing = editingItem;
+
+    // Optimistic update: Clear all items immediately
+    setItems([]);
+    setEditingItem(null);
+
     try {
+      // Make the actual server request
       await ShoppingListService.clearAllItems(shoppingList.id);
-      setItems([]);
-      setEditingItem(null);
     } catch (error) {
       console.error('Error clearing all items:', error);
+      // Rollback: Restore all items
+      setItems(previousItems);
+      setEditingItem(wasEditing);
+      showError(t('errors.clearAllFailed'));
     }
   };
 

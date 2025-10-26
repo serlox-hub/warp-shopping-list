@@ -118,5 +118,22 @@
       "preferences": "Preferencias de usuario",
       "logout": "Cerrar sesión"
     }
+  },
+  "errors": {
+    "addItemFailed": "Error al agregar el elemento. Inténtalo de nuevo.",
+    "updateItemFailed": "Error al actualizar el elemento. Inténtalo de nuevo.",
+    "deleteItemFailed": "Error al eliminar el elemento. Inténtalo de nuevo.",
+    "toggleCompleteFailed": "Error al actualizar el estado. Inténtalo de nuevo.",
+    "changeAisleFailed": "Error al cambiar el pasillo. Inténtalo de nuevo.",
+    "clearCompletedFailed": "Error al limpiar completados. Inténtalo de nuevo.",
+    "clearAllFailed": "Error al limpiar todos los elementos. Inténtalo de nuevo.",
+    "networkError": "Error de red. Verifica tu conexión e inténtalo de nuevo."
+  },
+  "success": {
+    "itemAdded": "Elemento agregado exitosamente",
+    "itemUpdated": "Elemento actualizado exitosamente",
+    "itemDeleted": "Elemento eliminado exitosamente",
+    "completedCleared": "Elementos completados limpiados",
+    "allCleared": "Todos los elementos limpiados"
   }
 }

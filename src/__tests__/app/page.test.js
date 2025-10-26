@@ -1,13 +1,16 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import React from 'react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Home from '../../app/page'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTranslations } from '../../contexts/LanguageContext'
+import { useNotification } from '../../contexts/NotificationContext'
 import { ShoppingListService } from '../../lib/shoppingListService'
 
 // Mock dependencies
 jest.mock('../../contexts/AuthContext')
 jest.mock('../../contexts/LanguageContext')
+jest.mock('../../contexts/NotificationContext')
 jest.mock('../../lib/shoppingListService')
 let addItemFormPropsLog = []
 let aisleSectionRenderLog = []
@@ -26,13 +29,40 @@ jest.mock('../../components/QuickAddBar', () => {
 })
 
 jest.mock('../../components/EditItemModal', () => {
-  return function MockEditItemModal({ item, onUpdateItem, onClose }) {
+  return function MockEditItemModal({ item, onUpdateItem, onClose, aisles = [] }) {
+    const [name, setName] = React.useState(item.name);
+    const [aisleName, setAisleName] = React.useState(item.aisle?.name || '');
+
+    // If no aisles provided, use a default list for testing
+    const availableAisles = aisles.length > 0 ? aisles : [
+      { id: 'a1', name: 'Produce', color: '#22c55e' },
+      { id: 'a2', name: 'Dairy', color: '#f97316' },
+      { id: 'a3', name: 'Bakery', color: '#f59e0b' },
+      { id: 'a4', name: 'Pantry', color: '#a855f7' }
+    ];
+
     return (
       <div data-testid="edit-item-modal">
         <h2>Edit Item</h2>
         <span>Editing: {item.name}</span>
-        <input defaultValue={item.name} data-testid="edit-name-input" />
-        <button onClick={() => onUpdateItem({ ...item, name: 'Updated Item' })}>
+        <input
+          defaultValue={item.name}
+          data-testid="edit-name-input"
+          onChange={(e) => setName(e.target.value)}
+        />
+        <select
+          data-testid="edit-aisle-select"
+          value={aisleName}
+          onChange={(e) => setAisleName(e.target.value)}
+        >
+          {availableAisles.map(a => (
+            <option key={a.name} value={a.name}>{a.name}</option>
+          ))}
+        </select>
+        <button onClick={() => {
+          const aisleObj = availableAisles.find(a => a.name === aisleName) || item.aisle;
+          onUpdateItem({ ...item, name, aisle: aisleObj });
+        }}>
           Update Item
         </button>
         <button onClick={onClose}>Cancel</button>
@@ -61,7 +91,7 @@ jest.mock('../../components/AisleSection', () => {
 })
 
 jest.mock('../../components/AisleManager', () => {
-  return function MockAisleManager({ aisles, onUpdateAisles, onClose }) {
+  return function MockAisleManager({ onUpdateAisles, onClose }) {
     return (
       <div data-testid="aisle-manager">
         <button onClick={() => onUpdateAisles(['New Aisle'])}>
@@ -209,6 +239,7 @@ const spanishAisleTranslations = {
 describe('Home', () => {
   const mockUseAuth = useAuth
   const mockUseTranslations = useTranslations
+  const mockUseNotification = useNotification
   const mockShoppingListService = ShoppingListService
 
   beforeEach(() => {
@@ -224,6 +255,15 @@ describe('Home', () => {
         translation = translation.replace(`{{${param}}}`, value.toString())
       })
       return translation
+    })
+
+    mockUseNotification.mockReturnValue({
+      showError: jest.fn(),
+      showSuccess: jest.fn(),
+      showInfo: jest.fn(),
+      showWarning: jest.fn(),
+      addNotification: jest.fn(),
+      removeNotification: jest.fn()
     })
 
     mockShoppingListService.getUserAisles.mockResolvedValue([])
@@ -912,7 +952,6 @@ describe('Home', () => {
       loading: false
     })
 
-    const newList = { id: '2', name: 'New List' }
     mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems
@@ -985,17 +1024,6 @@ describe('Home', () => {
 
       mockShoppingListService.getMostPurchasedItems.mockResolvedValue(mockTopItemsData)
 
-      // Mock QuickAddBar to capture props
-      let capturedProps = null
-      jest.isolateModules(() => {
-        jest.doMock('../../components/QuickAddBar', () => {
-          return function MockQuickAddBar(props) {
-            capturedProps = props
-            return <div data-testid="quick-add-bar">Mock QuickAddBar</div>
-          }
-        })
-      })
-
       render(<Home />)
 
       await waitFor(() => {
@@ -1008,7 +1036,7 @@ describe('Home', () => {
         expect(quickAddBar).toBeInTheDocument()
       })
 
-      // The mock captures the latest props, but we need to verify through the mock calls
+      // Verify that the service was called
       expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalled()
     })
 
@@ -1125,6 +1153,190 @@ describe('Home', () => {
         // Should be called twice: once on load, once after adding item
         expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledTimes(2)
       })
+    })
+
+    it('should refresh itemUsageHistory when an item name is updated', async () => {
+      const user = userEvent.setup()
+      const mockItemToEdit = {
+        id: '1',
+        name: 'Milk',
+        aisle: { id: 'a1', name: 'Dairy', color: '#f97316' },
+        quantity: 1,
+        completed: false,
+        comment: ''
+      }
+
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        loading: false
+      })
+
+      mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
+        list: mockShoppingList,
+        items: [mockItemToEdit]
+      })
+
+      const updatedItem = {
+        ...mockItemToEdit,
+        name: 'Whole Milk'
+      }
+
+      mockShoppingListService.updateShoppingItem.mockResolvedValue(updatedItem)
+      mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
+
+      render(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`aisle-section-Dairy`)).toBeInTheDocument()
+      })
+
+      // Edit the item
+      const editButton = screen.getByText('Edit')
+      await user.click(editButton)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-item-modal')).toBeInTheDocument()
+      })
+
+      // Change the name in the input
+      const nameInput = screen.getByTestId('edit-name-input')
+      await user.clear(nameInput)
+      await user.type(nameInput, 'Whole Milk')
+
+      const updateButton = screen.getByText('Update Item')
+      await user.click(updateButton)
+
+      await waitFor(() => {
+        // getMostPurchasedItems should be called once after updating item
+        // (not on initial load because items list is not empty)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id)
+      })
+    })
+
+    it('should refresh itemUsageHistory when an item aisle is updated', async () => {
+      const user = userEvent.setup()
+      const mockItemToEdit = {
+        id: '1',
+        name: 'Bread',
+        aisle: { id: 'a1', name: 'Bakery', color: '#f59e0b' },
+        quantity: 1,
+        completed: false,
+        comment: ''
+      }
+
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        loading: false
+      })
+
+      mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
+        list: mockShoppingList,
+        items: [mockItemToEdit]
+      })
+
+      mockShoppingListService.getUserAisles.mockResolvedValue([
+        { id: 'a1', name: 'Bakery', color: '#f59e0b' },
+        { id: 'a2', name: 'Pantry', color: '#a855f7' }
+      ])
+
+      const updatedItem = {
+        ...mockItemToEdit,
+        aisle: { id: 'a2', name: 'Pantry', color: '#a855f7' }
+      }
+
+      mockShoppingListService.updateShoppingItem.mockResolvedValue(updatedItem)
+      mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
+
+      render(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`aisle-section-Bakery`)).toBeInTheDocument()
+      })
+
+      // Edit the item
+      const editButton = screen.getByText('Edit')
+      await user.click(editButton)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-item-modal')).toBeInTheDocument()
+      })
+
+      // Change the aisle in the select
+      const aisleSelect = screen.getByTestId('edit-aisle-select')
+      await user.selectOptions(aisleSelect, 'Pantry')
+
+      const updateButton = screen.getByText('Update Item')
+      await user.click(updateButton)
+
+      await waitFor(() => {
+        // getMostPurchasedItems should be called once after updating item
+        // (not on initial load because items list is not empty)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id)
+      })
+    })
+
+    it('should NOT refresh itemUsageHistory when only quantity or comment changes', async () => {
+      const user = userEvent.setup()
+      const mockItemToEdit = {
+        id: '1',
+        name: 'Eggs',
+        aisle: { id: 'a1', name: 'Dairy', color: '#f97316' },
+        quantity: 1,
+        completed: false,
+        comment: ''
+      }
+
+      mockUseAuth.mockReturnValue({
+        user: mockUser,
+        loading: false
+      })
+
+      mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
+        list: mockShoppingList,
+        items: [mockItemToEdit]
+      })
+
+      mockShoppingListService.getUserAisles.mockResolvedValue([
+        { id: 'a1', name: 'Dairy', color: '#f97316' }
+      ])
+
+      const updatedItem = {
+        ...mockItemToEdit,
+        quantity: 2,
+        comment: 'Large size'
+      }
+
+      mockShoppingListService.updateShoppingItem.mockResolvedValue(updatedItem)
+      mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
+
+      // Clear any initial mock calls before rendering
+      mockShoppingListService.getMostPurchasedItems.mockClear()
+
+      render(<Home />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`aisle-section-Dairy`)).toBeInTheDocument()
+      })
+
+      // Edit the item
+      const editButton = screen.getByText('Edit')
+      await user.click(editButton)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('edit-item-modal')).toBeInTheDocument()
+      })
+
+      const updateButton = screen.getByText('Update Item')
+      await user.click(updateButton)
+
+      await waitFor(() => {
+        expect(mockShoppingListService.updateShoppingItem).toHaveBeenCalled()
+      })
+
+      // getMostPurchasedItems should NOT be called at all:
+      // - Not on initial load (items list is not empty)
+      // - Not after update (only quantity/comment changed, not name/aisle)
+      expect(mockShoppingListService.getMostPurchasedItems).not.toHaveBeenCalled()
     })
   })
 })

@@ -118,5 +118,22 @@
       "preferences": "User preferences",
       "logout": "Sign out"
     }
+  },
+  "errors": {
+    "addItemFailed": "Failed to add item. Please try again.",
+    "updateItemFailed": "Failed to update item. Please try again.",
+    "deleteItemFailed": "Failed to delete item. Please try again.",
+    "toggleCompleteFailed": "Failed to update item status. Please try again.",
+    "changeAisleFailed": "Failed to change aisle. Please try again.",
+    "clearCompletedFailed": "Failed to clear completed items. Please try again.",
+    "clearAllFailed": "Failed to clear all items. Please try again.",
+    "networkError": "Network error. Please check your connection and try again."
+  },
+  "success": {
+    "itemAdded": "Item added successfully",
+    "itemUpdated": "Item updated successfully",
+    "itemDeleted": "Item deleted successfully",
+    "completedCleared": "Completed items cleared",
+    "allCleared": "All items cleared"
   }
 }

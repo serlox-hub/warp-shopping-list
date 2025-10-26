@@ -241,10 +241,13 @@ describe('AddItemForm', () => {
     const quantityInput = screen.getByDisplayValue('1')
     const commentInput = screen.getByPlaceholderText('Add a note or comment...')
 
-    await user.type(nameInput, 'caf')
+    // Set quantity and comment first, then type name last so suggestions stay visible
     await user.clear(quantityInput)
     await user.type(quantityInput, '4')
     await user.type(commentInput, 'Morning brew')
+
+    // Type in name input last to keep focus and show suggestions
+    await user.type(nameInput, 'caf')
 
     const suggestionsList = await screen.findByTestId('item-suggestions')
     const [firstSuggestion] = within(suggestionsList).getAllByTestId('suggestion-item')

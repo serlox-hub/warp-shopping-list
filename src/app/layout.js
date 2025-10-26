@@ -2,6 +2,7 @@ import './globals.css';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -38,7 +39,9 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <LanguageProvider>
             <ThemeProvider>
-              {children}
+              <NotificationProvider>
+                {children}
+              </NotificationProvider>
             </ThemeProvider>
           </LanguageProvider>
         </AuthProvider>
