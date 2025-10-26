@@ -529,4 +529,25 @@ export class ShoppingListService {
       return [];
     }
   }
+
+  static async deleteFromPurchaseHistory(userId, itemName) {
+    if (!userId || !itemName) return false;
+
+    try {
+      // Delete all inactive items with this name for the user
+      // This removes them from purchase history
+      const { error } = await supabase
+        .from('shopping_items')
+        .delete()
+        .eq('user_id', userId)
+        .eq('name', itemName)
+        .eq('active', false);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting from purchase history:', error);
+      throw error;
+    }
+  }
 }

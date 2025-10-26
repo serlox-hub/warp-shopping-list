@@ -469,6 +469,24 @@ export default function Home() {
     }
   };
 
+  const handleDeleteFromHistory = async (itemName) => {
+    if (!userId || !itemName) return;
+
+    // Optimistic update: Remove item from topItems immediately
+    const previousTopItems = topItems;
+    setTopItems(prev => prev.filter(item => item.item_name !== itemName));
+
+    try {
+      await ShoppingListService.deleteFromPurchaseHistory(userId, itemName);
+      showSuccess(t('success.removedFromHistory', { itemName }));
+    } catch (error) {
+      console.error('Error deleting from purchase history:', error);
+      // Rollback: Restore the item
+      setTopItems(previousTopItems);
+      showError(t('errors.removeFromHistoryFailed'));
+    }
+  };
+
   const handleUpdateAisles = async (pendingAisles) => {
     const normalizedAisles = (pendingAisles || []).map((entry) => {
       if (typeof entry === 'string') {
@@ -787,6 +805,7 @@ export default function Home() {
               items={topItems}
               loading={topItemsLoading}
               onAddItem={handleQuickAddFromUsage}
+              onDeleteItem={handleDeleteFromHistory}
               customAisles={localizedCustomAisles}
               existingItemNames={items.map(item => item.name)}
               onClose={() => setIsTopItemsOpen(false)}
