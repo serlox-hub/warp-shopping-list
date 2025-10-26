@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { mapEnglishToLocalized, getDefaultAisleColor } from '@/types/shoppingList';
 import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
@@ -9,12 +9,14 @@ export default function TopPurchasedItems({
   items = [],
   loading = false,
   onAddItem,
+  onDeleteItem,
   customAisles = [],
   existingItemNames = [],
   onClose,
   aisleColors = {}
 }) {
   const t = useTranslations();
+  const [openMenuId, setOpenMenuId] = useState(null);
 
   const existingItemsSet = useMemo(() => {
     return new Set(
@@ -111,10 +113,12 @@ export default function TopPurchasedItems({
               });
               const badgeBorderColor = getBorderColorFromHex(badgeColor, 0.45) || 'rgba(107,114,128,0.45)';
 
-              return item.isInCurrentList ? (
+              const isMenuOpen = openMenuId === item.item_name;
+
+              return (
                 <div
                   key={item.item_name}
-                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/20 text-left"
+                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700 transition-colors duration-200"
                 >
                   <div>
                     <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[180px]">
@@ -136,40 +140,79 @@ export default function TopPurchasedItems({
                       )}
                     </div>
                   </div>
-                  <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
-                    {t('topItems.alreadyAdded')}
-                  </span>
+
+                  <div className="flex items-center gap-2">
+                    {item.isInCurrentList ? (
+                      <span className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
+                        {t('topItems.alreadyAdded')}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => onAddItem?.(item)}
+                        className="text-xs font-semibold text-indigo-600 dark:text-indigo-300 uppercase tracking-wide hover:text-indigo-700 dark:hover:text-indigo-200 transition-colors"
+                      >
+                        {t('topItems.addButton')}
+                      </button>
+                    )}
+
+                    {/* Kebab menu */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setOpenMenuId(isMenuOpen ? null : item.item_name)}
+                        className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        aria-label={t('topItems.menuButton')}
+                      >
+                        <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="12" cy="5" r="2" />
+                          <circle cx="12" cy="12" r="2" />
+                          <circle cx="12" cy="19" r="2" />
+                        </svg>
+                      </button>
+
+                      {isMenuOpen && (
+                        <>
+                          {/* Backdrop to close menu */}
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setOpenMenuId(null)}
+                          />
+
+                          {/* Menu dropdown */}
+                          <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg z-20">
+                            {!item.isInCurrentList && (
+                              <button
+                                onClick={() => {
+                                  onAddItem?.(item);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center gap-3 rounded-t-lg"
+                              >
+                                <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                                <span>{t('topItems.addButton')}</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                if (confirm(t('topItems.deleteConfirm', { itemName: item.item_name }))) {
+                                  onDeleteItem?.(item.item_name);
+                                }
+                                setOpenMenuId(null);
+                              }}
+                              className="w-full px-4 py-3 text-left text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex items-center gap-3 rounded-b-lg"
+                            >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span>{t('topItems.deleteFromHistory')}</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <button
-                  key={item.item_name}
-                  onClick={() => onAddItem?.(item)}
-                  className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/40 hover:border-indigo-200 dark:hover:border-indigo-400/60 hover:bg-white dark:hover:bg-slate-900 transition-colors duration-200 text-left"
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[180px]">
-                      {item.item_name}
-                    </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
-                      <span>{t('topItems.purchasedCount', { count: item.purchase_count })}</span>
-                      {item.displayAisle && (
-                        <span
-                          className="inline-flex items-center px-2 py-0.5 rounded-full border border-transparent font-medium"
-                          style={{
-                            backgroundColor: badgeColor,
-                            color: badgeTextColor,
-                            borderColor: badgeBorderColor
-                          }}
-                        >
-                          {item.displayAisle}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-300 uppercase tracking-wide">
-                    {t('topItems.addButton')}
-                  </span>
-                </button>
               );
             })}
           </div>
