@@ -534,16 +534,43 @@ export class ShoppingListService {
     if (!userId || !itemName) return false;
 
     try {
-      // Delete all inactive items with this name for the user
-      // This removes them from purchase history
-      const { error } = await supabase
-        .from('shopping_items')
-        .delete()
-        .eq('user_id', userId)
-        .eq('name', itemName)
-        .eq('active', false);
+      // Reset purchase_count to 0 for active items with this name
+      // AND delete all inactive items with this name
+      // This completely removes them from purchase history
 
-      if (error) throw error;
+      const operations = [];
+
+      // Reset purchase_count on active items
+      operations.push(
+        supabase
+          .from('shopping_items')
+          .update({
+            purchase_count: 0,
+            last_purchased_at: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+          .eq('name', itemName)
+          .eq('active', true)
+      );
+
+      // Delete inactive items
+      operations.push(
+        supabase
+          .from('shopping_items')
+          .delete()
+          .eq('user_id', userId)
+          .eq('name', itemName)
+          .eq('active', false)
+      );
+
+      const results = await Promise.all(operations);
+
+      // Check for errors in any operation
+      for (const result of results) {
+        if (result.error) throw result.error;
+      }
+
       return true;
     } catch (error) {
       console.error('Error deleting from purchase history:', error);
