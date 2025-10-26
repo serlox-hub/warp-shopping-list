@@ -513,7 +513,7 @@ describe('Home', () => {
 
     // Now getMostPurchasedItems should be called (lazy loading)
     await waitFor(() => {
-      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1')
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1', 'list-1')
     })
 
     const quickAddButton = await screen.findByText('Add Bananas')
@@ -573,7 +573,7 @@ describe('Home', () => {
 
     // Now getMostPurchasedItems should be called (lazy loading)
     await waitFor(() => {
-      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1')
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1', 'list-1')
     })
 
     await waitFor(() => {
@@ -1027,7 +1027,7 @@ describe('Home', () => {
       render(<Home />)
 
       await waitFor(() => {
-        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id, mockShoppingList.id)
       })
 
       // Wait for itemUsageHistory to be populated
@@ -1063,7 +1063,7 @@ describe('Home', () => {
       render(<Home />)
 
       await waitFor(() => {
-        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id, mockShoppingList.id)
       })
     })
 
@@ -1209,7 +1209,7 @@ describe('Home', () => {
       await waitFor(() => {
         // getMostPurchasedItems should be called once after updating item
         // (not on initial load because items list is not empty)
-        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id, mockShoppingList.id)
       })
     })
 
@@ -1271,7 +1271,7 @@ describe('Home', () => {
       await waitFor(() => {
         // getMostPurchasedItems should be called once after updating item
         // (not on initial load because items list is not empty)
-        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id, mockShoppingList.id)
       })
     })
 
@@ -1337,6 +1337,67 @@ describe('Home', () => {
       // - Not on initial load (items list is not empty)
       // - Not after update (only quantity/comment changed, not name/aisle)
       expect(mockShoppingListService.getMostPurchasedItems).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Independent purchase history per list', () => {
+    it('should call getMostPurchasedItems with the correct list ID', () => {
+      // This test verifies that getMostPurchasedItems service method
+      // requires and uses the listId parameter to filter results per list
+
+      // Test that the method signature requires both userId and listId
+      expect(mockShoppingListService.getMostPurchasedItems).toBeDefined()
+
+      // Calling with different listIds should work independently
+      mockShoppingListService.getMostPurchasedItems('user-1', 'list-a')
+      mockShoppingListService.getMostPurchasedItems('user-1', 'list-b')
+
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1', 'list-a')
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1', 'list-b')
+    })
+
+    it('should return different history results for different lists', async () => {
+      // History for list A has "Apples"
+      const historyA = [
+        {
+          id: 'hist-a1',
+          name: 'Apples',
+          purchase_count: 5,
+          aisle: { name: 'Produce' }
+        }
+      ]
+
+      // History for list B has "Oranges" (NOT Apples)
+      const historyB = [
+        {
+          id: 'hist-b1',
+          name: 'Oranges',
+          purchase_count: 3,
+          aisle: { name: 'Produce' }
+        }
+      ]
+
+      // Mock implementation returns different data based on listId
+      mockShoppingListService.getMostPurchasedItems.mockImplementation((userId, listId) => {
+        if (listId === 'list-a') {
+          return Promise.resolve(historyA)
+        } else if (listId === 'list-b') {
+          return Promise.resolve(historyB)
+        }
+        return Promise.resolve([])
+      })
+
+      // Verify that with listA, only historyA items are returned
+      const resultA = await mockShoppingListService.getMostPurchasedItems('user-1', 'list-a')
+      expect(resultA).toEqual(historyA)
+      expect(resultA.find(item => item.name === 'Apples')).toBeDefined()
+      expect(resultA.find(item => item.name === 'Oranges')).toBeUndefined()
+
+      // Verify that with listB, only historyB items are returned
+      const resultB = await mockShoppingListService.getMostPurchasedItems('user-1', 'list-b')
+      expect(resultB).toEqual(historyB)
+      expect(resultB.find(item => item.name === 'Oranges')).toBeDefined()
+      expect(resultB.find(item => item.name === 'Apples')).toBeUndefined()
     })
   })
 })

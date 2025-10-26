@@ -107,8 +107,9 @@ export default function Home() {
     }
   }, [userId]);
 
-  const loadTopItems = useCallback(async () => {
-    if (!userId) {
+  const loadTopItems = useCallback(async (listIdOverride) => {
+    const listId = listIdOverride || shoppingList?.id;
+    if (!userId || !listId) {
       setTopItems([]);
       setItemUsageHistory([]);
       return;
@@ -116,7 +117,7 @@ export default function Home() {
 
     setTopItemsLoading(true);
     try {
-      const mostPurchased = await ShoppingListService.getMostPurchasedItems(userId);
+      const mostPurchased = await ShoppingListService.getMostPurchasedItems(userId, listId);
       const formattedItems = mostPurchased.map(item => ({
         item_name: item.name,
         purchase_count: item.purchase_count,
@@ -134,7 +135,7 @@ export default function Home() {
     } finally {
       setTopItemsLoading(false);
     }
-  }, [userId]);
+  }, [userId, shoppingList?.id]);
 
 
   useEffect(() => {
@@ -166,11 +167,14 @@ export default function Home() {
   const handleListChange = async (newList) => {
     setShoppingList(newList);
     setEditingItem(null);
-    
+
     // Load items for the new list
     try {
       const listItems = await ShoppingListService.getShoppingItems(newList.id);
       setItems(listItems);
+
+      // Reload history for the new list - pass the new list ID to avoid closure issue
+      loadTopItems(newList.id);
     } catch (error) {
       console.error('Error loading items for new list:', error);
       setItems([]);
@@ -470,14 +474,14 @@ export default function Home() {
   };
 
   const handleDeleteFromHistory = async (itemName) => {
-    if (!userId || !itemName) return;
+    if (!userId || !shoppingList?.id || !itemName) return;
 
     // Optimistic update: Remove item from topItems immediately
     const previousTopItems = topItems;
     setTopItems(prev => prev.filter(item => item.item_name !== itemName));
 
     try {
-      await ShoppingListService.deleteFromPurchaseHistory(userId, itemName);
+      await ShoppingListService.deleteFromPurchaseHistory(userId, shoppingList.id, itemName);
       showSuccess(t('success.removedFromHistory', { itemName }));
     } catch (error) {
       console.error('Error deleting from purchase history:', error);
@@ -827,6 +831,7 @@ export default function Home() {
 
       {/* Quick Add Bar */}
       <QuickAddBar
+        key={shoppingList?.id}
         onAddItem={handleAddItem}
         customAisles={localizedCustomAisles}
         itemUsageHistory={itemUsageHistory}

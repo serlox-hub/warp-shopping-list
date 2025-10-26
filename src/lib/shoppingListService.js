@@ -498,8 +498,8 @@ export class ShoppingListService {
     }
   }
 
-  static async getMostPurchasedItems(userId, limit = 8) {
-    if (!userId) return [];
+  static async getMostPurchasedItems(userId, listId, limit = 8) {
+    if (!userId || !listId) return [];
 
     try {
       const { data, error } = await supabase
@@ -517,6 +517,7 @@ export class ShoppingListService {
           )
         `)
         .eq('user_id', userId)
+        .eq('shopping_list_id', listId)
         .gt('purchase_count', 0)
         .order('purchase_count', { ascending: false })
         .order('last_purchased_at', { ascending: false })
@@ -530,13 +531,13 @@ export class ShoppingListService {
     }
   }
 
-  static async deleteFromPurchaseHistory(userId, itemName) {
-    if (!userId || !itemName) return false;
+  static async deleteFromPurchaseHistory(userId, listId, itemName) {
+    if (!userId || !listId || !itemName) return false;
 
     try {
-      // Reset purchase_count to 0 for active items with this name
-      // AND delete all inactive items with this name
-      // This completely removes them from purchase history
+      // Reset purchase_count to 0 for active items with this name in this list
+      // AND delete all inactive items with this name from this list
+      // This completely removes them from purchase history for this specific list
 
       const operations = [];
 
@@ -550,6 +551,7 @@ export class ShoppingListService {
             updated_at: new Date().toISOString()
           })
           .eq('user_id', userId)
+          .eq('shopping_list_id', listId)
           .eq('name', itemName)
           .eq('active', true)
       );
@@ -560,6 +562,7 @@ export class ShoppingListService {
           .from('shopping_items')
           .delete()
           .eq('user_id', userId)
+          .eq('shopping_list_id', listId)
           .eq('name', itemName)
           .eq('active', false)
       );
