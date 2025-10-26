@@ -176,4 +176,195 @@ describe('TopPurchasedItems', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  describe('Kebab menu', () => {
+    it('renders kebab menu button for each item', () => {
+      render(
+        <TopPurchasedItems
+          items={[baseItem]}
+          loading={false}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      const menuButtons = screen.getAllByLabelText('Item actions')
+      expect(menuButtons).toHaveLength(1)
+    })
+
+    it('opens menu when kebab button is clicked', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <TopPurchasedItems
+          items={[baseItem]}
+          loading={false}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      // Menu should not be visible initially
+      expect(screen.queryByText('Remove from history')).not.toBeInTheDocument()
+
+      // Click kebab menu button
+      const menuButton = screen.getByLabelText('Item actions')
+      await user.click(menuButton)
+
+      // Menu should now be visible
+      expect(screen.getByText('Remove from history')).toBeInTheDocument()
+    })
+
+    it('closes menu when backdrop is clicked', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <TopPurchasedItems
+          items={[baseItem]}
+          loading={false}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      // Open menu
+      const menuButton = screen.getByLabelText('Item actions')
+      await user.click(menuButton)
+
+      expect(screen.getByText('Remove from history')).toBeInTheDocument()
+
+      // Click backdrop (the fixed overlay)
+      const backdrop = screen.getByText('Remove from history').parentElement.previousSibling
+      await user.click(backdrop)
+
+      // Menu should be closed
+      expect(screen.queryByText('Remove from history')).not.toBeInTheDocument()
+    })
+
+    it('shows "Add to list" option in menu when item is not in current list', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <TopPurchasedItems
+          items={[baseItem]}
+          loading={false}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      // Open menu
+      const menuButton = screen.getByLabelText('Item actions')
+      await user.click(menuButton)
+
+      // Both options should be visible
+      const addButtons = screen.getAllByText('Add to list')
+      expect(addButtons.length).toBeGreaterThan(0)
+      expect(screen.getByText('Remove from history')).toBeInTheDocument()
+    })
+
+    it('does not show "Add to list" option in menu when item is already in list', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <TopPurchasedItems
+          items={[baseItem]}
+          loading={false}
+          existingItemNames={['milk']}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      // Open menu
+      const menuButton = screen.getByLabelText('Item actions')
+      await user.click(menuButton)
+
+      // Should only show "Remove from history" option (not "Add to list")
+      expect(screen.queryByRole('button', { name: /Add to list/i })).not.toBeInTheDocument()
+      expect(screen.getByText('Remove from history')).toBeInTheDocument()
+    })
+
+    it('triggers onDeleteItem when delete option is clicked', async () => {
+      const onDeleteItem = jest.fn()
+      const user = userEvent.setup()
+
+      render(
+        <TopPurchasedItems
+          items={[baseItem]}
+          loading={false}
+          onDeleteItem={onDeleteItem}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      // Open menu
+      const menuButton = screen.getByLabelText('Item actions')
+      await user.click(menuButton)
+
+      // Click delete option
+      const deleteButton = screen.getByText('Remove from history')
+      await user.click(deleteButton)
+
+      expect(onDeleteItem).toHaveBeenCalledWith('Milk')
+      expect(onDeleteItem).toHaveBeenCalledTimes(1)
+    })
+
+    it('triggers onAddItem when "Add to list" in menu is clicked', async () => {
+      const onAddItem = jest.fn()
+      const user = userEvent.setup()
+
+      render(
+        <TopPurchasedItems
+          items={[baseItem]}
+          loading={false}
+          onAddItem={onAddItem}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      // Open menu
+      const menuButton = screen.getByLabelText('Item actions')
+      await user.click(menuButton)
+
+      // Click "Add to list" in menu
+      const menuAddButton = screen.getAllByText('Add to list')[1] // Second one is in the menu
+      await user.click(menuAddButton)
+
+      expect(onAddItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          item_name: 'Milk',
+          displayAisle: 'Localized Dairy'
+        })
+      )
+    })
+
+    it('closes menu after clicking delete option', async () => {
+      const onDeleteItem = jest.fn()
+      const user = userEvent.setup()
+
+      render(
+        <TopPurchasedItems
+          items={[baseItem]}
+          loading={false}
+          onDeleteItem={onDeleteItem}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      // Open menu
+      const menuButton = screen.getByLabelText('Item actions')
+      await user.click(menuButton)
+      expect(screen.getByText('Remove from history')).toBeInTheDocument()
+
+      // Click delete
+      const deleteButton = screen.getByText('Remove from history')
+      await user.click(deleteButton)
+
+      // Menu should be closed
+      expect(screen.queryByText('Remove from history')).not.toBeInTheDocument()
+    })
+  })
 })

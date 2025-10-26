@@ -909,4 +909,152 @@ describe('ShoppingListService', () => {
         .rejects.toThrow('Fetch error')
     })
   })
+
+  describe('deleteFromPurchaseHistory', () => {
+    const itemName = 'Milk'
+
+    it('should reset purchase_count on active items and delete inactive items', async () => {
+      // Mock the update for active items (reset purchase_count)
+      const updateChain = {
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null })
+          })
+        })
+      }
+
+      // Mock the delete for inactive items
+      const deleteChain = {
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null })
+          })
+        })
+      }
+
+      mockSupabase.from
+        .mockReturnValueOnce({
+          update: jest.fn().mockReturnValue(updateChain)
+        })
+        .mockReturnValueOnce({
+          delete: jest.fn().mockReturnValue(deleteChain)
+        })
+
+      const result = await ShoppingListService.deleteFromPurchaseHistory(mockUserId, itemName)
+
+      expect(result).toBe(true)
+      expect(mockSupabase.from).toHaveBeenCalledWith('shopping_items')
+    })
+
+    it('should return false when userId is missing', async () => {
+      const result = await ShoppingListService.deleteFromPurchaseHistory(null, itemName)
+      expect(result).toBe(false)
+    })
+
+    it('should return false when itemName is missing', async () => {
+      const result = await ShoppingListService.deleteFromPurchaseHistory(mockUserId, null)
+      expect(result).toBe(false)
+    })
+
+    it('should handle database errors on update operation', async () => {
+      const error = new Error('Database error on update')
+
+      // Mock the update for active items (with error)
+      const updateChain = {
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error })
+          })
+        })
+      }
+
+      // Mock the delete for inactive items (success)
+      const deleteChain = {
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null })
+          })
+        })
+      }
+
+      mockSupabase.from
+        .mockReturnValueOnce({
+          update: jest.fn().mockReturnValue(updateChain)
+        })
+        .mockReturnValueOnce({
+          delete: jest.fn().mockReturnValue(deleteChain)
+        })
+
+      await expect(ShoppingListService.deleteFromPurchaseHistory(mockUserId, itemName))
+        .rejects.toThrow('Database error on update')
+    })
+
+    it('should handle database errors on delete operation', async () => {
+      const error = new Error('Database error on delete')
+
+      // Mock the update for active items (success)
+      const updateChain = {
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null })
+          })
+        })
+      }
+
+      // Mock the delete for inactive items (with error)
+      const deleteChain = {
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error })
+          })
+        })
+      }
+
+      mockSupabase.from
+        .mockReturnValueOnce({
+          update: jest.fn().mockReturnValue(updateChain)
+        })
+        .mockReturnValueOnce({
+          delete: jest.fn().mockReturnValue(deleteChain)
+        })
+
+      await expect(ShoppingListService.deleteFromPurchaseHistory(mockUserId, itemName))
+        .rejects.toThrow('Database error on delete')
+    })
+
+    it('should verify correct parameters passed to update active items', async () => {
+      const updateMock = jest.fn().mockReturnValue({
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null })
+          })
+        })
+      })
+
+      const deleteChain = {
+        eq: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockResolvedValue({ error: null })
+          })
+        })
+      }
+
+      mockSupabase.from
+        .mockReturnValueOnce({
+          update: updateMock
+        })
+        .mockReturnValueOnce({
+          delete: jest.fn().mockReturnValue(deleteChain)
+        })
+
+      await ShoppingListService.deleteFromPurchaseHistory(mockUserId, itemName)
+
+      expect(updateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          purchase_count: 0,
+          last_purchased_at: null
+        })
+      )
+    })
+  })
 })
