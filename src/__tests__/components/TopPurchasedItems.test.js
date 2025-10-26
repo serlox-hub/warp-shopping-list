@@ -17,12 +17,15 @@ const mockUseTranslations = useTranslations
 const mockMapEnglishToLocalized = mapEnglishToLocalized
 
 const translationMap = {
-  'topItems.title': 'Top Purchased Items',
-  'topItems.subtitle': 'Items you add often',
-  'topItems.refreshing': 'Refreshing top items…',
-  'topItems.empty': 'No top items yet',
+  'topItems.title': 'History',
+  'topItems.subtitle': 'Quickly add your previously purchased products',
+  'topItems.refreshing': 'Updating...',
+  'topItems.empty': 'Your purchase history will appear here as you add items.',
   'topItems.alreadyAdded': 'Already added',
   'topItems.addButton': 'Add to list',
+  'topItems.menuButton': 'Item actions',
+  'topItems.deleteFromHistory': 'Remove from history',
+  'topItems.deleteConfirm': 'Are you sure you want to remove "{{itemName}}" from your purchase history?',
   'common.close': 'Close'
 }
 
@@ -33,6 +36,9 @@ describe('TopPurchasedItems', () => {
     mockUseTranslations.mockReturnValue((key, options) => {
       if (key === 'topItems.purchasedCount') {
         return `Purchased ${options?.count ?? 0} times`
+      }
+      if (key === 'topItems.deleteConfirm') {
+        return `Are you sure you want to remove "${options?.itemName}" from your purchase history?`
       }
       return translationMap[key] || key
     })
@@ -51,21 +57,21 @@ describe('TopPurchasedItems', () => {
   it('renders header with translated title and subtitle', () => {
     render(<TopPurchasedItems items={[]} loading={false} onAddItem={jest.fn()} />)
 
-    expect(screen.getByText('Top Purchased Items')).toBeInTheDocument()
-    expect(screen.getByText('Items you add often')).toBeInTheDocument()
+    expect(screen.getByText('History')).toBeInTheDocument()
+    expect(screen.getByText('Quickly add your previously purchased products')).toBeInTheDocument()
   })
 
   it('shows full-screen spinner when loading with no items', () => {
     const { container } = render(<TopPurchasedItems loading items={[]} />)
 
     expect(container.querySelector('.animate-spin')).toBeInTheDocument()
-    expect(screen.queryByText('No top items yet')).not.toBeInTheDocument()
+    expect(screen.queryByText('Your purchase history will appear here as you add items.')).not.toBeInTheDocument()
   })
 
   it('renders empty state when there are no items and not loading', () => {
     render(<TopPurchasedItems items={[]} loading={false} />)
 
-    expect(screen.getByText('No top items yet')).toBeInTheDocument()
+    expect(screen.getByText('Your purchase history will appear here as you add items.')).toBeInTheDocument()
   })
 
   it('renders add buttons for items not in the current list and triggers callback', async () => {
@@ -148,7 +154,7 @@ describe('TopPurchasedItems', () => {
       />
     )
 
-    expect(screen.getByText('Refreshing top items…')).toBeInTheDocument()
+    expect(screen.getByText('Updating...')).toBeInTheDocument()
   })
 
   it('renders close button when onClose is provided and triggers it', async () => {

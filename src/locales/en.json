@@ -14,7 +14,12 @@
     "darkMode": "Dark mode",
     "lightMode": "Light mode",
     "systemMode": "System",
-    "currentTheme": "Current theme"
+    "currentTheme": "Current theme",
+    "menu": {
+      "open": "Open user menu",
+      "preferences": "User preferences",
+      "logout": "Sign out"
+    }
   },
   "shoppingList": {
     "emptyTitle": "Your shopping list is empty",
@@ -29,14 +34,17 @@
     "currentAisle": "Current aisle"
   },
   "topItems": {
-    "title": "Frequently Bought",
-    "subtitle": "Quickly add your go-to products",
-    "empty": "Your most frequent products will appear here as you add them.",
+    "title": "History",
+    "subtitle": "Quickly add your previously purchased products",
+    "empty": "Your purchase history will appear here as you add items.",
     "purchasedCount": "Purchased {{count}} times",
     "addButton": "Add to list",
     "alreadyAdded": "Already in list",
-    "openButton": "Frequent items",
-    "refreshing": "Updating..."
+    "openButton": "History",
+    "refreshing": "Updating...",
+    "menuButton": "Item actions",
+    "deleteFromHistory": "Remove from history",
+    "deleteConfirm": "Are you sure you want to remove \"{{itemName}}\" from your purchase history?"
   },
   "addItemForm": {
     "addTitle": "Add New Item",
@@ -112,13 +120,6 @@
       "subtitle": "Your account information"
     }
   },
-  "header": {
-    "menu": {
-      "open": "Open user menu",
-      "preferences": "User preferences",
-      "logout": "Sign out"
-    }
-  },
   "errors": {
     "addItemFailed": "Failed to add item. Please try again.",
     "updateItemFailed": "Failed to update item. Please try again.",
@@ -127,13 +128,15 @@
     "changeAisleFailed": "Failed to change aisle. Please try again.",
     "clearCompletedFailed": "Failed to clear completed items. Please try again.",
     "clearAllFailed": "Failed to clear all items. Please try again.",
-    "networkError": "Network error. Please check your connection and try again."
+    "networkError": "Network error. Please check your connection and try again.",
+    "removeFromHistoryFailed": "Failed to remove item from history. Please try again."
   },
   "success": {
     "itemAdded": "Item added successfully",
     "itemUpdated": "Item updated successfully",
     "itemDeleted": "Item deleted successfully",
     "completedCleared": "Completed items cleared",
-    "allCleared": "All items cleared"
+    "allCleared": "All items cleared",
+    "removedFromHistory": "\"{{itemName}}\" removed from purchase history"
   }
 }

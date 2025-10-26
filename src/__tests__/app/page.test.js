@@ -202,14 +202,14 @@ const mockTranslations = {
   'shoppingList.emptyTitle': 'Your list is empty',
   'shoppingList.emptySubtitle': 'Add your first item above',
   'shoppingList.itemActions': 'Item actions',
-  'topItems.title': 'Top Items',
-  'topItems.subtitle': 'Subtitle',
-  'topItems.empty': 'No top items yet',
+  'topItems.title': 'History',
+  'topItems.subtitle': 'Quickly add your previously purchased products',
+  'topItems.empty': 'Your purchase history will appear here as you add items.',
   'topItems.purchasedCount': 'Purchased {{count}} times',
   'topItems.addButton': 'Add',
   'topItems.alreadyAdded': 'Already added',
-  'topItems.openButton': 'Top Items',
-  'topItems.refreshing': 'Refreshing'
+  'topItems.openButton': 'History',
+  'topItems.refreshing': 'Updating...'
 }
 
 const englishAisleTranslations = {
@@ -508,8 +508,8 @@ describe('Home', () => {
     // Open kebab menu first
     await user.click(screen.getByLabelText('Acciones'))
 
-    // Click "Top Items" button in the menu
-    await user.click(screen.getByText('Top Items'))
+    // Click "History" button in the menu
+    await user.click(screen.getByText('History'))
 
     // Now getMostPurchasedItems should be called (lazy loading)
     await waitFor(() => {
@@ -568,8 +568,8 @@ describe('Home', () => {
     // Open kebab menu first
     await user.click(screen.getByLabelText('Acciones'))
 
-    // Click "Top Items" button in the menu
-    await user.click(screen.getByText('Top Items'))
+    // Click "History" button in the menu
+    await user.click(screen.getByText('History'))
 
     // Now getMostPurchasedItems should be called (lazy loading)
     await waitFor(() => {
@@ -882,7 +882,7 @@ describe('Home', () => {
     })
 
     // Should show button to open frequent items
-    expect(screen.getByText('Top Items')).toBeInTheDocument()
+    expect(screen.getByText('History')).toBeInTheDocument()
   })
 
   it('should not show frequent items button when list is empty and no top items exist', async () => {
@@ -903,7 +903,7 @@ describe('Home', () => {
     })
 
     // Should not show button to open frequent items
-    expect(screen.queryByText('Top Items')).not.toBeInTheDocument()
+    expect(screen.queryByText('History')).not.toBeInTheDocument()
   })
 
   it('should open frequent items modal from empty state button', async () => {
@@ -936,7 +936,7 @@ describe('Home', () => {
     })
 
     // Click the frequent items button in empty state
-    await user.click(screen.getByText('Top Items'))
+    await user.click(screen.getByText('History'))
 
     // Should open the top purchased items modal
     await waitFor(() => {

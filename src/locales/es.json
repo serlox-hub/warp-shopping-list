@@ -29,14 +29,17 @@
     "currentAisle": "Pasillo actual"
   },
   "topItems": {
-    "title": "Comprados con frecuencia",
-    "subtitle": "Agrega rápidamente tus productos habituales",
-    "empty": "Tus productos más frecuentes aparecerán aquí a medida que los añadas.",
+    "title": "Historial",
+    "subtitle": "Agrega rápidamente tus productos comprados anteriormente",
+    "empty": "Tu historial de compras aparecerá aquí a medida que agregues artículos.",
     "purchasedCount": "Comprado {{count}} veces",
     "addButton": "Agregar a la lista",
     "alreadyAdded": "Ya en la lista",
-    "openButton": "Productos frecuentes",
-    "refreshing": "Actualizando..."
+    "openButton": "Historial",
+    "refreshing": "Actualizando...",
+    "menuButton": "Acciones del producto",
+    "deleteFromHistory": "Eliminar del historial",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar \"{{itemName}}\" de tu historial de compras?"
   },
   "addItemForm": {
     "addTitle": "Agregar Nuevo Artículo",
@@ -127,13 +130,15 @@
     "changeAisleFailed": "Error al cambiar el pasillo. Inténtalo de nuevo.",
     "clearCompletedFailed": "Error al limpiar completados. Inténtalo de nuevo.",
     "clearAllFailed": "Error al limpiar todos los elementos. Inténtalo de nuevo.",
-    "networkError": "Error de red. Verifica tu conexión e inténtalo de nuevo."
+    "networkError": "Error de red. Verifica tu conexión e inténtalo de nuevo.",
+    "removeFromHistoryFailed": "Error al eliminar del historial. Inténtalo de nuevo."
   },
   "success": {
     "itemAdded": "Elemento agregado exitosamente",
     "itemUpdated": "Elemento actualizado exitosamente",
     "itemDeleted": "Elemento eliminado exitosamente",
     "completedCleared": "Elementos completados limpiados",
-    "allCleared": "Todos los elementos limpiados"
+    "allCleared": "Todos los elementos limpiados",
+    "removedFromHistory": "\"{{itemName}}\" eliminado del historial de compras"
   }
 }

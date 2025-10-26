@@ -102,7 +102,7 @@ export default function TopPurchasedItems({
             {t('topItems.empty')}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex flex-col gap-3">
             {normalizedItems.map((item) => {
               const badgeColor = normalizeHexColor(item.displayColor) || '#6b7280';
               const badgeTextColor = getContrastingTextColor(badgeColor, {
