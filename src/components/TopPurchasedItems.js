@@ -195,9 +195,7 @@ export default function TopPurchasedItems({
                             )}
                             <button
                               onClick={() => {
-                                if (confirm(t('topItems.deleteConfirm', { itemName: item.item_name }))) {
-                                  onDeleteItem?.(item.item_name);
-                                }
+                                onDeleteItem?.(item.item_name);
                                 setOpenMenuId(null);
                               }}
                               className="w-full px-4 py-3 text-left text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex items-center gap-3 rounded-b-lg"
