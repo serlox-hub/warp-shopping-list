@@ -150,5 +150,226 @@ CREATE INDEX IF NOT EXISTS idx_shopping_items_comment ON public.shopping_items
 CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON public.user_preferences(user_id);
 
 -- =============================================================================
--- INDEXES COMPLETE - RLS POLICIES AND FUNCTIONS IN NEXT SECTIONS
+-- 3. ROW LEVEL SECURITY (RLS) POLICIES
+-- =============================================================================
+
+-- Enable RLS on all tables
+ALTER TABLE public.shopping_lists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.list_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.list_invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.list_aisles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shopping_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
+
+-- =============================================================================
+-- RLS POLICIES - SHOPPING LISTS
+-- =============================================================================
+-- Users can only access lists they are members of
+
+CREATE POLICY "Users can view lists they are members of"
+    ON public.shopping_lists FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = shopping_lists.id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can create new lists"
+    ON public.shopping_lists FOR INSERT
+    WITH CHECK (auth.uid() = created_by);
+
+CREATE POLICY "List members can update list details"
+    ON public.shopping_lists FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = shopping_lists.id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "List members can delete lists (via leave_list function)"
+    ON public.shopping_lists FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = shopping_lists.id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+-- =============================================================================
+-- RLS POLICIES - LIST MEMBERS
+-- =============================================================================
+-- Users can manage their own membership and view other members of their lists
+
+CREATE POLICY "Users can view members of lists they belong to"
+    ON public.list_members FOR SELECT
+    USING (
+        -- Can see their own membership
+        user_id = auth.uid()
+        OR
+        -- Can see other members of lists they're in
+        EXISTS (
+            SELECT 1 FROM public.list_members lm
+            WHERE lm.list_id = list_members.list_id
+            AND lm.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can join lists (via invite function)"
+    ON public.list_members FOR INSERT
+    WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own membership (set active list)"
+    ON public.list_members FOR UPDATE
+    USING (user_id = auth.uid());
+
+CREATE POLICY "Users can leave lists (delete own membership)"
+    ON public.list_members FOR DELETE
+    USING (user_id = auth.uid());
+
+-- =============================================================================
+-- RLS POLICIES - LIST INVITES
+-- =============================================================================
+-- List members can create/revoke invites; all authenticated users can read for validation
+
+CREATE POLICY "Anyone authenticated can view invites (for validation)"
+    ON public.list_invites FOR SELECT
+    USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "List members can create invites"
+    ON public.list_invites FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = list_invites.list_id
+            AND list_members.user_id = auth.uid()
+        )
+        AND created_by = auth.uid()
+    );
+
+CREATE POLICY "List members can revoke invites"
+    ON public.list_invites FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = list_invites.list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "List members can delete invites"
+    ON public.list_invites FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = list_invites.list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+-- =============================================================================
+-- RLS POLICIES - LIST AISLES
+-- =============================================================================
+-- List members can manage aisles for their lists
+
+CREATE POLICY "List members can view aisles"
+    ON public.list_aisles FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = list_aisles.list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "List members can create aisles"
+    ON public.list_aisles FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = list_aisles.list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "List members can update aisles"
+    ON public.list_aisles FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = list_aisles.list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "List members can delete aisles"
+    ON public.list_aisles FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = list_aisles.list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+-- =============================================================================
+-- RLS POLICIES - SHOPPING ITEMS
+-- =============================================================================
+-- List members can manage items in their lists
+
+CREATE POLICY "List members can view items"
+    ON public.shopping_items FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = shopping_items.shopping_list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "List members can create items"
+    ON public.shopping_items FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = shopping_items.shopping_list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "List members can update items"
+    ON public.shopping_items FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = shopping_items.shopping_list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "List members can delete items"
+    ON public.shopping_items FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE list_members.list_id = shopping_items.shopping_list_id
+            AND list_members.user_id = auth.uid()
+        )
+    );
+
+-- =============================================================================
+-- RLS POLICIES - USER PREFERENCES
+-- =============================================================================
+-- Users can only manage their own preferences (unchanged from original)
+
+CREATE POLICY "Users can manage their own preferences"
+    ON public.user_preferences FOR ALL
+    USING (auth.uid() = user_id);
+
+-- =============================================================================
+-- RLS POLICIES COMPLETE - FUNCTIONS AND TRIGGERS IN NEXT SECTIONS
 -- =============================================================================
