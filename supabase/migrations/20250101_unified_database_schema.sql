@@ -371,5 +371,256 @@ CREATE POLICY "Users can manage their own preferences"
     USING (auth.uid() = user_id);
 
 -- =============================================================================
--- RLS POLICIES COMPLETE - FUNCTIONS AND TRIGGERS IN NEXT SECTIONS
+-- 4. DATABASE FUNCTIONS
+-- =============================================================================
+
+-- Function to handle updated_at timestamps
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = timezone('utc'::text, now());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.handle_updated_at IS 'Automatically updates updated_at timestamp on row updates';
+
+-- Function to generate secure random token for invites
+CREATE OR REPLACE FUNCTION public.generate_invite_token()
+RETURNS TEXT AS $$
+DECLARE
+    chars TEXT := 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    result TEXT := '';
+    i INTEGER;
+BEGIN
+    -- Generate 32 character URL-safe token
+    FOR i IN 1..32 LOOP
+        result := result || substr(chars, 1 + (random() * (length(chars) - 1))::INTEGER, 1);
+    END LOOP;
+    RETURN result;
+END;
+$$ LANGUAGE plpgsql VOLATILE;
+
+COMMENT ON FUNCTION public.generate_invite_token IS 'Generates a 32-character URL-safe random token';
+
+-- Function to create default aisles for a new list
+CREATE OR REPLACE FUNCTION public.create_default_list_aisles(p_list_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO public.list_aisles (list_id, name, display_order, color)
+    VALUES
+        (p_list_id, 'Produce', 1, '#22c55e'),
+        (p_list_id, 'Dairy', 2, '#f97316'),
+        (p_list_id, 'Meat & Seafood', 3, '#ef4444'),
+        (p_list_id, 'Bakery', 4, '#f59e0b'),
+        (p_list_id, 'Pantry', 5, '#6366f1'),
+        (p_list_id, 'Frozen', 6, '#0ea5e9'),
+        (p_list_id, 'Personal Care', 7, '#ec4899'),
+        (p_list_id, 'Household', 8, '#14b8a6'),
+        (p_list_id, 'Other', 9, '#6b7280')
+    ON CONFLICT (list_id, name) DO NOTHING;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.create_default_list_aisles IS 'Creates default shopping aisles for a new list';
+
+-- Function to generate a shareable invite link for a list
+CREATE OR REPLACE FUNCTION public.generate_list_invite(
+    p_list_id UUID,
+    p_user_id UUID
+)
+RETURNS TABLE (
+    invite_id UUID,
+    token TEXT,
+    expires_at TIMESTAMP WITH TIME ZONE
+) AS $$
+DECLARE
+    v_token TEXT;
+    v_invite_id UUID;
+    v_expires_at TIMESTAMP WITH TIME ZONE;
+BEGIN
+    -- Verify user is a member of the list
+    IF NOT EXISTS (
+        SELECT 1 FROM public.list_members
+        WHERE list_id = p_list_id AND user_id = p_user_id
+    ) THEN
+        RAISE EXCEPTION 'User is not a member of this list';
+    END IF;
+
+    -- Generate unique token
+    LOOP
+        v_token := public.generate_invite_token();
+        EXIT WHEN NOT EXISTS (SELECT 1 FROM public.list_invites WHERE token = v_token);
+    END LOOP;
+
+    -- Set expiration to 7 days from now
+    v_expires_at := timezone('utc'::text, now()) + INTERVAL '7 days';
+
+    -- Insert invite
+    INSERT INTO public.list_invites (list_id, token, created_by, expires_at)
+    VALUES (p_list_id, v_token, p_user_id, v_expires_at)
+    RETURNING id, token, expires_at INTO v_invite_id, v_token, v_expires_at;
+
+    RETURN QUERY SELECT v_invite_id, v_token, v_expires_at;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+COMMENT ON FUNCTION public.generate_list_invite IS 'Generates a shareable invite token for a list (7-day expiration)';
+
+-- Function to revoke all active invites for a list
+CREATE OR REPLACE FUNCTION public.revoke_list_invites(p_list_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+    v_revoked_count INTEGER;
+BEGIN
+    -- Revoke all non-revoked invites for this list
+    UPDATE public.list_invites
+    SET revoked_at = timezone('utc'::text, now())
+    WHERE list_id = p_list_id
+      AND revoked_at IS NULL
+      AND expires_at > timezone('utc'::text, now());
+
+    GET DIAGNOSTICS v_revoked_count = ROW_COUNT;
+    RETURN v_revoked_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+COMMENT ON FUNCTION public.revoke_list_invites IS 'Revokes all active invites for a list, returns count of revoked invites';
+
+-- Function to join a list via invite token
+CREATE OR REPLACE FUNCTION public.join_list_via_invite(
+    p_token TEXT,
+    p_user_id UUID
+)
+RETURNS TABLE (
+    list_id UUID,
+    list_name TEXT,
+    joined_at TIMESTAMP WITH TIME ZONE
+) AS $$
+DECLARE
+    v_invite RECORD;
+    v_list RECORD;
+    v_joined_at TIMESTAMP WITH TIME ZONE;
+BEGIN
+    -- Find and validate invite
+    SELECT li.list_id, li.expires_at, li.revoked_at
+    INTO v_invite
+    FROM public.list_invites li
+    WHERE li.token = p_token;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Invalid invite token';
+    END IF;
+
+    IF v_invite.revoked_at IS NOT NULL THEN
+        RAISE EXCEPTION 'This invite has been revoked';
+    END IF;
+
+    IF v_invite.expires_at < timezone('utc'::text, now()) THEN
+        RAISE EXCEPTION 'This invite has expired';
+    END IF;
+
+    -- Check if user is already a member
+    IF EXISTS (
+        SELECT 1 FROM public.list_members
+        WHERE list_members.list_id = v_invite.list_id
+        AND list_members.user_id = p_user_id
+    ) THEN
+        -- Already a member, just return the list info
+        SELECT sl.id, sl.name INTO v_list
+        FROM public.shopping_lists sl
+        WHERE sl.id = v_invite.list_id;
+
+        RETURN QUERY SELECT v_list.id, v_list.name, timezone('utc'::text, now());
+        RETURN;
+    END IF;
+
+    -- Add user to list
+    v_joined_at := timezone('utc'::text, now());
+    INSERT INTO public.list_members (list_id, user_id, is_active, joined_at)
+    VALUES (v_invite.list_id, p_user_id, false, v_joined_at);
+
+    -- Get list details
+    SELECT sl.id, sl.name INTO v_list
+    FROM public.shopping_lists sl
+    WHERE sl.id = v_invite.list_id;
+
+    RETURN QUERY SELECT v_list.id, v_list.name, v_joined_at;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+COMMENT ON FUNCTION public.join_list_via_invite IS 'Joins a user to a list using an invite token, validates token expiration and revocation';
+
+-- Function to leave a list (removes membership, deletes list if last member)
+CREATE OR REPLACE FUNCTION public.leave_list(
+    p_list_id UUID,
+    p_user_id UUID
+)
+RETURNS TABLE (
+    was_last_member BOOLEAN,
+    list_deleted BOOLEAN
+) AS $$
+DECLARE
+    v_member_count INTEGER;
+    v_was_last BOOLEAN;
+BEGIN
+    -- Verify user is a member
+    IF NOT EXISTS (
+        SELECT 1 FROM public.list_members
+        WHERE list_id = p_list_id AND user_id = p_user_id
+    ) THEN
+        RAISE EXCEPTION 'User is not a member of this list';
+    END IF;
+
+    -- Count members before deletion
+    SELECT COUNT(*) INTO v_member_count
+    FROM public.list_members
+    WHERE list_id = p_list_id;
+
+    v_was_last := (v_member_count = 1);
+
+    -- Remove user from list
+    DELETE FROM public.list_members
+    WHERE list_id = p_list_id AND user_id = p_user_id;
+
+    -- If last member, delete the list (CASCADE will handle items and aisles)
+    IF v_was_last THEN
+        DELETE FROM public.shopping_lists WHERE id = p_list_id;
+    END IF;
+
+    RETURN QUERY SELECT v_was_last, v_was_last;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+COMMENT ON FUNCTION public.leave_list IS 'Removes user from list membership, auto-deletes list if they were the last member';
+
+-- Function to increment purchase count when item is marked as completed
+CREATE OR REPLACE FUNCTION public.increment_purchase_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only increment if item is being marked as completed (not already completed)
+    IF NEW.completed = true AND OLD.completed = false THEN
+        NEW.purchase_count = OLD.purchase_count + 1;
+        NEW.last_purchased_at = timezone('utc'::text, now());
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.increment_purchase_count IS 'Trigger function to increment purchase_count when item marked as completed';
+
+-- Function to create default user preferences
+CREATE OR REPLACE FUNCTION public.create_default_user_preferences(p_user_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO public.user_preferences (user_id, language, theme)
+    VALUES (p_user_id, 'en', 'system')
+    ON CONFLICT (user_id) DO NOTHING;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.create_default_user_preferences IS 'Creates default preferences for a new user';
+
+-- =============================================================================
+-- DATABASE FUNCTIONS COMPLETE - TRIGGERS IN NEXT SECTION
 -- =============================================================================
