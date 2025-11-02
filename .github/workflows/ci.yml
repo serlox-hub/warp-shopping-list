@@ -9,25 +9,39 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
-        
+
+    - name: Setup Supabase CLI
+      uses: supabase/setup-cli@v1
+      with:
+        version: latest
+
     - name: Install dependencies
       run: npm ci
-      
+
+    - name: Start Supabase local instance
+      run: supabase start
+
     - name: Run tests with coverage
       run: npm test -- --coverage --watchAll=false --passWithNoTests
       env:
-        NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key-for-testing
+        SUPABASE_URL: http://127.0.0.1:54321
+        SUPABASE_ANON_KEY: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
+        SUPABASE_SERVICE_KEY: sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz
+        DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+    - name: Stop Supabase
+      if: always()
+      run: supabase stop --no-backup
       
     - name: Test Summary
       run: |

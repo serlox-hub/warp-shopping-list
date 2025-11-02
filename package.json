@@ -7,10 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "jest",
+    "supabase:start": "~/.local/bin/supabase start",
+    "supabase:stop": "~/.local/bin/supabase stop",
+    "supabase:status": "~/.local/bin/supabase status",
+    "supabase:reset": "~/.local/bin/supabase db reset",
+    "test": "npm run supabase:start && jest && npm run supabase:stop",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --watchAll=false"
+    "test:coverage": "npm run supabase:start && jest --coverage && npm run supabase:stop",
+    "test:ci": "npm run supabase:start && jest --ci --coverage --watchAll=false && npm run supabase:stop",
+    "test:db": "npm run supabase:start && jest --testPathPattern=__tests__/db && npm run supabase:stop"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

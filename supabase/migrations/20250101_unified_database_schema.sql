@@ -735,40 +735,42 @@ CREATE TRIGGER ensure_one_active_list_trigger
 
 COMMENT ON TRIGGER ensure_one_active_list_trigger ON public.list_members IS 'Maintains invariant: each user has exactly one active list';
 
--- Trigger function to setup new user with default list
-CREATE OR REPLACE FUNCTION public.setup_new_user()
-RETURNS TRIGGER AS $$
+-- Function to setup new user with default list (called manually on first login)
+CREATE OR REPLACE FUNCTION public.setup_new_user(p_user_id UUID)
+RETURNS UUID AS $$
 DECLARE
     v_list_id UUID;
 BEGIN
+    -- Check if user already has a list
+    IF EXISTS (SELECT 1 FROM public.list_members WHERE user_id = p_user_id) THEN
+        -- Return existing active list
+        SELECT list_id INTO v_list_id
+        FROM public.list_members
+        WHERE user_id = p_user_id AND is_active = true
+        LIMIT 1;
+        RETURN v_list_id;
+    END IF;
+
     -- Create default list for new user
     INSERT INTO public.shopping_lists (name, created_by)
-    VALUES ('My Shopping List', NEW.id)
+    VALUES ('My Shopping List', p_user_id)
     RETURNING id INTO v_list_id;
 
     -- Add user as member and set as active
     INSERT INTO public.list_members (list_id, user_id, is_active)
-    VALUES (v_list_id, NEW.id, true);
+    VALUES (v_list_id, p_user_id, true);
 
     -- Create default aisles for the list
     PERFORM public.create_default_list_aisles(v_list_id);
 
     -- Create default user preferences
-    PERFORM public.create_default_user_preferences(NEW.id);
+    PERFORM public.create_default_user_preferences(p_user_id);
 
-    RETURN NEW;
+    RETURN v_list_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-COMMENT ON FUNCTION public.setup_new_user IS 'Automatically sets up new users with default list, aisles, and preferences';
-
--- Trigger to setup new users automatically
-CREATE TRIGGER setup_new_user_trigger
-    AFTER INSERT ON auth.users
-    FOR EACH ROW
-    EXECUTE FUNCTION public.setup_new_user();
-
-COMMENT ON TRIGGER setup_new_user_trigger ON auth.users IS 'Automatically creates default list and preferences for new users';
+COMMENT ON FUNCTION public.setup_new_user IS 'Sets up new users with default list, aisles, and preferences. Call on first login. Returns list_id.';
 
 -- =============================================================================
 -- 6. GRANTS
