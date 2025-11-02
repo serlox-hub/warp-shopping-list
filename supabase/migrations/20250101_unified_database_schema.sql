@@ -656,6 +656,130 @@ CREATE TRIGGER cleanup_empty_lists_trigger
 
 COMMENT ON TRIGGER cleanup_empty_lists_trigger ON public.list_members IS 'Automatically deletes lists when the last member leaves';
 
+-- Triggers for updated_at timestamps
+CREATE TRIGGER handle_updated_at_shopping_lists
+    BEFORE UPDATE ON public.shopping_lists
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_updated_at_shopping_items
+    BEFORE UPDATE ON public.shopping_items
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_updated_at_user_preferences
+    BEFORE UPDATE ON public.user_preferences
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+CREATE TRIGGER handle_updated_at_list_aisles
+    BEFORE UPDATE ON public.list_aisles
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_updated_at();
+
+-- Trigger to increment purchase count when item is completed
+CREATE TRIGGER increment_purchase_count_trigger
+    BEFORE UPDATE ON public.shopping_items
+    FOR EACH ROW
+    EXECUTE FUNCTION public.increment_purchase_count();
+
+-- Trigger function to ensure user always has exactly one active list
+CREATE OR REPLACE FUNCTION public.ensure_one_active_list()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- If setting a list as active
+    IF NEW.is_active = true THEN
+        -- Deactivate all other lists for this user
+        UPDATE public.list_members
+        SET is_active = false
+        WHERE user_id = NEW.user_id
+          AND list_id != NEW.list_id
+          AND is_active = true;
+    END IF;
+
+    -- If deactivating a list, check if user has no active lists
+    IF NEW.is_active = false AND OLD.is_active = true THEN
+        -- Check if this was the user's only active list
+        IF NOT EXISTS (
+            SELECT 1 FROM public.list_members
+            WHERE user_id = NEW.user_id
+              AND is_active = true
+              AND list_id != NEW.list_id
+        ) THEN
+            -- Make the first available list active
+            UPDATE public.list_members
+            SET is_active = true
+            WHERE user_id = NEW.user_id
+              AND list_id = (
+                  SELECT list_id FROM public.list_members
+                  WHERE user_id = NEW.user_id
+                  ORDER BY joined_at ASC
+                  LIMIT 1
+              )
+              AND list_id != NEW.list_id;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.ensure_one_active_list IS 'Ensures each user has exactly one active list at all times';
+
+-- Trigger to maintain one active list per user
+CREATE TRIGGER ensure_one_active_list_trigger
+    BEFORE UPDATE ON public.list_members
+    FOR EACH ROW
+    WHEN (OLD.is_active IS DISTINCT FROM NEW.is_active)
+    EXECUTE FUNCTION public.ensure_one_active_list();
+
+COMMENT ON TRIGGER ensure_one_active_list_trigger ON public.list_members IS 'Maintains invariant: each user has exactly one active list';
+
+-- Trigger function to setup new user with default list
+CREATE OR REPLACE FUNCTION public.setup_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_list_id UUID;
+BEGIN
+    -- Create default list for new user
+    INSERT INTO public.shopping_lists (name, created_by)
+    VALUES ('My Shopping List', NEW.id)
+    RETURNING id INTO v_list_id;
+
+    -- Add user as member and set as active
+    INSERT INTO public.list_members (list_id, user_id, is_active)
+    VALUES (v_list_id, NEW.id, true);
+
+    -- Create default aisles for the list
+    PERFORM public.create_default_list_aisles(v_list_id);
+
+    -- Create default user preferences
+    PERFORM public.create_default_user_preferences(NEW.id);
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+COMMENT ON FUNCTION public.setup_new_user IS 'Automatically sets up new users with default list, aisles, and preferences';
+
+-- Trigger to setup new users automatically
+CREATE TRIGGER setup_new_user_trigger
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION public.setup_new_user();
+
+COMMENT ON TRIGGER setup_new_user_trigger ON auth.users IS 'Automatically creates default list and preferences for new users';
+
 -- =============================================================================
--- ORPHAN CLEANUP TRIGGER COMPLETE - REMAINING TRIGGERS IN NEXT SECTION
+-- 6. GRANTS
+-- =============================================================================
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
+
+-- =============================================================================
+-- SCHEMA COMPLETE
 -- =============================================================================
