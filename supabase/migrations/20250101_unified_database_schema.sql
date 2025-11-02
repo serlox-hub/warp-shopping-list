@@ -622,5 +622,40 @@ $$ LANGUAGE plpgsql;
 COMMENT ON FUNCTION public.create_default_user_preferences IS 'Creates default preferences for a new user';
 
 -- =============================================================================
--- DATABASE FUNCTIONS COMPLETE - TRIGGERS IN NEXT SECTION
+-- 5. TRIGGERS
+-- =============================================================================
+
+-- Trigger function to cleanup orphaned lists when last member leaves
+CREATE OR REPLACE FUNCTION public.cleanup_empty_lists()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_remaining_members INTEGER;
+BEGIN
+    -- Count remaining members for this list
+    SELECT COUNT(*) INTO v_remaining_members
+    FROM public.list_members
+    WHERE list_id = OLD.list_id;
+
+    -- If no members remain, delete the list
+    IF v_remaining_members = 0 THEN
+        DELETE FROM public.shopping_lists WHERE id = OLD.list_id;
+        RAISE NOTICE 'List % was deleted because it has no remaining members', OLD.list_id;
+    END IF;
+
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.cleanup_empty_lists IS 'Trigger function to auto-delete lists when last member is removed';
+
+-- Trigger to auto-delete orphaned lists
+CREATE TRIGGER cleanup_empty_lists_trigger
+    AFTER DELETE ON public.list_members
+    FOR EACH ROW
+    EXECUTE FUNCTION public.cleanup_empty_lists();
+
+COMMENT ON TRIGGER cleanup_empty_lists_trigger ON public.list_members IS 'Automatically deletes lists when the last member leaves';
+
+-- =============================================================================
+-- ORPHAN CLEANUP TRIGGER COMPLETE - REMAINING TRIGGERS IN NEXT SECTION
 -- =============================================================================
