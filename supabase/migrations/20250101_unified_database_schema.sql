@@ -113,5 +113,42 @@ COMMENT ON COLUMN public.shopping_items.purchase_count IS 'Number of times this 
 COMMENT ON COLUMN public.shopping_items.last_purchased_at IS 'Timestamp of the most recent time this item was marked as completed';
 
 -- =============================================================================
--- SCHEMA STRUCTURE COMPLETE - INDEXES, RLS, AND FUNCTIONS IN NEXT SECTIONS
+-- 2. INDEXES FOR PERFORMANCE
+-- =============================================================================
+
+-- List Members indexes (critical for membership queries)
+CREATE INDEX IF NOT EXISTS idx_list_members_user_id ON public.list_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_list_members_list_id ON public.list_members(list_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_list_members_active_per_user
+    ON public.list_members(user_id)
+    WHERE is_active = true;
+
+COMMENT ON INDEX idx_list_members_active_per_user IS 'Ensures each user has only one active list';
+
+-- List Invites indexes (for token validation)
+CREATE INDEX IF NOT EXISTS idx_list_invites_token ON public.list_invites(token);
+CREATE INDEX IF NOT EXISTS idx_list_invites_list_id ON public.list_invites(list_id);
+CREATE INDEX IF NOT EXISTS idx_list_invites_active ON public.list_invites(list_id, expires_at, revoked_at)
+    WHERE revoked_at IS NULL;
+
+-- List Aisles indexes (for aisle queries by list)
+CREATE INDEX IF NOT EXISTS idx_list_aisles_list_id ON public.list_aisles(list_id);
+CREATE INDEX IF NOT EXISTS idx_list_aisles_list_order ON public.list_aisles(list_id, display_order);
+
+-- Shopping Items indexes (optimized for list-based queries)
+CREATE INDEX IF NOT EXISTS idx_shopping_items_list_id ON public.shopping_items(shopping_list_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_items_aisle_id ON public.shopping_items(aisle_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_items_active ON public.shopping_items(shopping_list_id, active)
+    WHERE active = true;
+CREATE INDEX IF NOT EXISTS idx_shopping_items_purchase_history ON public.shopping_items(shopping_list_id, purchase_count DESC, last_purchased_at DESC)
+    WHERE active = true AND purchase_count > 0;
+CREATE INDEX IF NOT EXISTS idx_shopping_items_comment ON public.shopping_items
+    USING gin(to_tsvector('english', comment))
+    WHERE comment IS NOT NULL;
+
+-- User Preferences indexes
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON public.user_preferences(user_id);
+
+-- =============================================================================
+-- INDEXES COMPLETE - RLS POLICIES AND FUNCTIONS IN NEXT SECTIONS
 -- =============================================================================
