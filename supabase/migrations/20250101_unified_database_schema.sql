@@ -459,7 +459,7 @@ BEGIN
     -- Insert invite
     INSERT INTO public.list_invites (list_id, token, created_by, expires_at)
     VALUES (p_list_id, v_token, p_user_id, v_expires_at)
-    RETURNING id, token, expires_at INTO v_invite_id, v_token, v_expires_at;
+    RETURNING id, list_invites.token, list_invites.expires_at INTO v_invite_id, v_token, v_expires_at;
 
     RETURN QUERY SELECT v_invite_id, v_token, v_expires_at;
 END;
