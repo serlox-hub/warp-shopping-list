@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import QuickAddBar from '@/components/QuickAddBar';
+import FloatingAddButton from '@/components/FloatingAddButton';
+import AddItemModal from '@/components/AddItemModal';
 import EditItemModal from '@/components/EditItemModal';
 import AisleSection from '@/components/AisleSection';
 import AisleManager from '@/components/AisleManager';
@@ -39,6 +40,7 @@ export default function Home() {
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
   const [itemUsageHistory, setItemUsageHistory] = useState([]);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const englishCustomAisles = useMemo(() => customAisles.filter(a => a && a.name).map(a => a.name), [customAisles]);
   const localizedCustomAisles = useMemo(() => {
     const englishNames = customAisles.filter(a => a && a.name).map(a => a.name);
@@ -854,15 +856,18 @@ export default function Home() {
         />
       )}
 
-      {/* Quick Add Bar */}
-      <QuickAddBar
-        key={shoppingList?.id}
+      {/* Floating Add Button */}
+      <FloatingAddButton onClick={() => setShowAddModal(true)} />
+
+      {/* Add Item Modal */}
+      <AddItemModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
         onAddItem={handleAddItem}
         customAisles={localizedCustomAisles}
         itemUsageHistory={itemUsageHistory}
         existingItems={items}
         aisleColors={aisleColors}
-        availableAisles={englishCustomAisles}
       />
     </div>
   );

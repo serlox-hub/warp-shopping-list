@@ -15,14 +15,29 @@ jest.mock('../../lib/shoppingListService')
 let addItemFormPropsLog = []
 let aisleSectionRenderLog = []
 
-jest.mock('../../components/QuickAddBar', () => {
-  return function MockQuickAddBar({ onAddItem, customAisles, aisleColors, existingItems }) {
-    addItemFormPropsLog.push({ customAisles, aisleColors, existingItems })
+jest.mock('../../components/FloatingAddButton', () => {
+  return function MockFloatingAddButton({ onClick }) {
     return (
-      <div data-testid="quick-add-bar">
-        <button onClick={() => onAddItem({ name: 'Test Item', aisle: 'Produce', quantity: 1, comment: '' })}>
+      <button data-testid="floating-add-button" onClick={onClick}>
+        Add
+      </button>
+    )
+  }
+})
+
+jest.mock('../../components/AddItemModal', () => {
+  return function MockAddItemModal({ isOpen, onClose, onAddItem, customAisles, aisleColors, existingItems }) {
+    addItemFormPropsLog.push({ customAisles, aisleColors, existingItems })
+    if (!isOpen) return null
+    return (
+      <div data-testid="add-item-modal">
+        <button onClick={() => {
+          onAddItem({ name: 'Test Item', aisle: 'Produce', quantity: 1, comment: '' })
+          onClose()
+        }}>
           Add Item
         </button>
+        <button onClick={onClose}>Cancel</button>
       </div>
     )
   }
@@ -410,7 +425,7 @@ describe('Home', () => {
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
+      expect(screen.getByTestId('floating-add-button')).toBeInTheDocument()
       expect(screen.getByTestId('aisle-section-Produce')).toBeInTheDocument()
       expect(screen.getByTestId('aisle-section-Dairy')).toBeInTheDocument()
     })
@@ -444,9 +459,13 @@ describe('Home', () => {
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
+      expect(screen.getByTestId('floating-add-button')).toBeInTheDocument()
     })
 
+    // Click the floating button to open the modal
+    await user.click(screen.getByTestId('floating-add-button'))
+
+    // Now click the Add Item button inside the modal
     await user.click(screen.getByText('Add Item'))
 
     await waitFor(() => {
@@ -501,7 +520,7 @@ describe('Home', () => {
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
+      expect(screen.getByTestId('floating-add-button')).toBeInTheDocument()
     })
 
     // Open kebab menu first
@@ -560,7 +579,7 @@ describe('Home', () => {
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
+      expect(screen.getByTestId('floating-add-button')).toBeInTheDocument()
     })
 
     // Open kebab menu first
@@ -993,7 +1012,7 @@ describe('Home', () => {
     expect(mockShoppingListService.getActiveShoppingListWithItems).toHaveBeenCalledWith(mockUser.id)
   })
 
-  describe('itemUsageHistory and QuickAddBar suggestions', () => {
+  describe('itemUsageHistory and AddItemModal suggestions', () => {
     it('should populate itemUsageHistory when loadTopItems is called', async () => {
       const mockTopItemsData = [
         {
@@ -1028,10 +1047,10 @@ describe('Home', () => {
         expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockShoppingList.id)
       })
 
-      // Wait for itemUsageHistory to be populated
+      // Wait for component to be rendered
       await waitFor(() => {
-        const quickAddBar = screen.getByTestId('quick-add-bar')
-        expect(quickAddBar).toBeInTheDocument()
+        const floatingAddButton = screen.getByTestId('floating-add-button')
+        expect(floatingAddButton).toBeInTheDocument()
       })
 
       // Verify that the service was called
@@ -1141,9 +1160,14 @@ describe('Home', () => {
       render(<Home />)
 
       await waitFor(() => {
-        expect(screen.getByTestId('quick-add-bar')).toBeInTheDocument()
+        expect(screen.getByTestId('floating-add-button')).toBeInTheDocument()
       })
 
+      // Click the floating button to open the modal
+      const floatingButton = screen.getByTestId('floating-add-button')
+      await user.click(floatingButton)
+
+      // Now click the Add Item button inside the modal
       const addButton = screen.getByText('Add Item')
       await user.click(addButton)
 
