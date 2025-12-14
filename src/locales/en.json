@@ -5,7 +5,8 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "save": "Save",
-    "close": "Close"
+    "close": "Close",
+    "loading": "Loading..."
   },
   "auth": {
     "logout": "Sign Out"
@@ -183,8 +184,5 @@
     "errorTitle": "Something Went Wrong",
     "genericError": "An error occurred while joining the list",
     "goHome": "Go to Home"
-  },
-  "common": {
-    "loading": "Loading..."
   }
 }

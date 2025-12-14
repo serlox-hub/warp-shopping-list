@@ -5,7 +5,8 @@
     "delete": "Eliminar",
     "cancel": "Cancelar",
     "save": "Guardar",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "loading": "Cargando..."
   },
   "auth": {
     "logout": "Cerrar Sesión"
@@ -14,7 +15,12 @@
     "darkMode": "Modo oscuro",
     "lightMode": "Modo claro",
     "systemMode": "Sistema",
-    "currentTheme": "Tema actual"
+    "currentTheme": "Tema actual",
+    "menu": {
+      "open": "Abrir menú de usuario",
+      "preferences": "Preferencias de usuario",
+      "logout": "Cerrar sesión"
+    }
   },
   "shoppingList": {
     "emptyTitle": "Tu lista de compras está vacía",
@@ -115,13 +121,6 @@
       "subtitle": "Información de tu cuenta"
     }
   },
-  "header": {
-    "menu": {
-      "open": "Abrir menú de usuario",
-      "preferences": "Preferencias de usuario",
-      "logout": "Cerrar sesión"
-    }
-  },
   "errors": {
     "addItemFailed": "Error al agregar el elemento. Inténtalo de nuevo.",
     "updateItemFailed": "Error al actualizar el elemento. Inténtalo de nuevo.",
@@ -185,8 +184,5 @@
     "errorTitle": "Algo Salió Mal",
     "genericError": "Ocurrió un error al unirse a la lista",
     "goHome": "Ir al Inicio"
-  },
-  "common": {
-    "loading": "Cargando..."
   }
 }
