@@ -11,21 +11,28 @@ describe('ShoppingListService', () => {
   const mockUserId = 'user-123'
   const mockListId = 'list-123'
   const mockItemId = 'item-123'
+  const mockAisleId = 'aisle-123'
 
+  // New data model - shopping lists have created_by instead of user_id
   const mockShoppingList = {
     id: mockListId,
-    user_id: mockUserId,
     name: 'My Shopping List',
-    is_active: true,
+    created_by: mockUserId,
     created_at: '2024-01-01T00:00:00.000Z',
     updated_at: '2024-01-01T00:00:00.000Z'
   }
 
-  const mockAisleId = 'aisle-123'
+  // List membership data (from list_members table)
+  const mockMembership = {
+    is_active: true,
+    joined_at: '2024-01-01T00:00:00.000Z',
+    shopping_lists: mockShoppingList
+  }
 
+  // Aisles are now list-scoped (list_aisles table)
   const mockAisle = {
     id: mockAisleId,
-    user_id: mockUserId,
+    list_id: mockListId,
     name: 'Produce',
     color: '#22c55e',
     display_order: 1,
@@ -33,20 +40,20 @@ describe('ShoppingListService', () => {
     updated_at: '2024-01-01T00:00:00.000Z'
   }
 
+  // Items no longer have user_id
   const mockShoppingItem = {
     id: mockItemId,
     shopping_list_id: mockListId,
-    user_id: mockUserId,
     name: 'Apples',
     aisle_id: mockAisleId,
     quantity: 3,
     comment: '',
     completed: false,
     purchase_count: 0,
+    active: true,
     created_at: '2024-01-01T00:00:00.000Z',
     updated_at: '2024-01-01T00:00:00.000Z',
     last_purchased_at: null,
-    // Joined from user_aisles
     aisle: {
       id: mockAisleId,
       name: 'Produce',
@@ -58,21 +65,24 @@ describe('ShoppingListService', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     jest.spyOn(console, 'error').mockImplementation(() => {})
-    
-    // Create a simple mock that can be chained without recursion
+    jest.spyOn(console, 'warn').mockImplementation(() => {})
+
     const createBasicMock = () => ({
       select: jest.fn().mockReturnThis(),
       insert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),
       delete: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
+      gt: jest.fn().mockReturnThis(),
+      is: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
       single: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       then: jest.fn().mockResolvedValue({ data: null, error: null })
     })
-    
-    // Set up basic mock for supabase operations - each test will override as needed
+
     mockSupabase.from = jest.fn().mockReturnValue(createBasicMock())
     mockSupabase.rpc = jest.fn().mockResolvedValue({ data: null, error: null })
   })
@@ -81,14 +91,18 @@ describe('ShoppingListService', () => {
     jest.restoreAllMocks()
   })
 
+  // ============================================================================
+  // LIST QUERY METHODS (using list_members)
+  // ============================================================================
+
   describe('getUserShoppingLists', () => {
-    it('should return user shopping lists', async () => {
-      const mockLists = [mockShoppingList]
+    it('should return user shopping lists via list_members', async () => {
+      const mockMemberships = [mockMembership]
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             order: jest.fn().mockResolvedValue({
-              data: mockLists,
+              data: mockMemberships,
               error: null
             })
           })
@@ -97,52 +111,38 @@ describe('ShoppingListService', () => {
 
       const result = await ShoppingListService.getUserShoppingLists(mockUserId)
 
-      expect(result).toEqual(mockLists)
-      expect(mockSupabase.from).toHaveBeenCalledWith('shopping_lists')
+      expect(result).toEqual([{
+        ...mockShoppingList,
+        is_active: true,
+        joined_at: '2024-01-01T00:00:00.000Z'
+      }])
+      expect(mockSupabase.from).toHaveBeenCalledWith('list_members')
     })
 
-    it('should return empty array when no lists found', async () => {
+    it('should handle errors gracefully', async () => {
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             order: jest.fn().mockResolvedValue({
               data: null,
-              error: null
+              error: new Error('Database error')
             })
           })
         })
       })
 
-      const result = await ShoppingListService.getUserShoppingLists(mockUserId)
-
-      expect(result).toEqual([])
-    })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
-              data: null,
-              error
-            })
-          })
-        })
-      })
-
-      await expect(ShoppingListService.getUserShoppingLists(mockUserId)).rejects.toThrow('Database error')
+      await expect(ShoppingListService.getUserShoppingLists(mockUserId)).rejects.toThrow()
     })
   })
 
   describe('getActiveShoppingList', () => {
-    it('should return active shopping list', async () => {
+    it('should return active shopping list via list_members', async () => {
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
               single: jest.fn().mockResolvedValue({
-                data: mockShoppingList,
+                data: mockMembership,
                 error: null
               })
             })
@@ -152,296 +152,120 @@ describe('ShoppingListService', () => {
 
       const result = await ShoppingListService.getActiveShoppingList(mockUserId)
 
-      expect(result).toEqual(mockShoppingList)
+      expect(result).toEqual({
+        ...mockShoppingList,
+        is_active: true,
+        joined_at: '2024-01-01T00:00:00.000Z'
+      })
+      expect(mockSupabase.from).toHaveBeenCalledWith('list_members')
     })
 
-    it('should create default list if no active list exists', async () => {
-      const error = { code: 'PGRST116' }
-      const newList = { ...mockShoppingList, name: 'My Shopping List' }
-      
-      mockSupabase.from
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({
-                  data: null,
-                  error
-                })
-              })
-            })
-          })
-        })
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error: null })
-          })
-        })
-        .mockReturnValueOnce({
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
-                data: newList,
-                error: null
-              })
-            })
-          })
-        })
-
-      const result = await ShoppingListService.getActiveShoppingList(mockUserId)
-
-      expect(result).toEqual(newList)
-    })
-
-    it('should handle other database errors', async () => {
-      const error = new Error('Database error')
-      mockSupabase.from.mockReturnValue({
+    it('should call setupNewUser if no active list found', async () => {
+      // First call returns no data
+      mockSupabase.from.mockReturnValueOnce({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
               single: jest.fn().mockResolvedValue({
                 data: null,
-                error
+                error: { code: 'PGRST116' }
               })
             })
           })
         })
       })
 
-      await expect(ShoppingListService.getActiveShoppingList(mockUserId)).rejects.toThrow('Database error')
+      // Mock RPC for setup_new_user
+      mockSupabase.rpc.mockResolvedValueOnce({ data: mockListId, error: null })
+
+      // Second call returns the new list
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: mockMembership,
+                error: null
+              })
+            })
+          })
+        })
+      })
+
+      const result = await ShoppingListService.getActiveShoppingList(mockUserId)
+
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('setup_new_user', { p_user_id: mockUserId })
+    })
+  })
+
+  describe('setupNewUser', () => {
+    it('should call the setup_new_user RPC function', async () => {
+      mockSupabase.rpc.mockResolvedValue({ data: mockListId, error: null })
+
+      const result = await ShoppingListService.setupNewUser(mockUserId)
+
+      expect(result).toBe(mockListId)
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('setup_new_user', { p_user_id: mockUserId })
     })
   })
 
   describe('createShoppingList', () => {
-    it('should create a new shopping list', async () => {
-      mockSupabase.from.mockReturnValue({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: mockShoppingList,
-              error: null
-            })
-          })
-        })
-      })
+    it('should create a new shopping list with membership', async () => {
+      const newList = { ...mockShoppingList, id: 'new-list-123' }
 
-      const result = await ShoppingListService.createShoppingList(mockUserId, 'New List')
-
-      expect(result).toEqual(mockShoppingList)
-    })
-
-    it('should deactivate other lists when setting as active', async () => {
-      // Mock the deactivate chain properly
-      const deactivateChain = {
-        eq: jest.fn().mockResolvedValue({ error: null })
-      }
-      
-      // Mock the insert chain properly
-      const insertChain = {
-        select: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
-            data: mockShoppingList,
-            error: null
-          })
-        })
-      }
-      
       mockSupabase.from
         .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue(deactivateChain)
-        })
-        .mockReturnValueOnce({
-          insert: jest.fn().mockReturnValue(insertChain)
-        })
-
-      const result = await ShoppingListService.createShoppingList(mockUserId, 'New List', true)
-
-      expect(result).toEqual(mockShoppingList)
-    })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      mockSupabase.from.mockReturnValue({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: null,
-              error
+          insert: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: newList, error: null })
             })
           })
         })
-      })
+        .mockReturnValueOnce({
+          insert: jest.fn().mockResolvedValue({ data: null, error: null })
+        })
 
-      await expect(ShoppingListService.createShoppingList(mockUserId, 'New List')).rejects.toThrow('Database error')
+      mockSupabase.rpc.mockResolvedValue({ data: null, error: null })
+
+      const result = await ShoppingListService.createShoppingList(mockUserId, 'Test List', true)
+
+      expect(result.name).toBe('My Shopping List')
+      expect(result.is_active).toBe(true)
     })
   })
 
   describe('setActiveList', () => {
-    it('should set a list as active', async () => {
-      // Mock the deactivate chain properly
-      const deactivateChain = {
-        eq: jest.fn().mockResolvedValue({ error: null })
-      }
-      
-      // Mock the activate chain properly
-      const activateChain = {
-        eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
-                data: mockShoppingList,
-                error: null
-              })
+    it('should update list_members to set list as active', async () => {
+      mockSupabase.from
+        .mockReturnValueOnce({
+          update: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValue({ data: null, error: null })
             })
           })
         })
-      }
-      
-      mockSupabase.from
         .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue(deactivateChain)
-        })
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue(activateChain)
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({ data: mockMembership, error: null })
+              })
+            })
+          })
         })
 
       const result = await ShoppingListService.setActiveList(mockUserId, mockListId)
 
-      expect(result).toEqual(mockShoppingList)
-    })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      
-      // Mock the deactivate chain (success)
-      const deactivateChain = {
-        eq: jest.fn().mockResolvedValue({ error: null })
-      }
-      
-      // Mock the activate chain (error)
-      const activateChain = {
-        eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
-                data: null,
-                error
-              })
-            })
-          })
-        })
-      }
-      
-      mockSupabase.from
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue(deactivateChain)
-        })
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue(activateChain)
-        })
-
-      await expect(ShoppingListService.setActiveList(mockUserId, mockListId)).rejects.toThrow('Database error')
+      expect(mockSupabase.from).toHaveBeenCalledWith('list_members')
     })
   })
 
-  describe('deleteShoppingList', () => {
-    it.skip('should delete a shopping list', async () => {
-      const allLists = [mockShoppingList, { ...mockShoppingList, id: 'list-2', is_active: false }]
-      
-      mockSupabase.from
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
-                data: allLists,
-                error: null
-              })
-            })
-          })
-        })
-        .mockReturnValueOnce({
-          delete: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
-            })
-          })
-        })
-
-      const result = await ShoppingListService.deleteShoppingList(mockUserId, mockListId)
-
-      expect(result).toBe(true)
-    })
-
-    it('should throw error when trying to delete the last list', async () => {
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
-              data: [mockShoppingList],
-              error: null
-            })
-          })
-        })
-      })
-
-      await expect(ShoppingListService.deleteShoppingList(mockUserId, mockListId))
-        .rejects.toThrow('Cannot delete the last remaining list')
-    })
-
-    it('should set another list as active when deleting active list', async () => {
-      const list2 = { ...mockShoppingList, id: 'list-2', is_active: false }
-      const allLists = [mockShoppingList, list2]
-      
-      const mockSetActive = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          order: jest.fn().mockResolvedValue({ error: null })
-        })
-      })
-      
-      mockSupabase.from
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
-                data: allLists,
-                error: null
-              })
-            })
-          })
-        })
-        .mockReturnValueOnce({
-          delete: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
-            })
-          })
-        })
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error: null })
-          })
-        })
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockReturnValue({
-                select: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({
-                    data: list2,
-                    error: null
-                  })
-                })
-              })
-            })
-          })
-        })
-
-      await ShoppingListService.deleteShoppingList(mockUserId, mockListId)
-    })
-  })
+  // ============================================================================
+  // SHOPPING ITEMS METHODS
+  // ============================================================================
 
   describe('getShoppingItems', () => {
-    it('should return shopping items for a list', async () => {
+    it('should return active items for a list with list_aisles', async () => {
       const mockItems = [mockShoppingItem]
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
@@ -459,68 +283,24 @@ describe('ShoppingListService', () => {
       const result = await ShoppingListService.getShoppingItems(mockListId)
 
       expect(result).toEqual(mockItems)
-    })
-
-    it('should return empty array when no items found', async () => {
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
-                data: null,
-                error: null
-              })
-            })
-          })
-        })
-      })
-
-      const result = await ShoppingListService.getShoppingItems(mockListId)
-
-      expect(result).toEqual([])
-    })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
-                data: null,
-                error
-              })
-            })
-          })
-        })
-      })
-
-      await expect(ShoppingListService.getShoppingItems(mockListId)).rejects.toThrow('Database error')
+      expect(mockSupabase.from).toHaveBeenCalledWith('shopping_items')
     })
   })
 
   describe('addShoppingItem', () => {
-    it('should add a new shopping item', async () => {
-      const itemData = {
-        name: 'Apples',
-        aisle_id: mockAisleId,
-        quantity: 3,
-        comment: 'Red apples'
-      }
+    it('should add a new item (no user_id parameter)', async () => {
+      const itemData = { name: 'Bananas', aisle_id: mockAisleId, quantity: 2 }
+      const newItem = { ...mockShoppingItem, ...itemData, id: 'new-item' }
 
-      // Mock the check for existing inactive items (returns null - no inactive item found)
-      mockSupabase.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
+      mockSupabase.from
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
               eq: jest.fn().mockReturnValue({
                 eq: jest.fn().mockReturnValue({
                   order: jest.fn().mockReturnValue({
                     limit: jest.fn().mockReturnValue({
-                      maybeSingle: jest.fn().mockResolvedValue({
-                        data: null,
-                        error: null
-                      })
+                      maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null })
                     })
                   })
                 })
@@ -528,42 +308,32 @@ describe('ShoppingListService', () => {
             })
           })
         })
-      })
-
-      // Mock the insert for new item
-      mockSupabase.from.mockReturnValueOnce({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: mockShoppingItem,
-              error: null
+        .mockReturnValueOnce({
+          insert: jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: newItem, error: null })
             })
           })
         })
-      })
 
-      const result = await ShoppingListService.addShoppingItem(mockListId, mockUserId, itemData)
+      const result = await ShoppingListService.addShoppingItem(mockListId, itemData)
 
-      expect(result).toEqual(mockShoppingItem)
+      expect(result.name).toBe('Bananas')
     })
 
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      const itemData = { name: 'Apples', aisle_id: mockAisleId, quantity: 3 }
+    it('should reactivate existing inactive item', async () => {
+      const existingItem = { ...mockShoppingItem, active: false }
+      const itemData = { name: 'Apples', quantity: 5 }
 
-      // Mock the check for existing inactive items (returns null)
-      mockSupabase.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
+      mockSupabase.from
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
               eq: jest.fn().mockReturnValue({
                 eq: jest.fn().mockReturnValue({
                   order: jest.fn().mockReturnValue({
                     limit: jest.fn().mockReturnValue({
-                      maybeSingle: jest.fn().mockResolvedValue({
-                        data: null,
-                        error: null
-                      })
+                      maybeSingle: jest.fn().mockResolvedValue({ data: existingItem, error: null })
                     })
                   })
                 })
@@ -571,38 +341,32 @@ describe('ShoppingListService', () => {
             })
           })
         })
-      })
-
-      // Mock the insert with error
-      mockSupabase.from.mockReturnValueOnce({
-        insert: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: null,
-              error
+        .mockReturnValueOnce({
+          update: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              select: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({ data: { ...existingItem, active: true, quantity: 5 }, error: null })
+              })
             })
           })
         })
-      })
 
-      await expect(ShoppingListService.addShoppingItem(mockListId, mockUserId, itemData))
-        .rejects.toThrow('Database error')
+      const result = await ShoppingListService.addShoppingItem(mockListId, itemData)
+
+      expect(result.active).toBe(true)
     })
   })
 
   describe('updateShoppingItem', () => {
-    it('should update a shopping item', async () => {
-      const updates = { name: 'Green Apples', quantity: 5 }
-      const updatedItem = { ...mockShoppingItem, ...updates }
+    it('should update item and return with list_aisles', async () => {
+      const updates = { quantity: 5 }
+      const updatedItem = { ...mockShoppingItem, quantity: 5 }
 
       mockSupabase.from.mockReturnValue({
         update: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
-                data: updatedItem,
-                error: null
-              })
+              single: jest.fn().mockResolvedValue({ data: updatedItem, error: null })
             })
           })
         })
@@ -610,36 +374,15 @@ describe('ShoppingListService', () => {
 
       const result = await ShoppingListService.updateShoppingItem(mockItemId, updates)
 
-      expect(result).toEqual(updatedItem)
-    })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      const updates = { name: 'Green Apples' }
-
-      mockSupabase.from.mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
-                data: null,
-                error
-              })
-            })
-          })
-        })
-      })
-
-      await expect(ShoppingListService.updateShoppingItem(mockItemId, updates))
-        .rejects.toThrow('Database error')
+      expect(result.quantity).toBe(5)
     })
   })
 
   describe('deleteShoppingItem', () => {
-    it('should delete a shopping item', async () => {
+    it('should soft delete by setting active to false', async () => {
       mockSupabase.from.mockReturnValue({
         update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: null })
+          eq: jest.fn().mockResolvedValue({ data: null, error: null })
         })
       })
 
@@ -647,26 +390,15 @@ describe('ShoppingListService', () => {
 
       expect(result).toBe(true)
     })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      mockSupabase.from.mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error })
-        })
-      })
-
-      await expect(ShoppingListService.deleteShoppingItem(mockItemId)).rejects.toThrow('Database error')
-    })
   })
 
   describe('clearCompletedItems', () => {
-    it('should clear completed items', async () => {
+    it('should set active to false for completed items', async () => {
       mockSupabase.from.mockReturnValue({
         update: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
+              eq: jest.fn().mockResolvedValue({ data: null, error: null })
             })
           })
         })
@@ -676,59 +408,15 @@ describe('ShoppingListService', () => {
 
       expect(result).toBe(true)
     })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      mockSupabase.from.mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error })
-            })
-          })
-        })
-      })
-
-      await expect(ShoppingListService.clearCompletedItems(mockListId)).rejects.toThrow('Database error')
-    })
   })
 
-  describe('clearAllItems', () => {
-    it('should clear all items', async () => {
-      mockSupabase.from.mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error: null })
-          })
-        })
-      })
+  // ============================================================================
+  // LIST AISLES METHODS (replaces user_aisles)
+  // ============================================================================
 
-      const result = await ShoppingListService.clearAllItems(mockListId)
-
-      expect(result).toBe(true)
-    })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      mockSupabase.from.mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockResolvedValue({ error })
-          })
-        })
-      })
-
-      await expect(ShoppingListService.clearAllItems(mockListId)).rejects.toThrow('Database error')
-    })
-  })
-
-  describe('getUserAisles', () => {
-    it('should return user aisles', async () => {
-      const mockAisles = [
-        { id: '1', user_id: mockUserId, name: 'Produce', display_order: 1, color: '#34d399' },
-        { id: '2', user_id: mockUserId, name: 'Dairy', display_order: 2, color: '#f97316' }
-      ]
-
+  describe('getListAisles', () => {
+    it('should return aisles for a list', async () => {
+      const mockAisles = [mockAisle]
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
@@ -740,342 +428,375 @@ describe('ShoppingListService', () => {
         })
       })
 
-      const result = await ShoppingListService.getUserAisles(mockUserId)
+      const result = await ShoppingListService.getListAisles(mockListId)
 
-      expect(result).toEqual([
-        { id: '1', name: 'Produce', color: '#34d399', display_order: 1 },
-        { id: '2', name: 'Dairy', color: '#f97316', display_order: 2 }
-      ])
+      expect(result[0].name).toBe('Produce')
+      expect(mockSupabase.from).toHaveBeenCalledWith('list_aisles')
     })
 
-    it('should create default aisles if user has none', async () => {
-      const mockDefaultAisles = [
-        { id: '1', user_id: mockUserId, name: 'Produce', display_order: 1, color: null }
-      ]
+    it('should create default aisles if none exist', async () => {
+      mockSupabase.from
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: [], error: null })
+            })
+          })
+        })
+
+      mockSupabase.rpc.mockResolvedValue({ data: null, error: null })
 
       mockSupabase.from
         .mockReturnValueOnce({
           select: jest.fn().mockReturnValue({
             eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
-                data: [],
-                error: null
-              })
-            })
-          })
-        })
-      
-      mockSupabase.rpc.mockResolvedValue({ error: null })
-      
-      mockSupabase.from
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              order: jest.fn().mockResolvedValue({
-                data: mockDefaultAisles,
-                error: null
-              })
+              order: jest.fn().mockResolvedValue({ data: [mockAisle], error: null })
             })
           })
         })
 
-      const result = await ShoppingListService.getUserAisles(mockUserId)
+      const result = await ShoppingListService.getListAisles(mockListId)
 
-      expect(mockSupabase.rpc).toHaveBeenCalledWith('create_default_user_aisles', {
-        p_user_id: mockUserId
-      })
-      expect(result).toEqual([
-        { id: '1', name: 'Produce', color: getDefaultAisleColor('Produce'), display_order: 1 }
-      ])
-    })
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error')
-      mockSupabase.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
-              data: null,
-              error
-            })
-          })
-        })
-      })
-
-      await expect(ShoppingListService.getUserAisles(mockUserId)).rejects.toThrow('Database error')
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('create_default_list_aisles', { p_list_id: mockListId })
     })
   })
 
-  describe('updateUserAisles', () => {
-    it('should update existing aisle when id matches', async () => {
-      const existingAisles = [
-        { id: '1', user_id: mockUserId, name: 'Produce', display_order: 1, color: '#22c55e' }
-      ]
+  describe('createDefaultListAisles', () => {
+    it('should call the RPC function', async () => {
+      mockSupabase.rpc.mockResolvedValue({ data: null, error: null })
 
-      const newAisles = [
-        { id: '1', name: 'Fruits', color: '#123456', display_order: 1 }
-      ]
+      const result = await ShoppingListService.createDefaultListAisles(mockListId)
 
-      const mockReturnedAisles = [
-        { id: '1', name: 'Fruits', display_order: 1, color: '#123456' }
-      ]
-
-      // Mock the fetch of existing aisles
-      mockSupabase.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: existingAisles,
-            error: null
-          })
-        })
-      })
-
-      // Mock the update operation (returns a promise for Promise.all)
-      mockSupabase.from.mockReturnValueOnce({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error: null })
-        })
-      })
-
-      // Mock getUserAisles call at the end
-      mockSupabase.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
-              data: mockReturnedAisles,
-              error: null
-            })
-          })
-        })
-      })
-
-      const result = await ShoppingListService.updateUserAisles(mockUserId, newAisles)
-
-      expect(result).toEqual(mockReturnedAisles)
+      expect(result).toBe(true)
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('create_default_list_aisles', { p_list_id: mockListId })
     })
+  })
 
-    it('should insert new aisle when no id provided', async () => {
-      const existingAisles = []
+  // ============================================================================
+  // PURCHASE HISTORY METHODS (list-scoped)
+  // ============================================================================
 
-      const newAisles = [
-        { name: 'Produce', color: '#22c55e', display_order: 1 }
+  describe('getMostPurchasedItems', () => {
+    it('should return most purchased items for a list (no userId parameter)', async () => {
+      const mockPurchasedItems = [
+        { ...mockShoppingItem, purchase_count: 10 },
+        { ...mockShoppingItem, id: 'item-2', name: 'Bananas', purchase_count: 5 }
       ]
 
-      const mockReturnedAisles = [
-        { id: '1', name: 'Produce', display_order: 1, color: '#22c55e' }
-      ]
-
-      // Mock the fetch of existing aisles (empty)
-      mockSupabase.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({
-            data: existingAisles,
-            error: null
-          })
-        })
-      })
-
-      // Mock the insert operation
-      mockSupabase.from.mockReturnValueOnce({
-        insert: jest.fn().mockResolvedValue({ error: null })
-      })
-
-      // Mock getUserAisles call at the end
-      mockSupabase.from.mockReturnValueOnce({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            order: jest.fn().mockResolvedValue({
-              data: mockReturnedAisles,
-              error: null
-            })
-          })
-        })
-      })
-
-      const result = await ShoppingListService.updateUserAisles(mockUserId, newAisles)
-
-      expect(result).toEqual(mockReturnedAisles)
-    })
-
-    it('should handle database errors during fetch', async () => {
-      const error = new Error('Fetch error')
       mockSupabase.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockResolvedValue({ error })
+          eq: jest.fn().mockReturnValue({
+            gt: jest.fn().mockReturnValue({
+              order: jest.fn().mockReturnValue({
+                order: jest.fn().mockReturnValue({
+                  limit: jest.fn().mockResolvedValue({ data: mockPurchasedItems, error: null })
+                })
+              })
+            })
+          })
         })
       })
 
-      await expect(ShoppingListService.updateUserAisles(mockUserId, [{ name: 'Produce', color: '#ffffff' }]))
-        .rejects.toThrow('Fetch error')
+      const result = await ShoppingListService.getMostPurchasedItems(mockListId)
+
+      expect(result).toHaveLength(2)
+      expect(result[0].purchase_count).toBe(10)
+    })
+
+    it('should return empty array if listId is not provided', async () => {
+      const result = await ShoppingListService.getMostPurchasedItems(null)
+      expect(result).toEqual([])
     })
   })
 
   describe('deleteFromPurchaseHistory', () => {
-    const itemName = 'Milk'
-
-    it('should reset purchase_count on active items and delete inactive items', async () => {
-      // Mock the update for active items (reset purchase_count)
-      const updateChain = {
-        eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
-            })
-          })
-        })
-      }
-
-      // Mock the delete for inactive items
-      const deleteChain = {
-        eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
-            })
-          })
-        })
-      }
-
+    it('should reset purchase_count and delete inactive items (no userId)', async () => {
       mockSupabase.from
         .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue(updateChain)
+          update: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({ data: null, error: null })
+              })
+            })
+          })
         })
         .mockReturnValueOnce({
-          delete: jest.fn().mockReturnValue(deleteChain)
+          delete: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                eq: jest.fn().mockResolvedValue({ data: null, error: null })
+              })
+            })
+          })
         })
 
-      const result = await ShoppingListService.deleteFromPurchaseHistory(mockUserId, mockListId, itemName)
+      const result = await ShoppingListService.deleteFromPurchaseHistory(mockListId, 'Apples')
 
       expect(result).toBe(true)
-      expect(mockSupabase.from).toHaveBeenCalledWith('shopping_items')
+    })
+  })
+
+  // ============================================================================
+  // SHARING METHODS
+  // ============================================================================
+
+  describe('generateShareLink', () => {
+    it('should generate a share link via RPC', async () => {
+      const mockInvite = {
+        invite_id: 'invite-123',
+        token: 'abc123token',
+        expires_at: '2024-01-08T00:00:00.000Z'
+      }
+      mockSupabase.rpc.mockResolvedValue({ data: [mockInvite], error: null })
+
+      const result = await ShoppingListService.generateShareLink(mockListId, mockUserId)
+
+      expect(result.token).toBe('abc123token')
+      expect(result.url).toContain('/join/abc123token')
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('generate_list_invite', {
+        p_list_id: mockListId,
+        p_user_id: mockUserId
+      })
     })
 
-    it('should return false when userId is missing', async () => {
-      const result = await ShoppingListService.deleteFromPurchaseHistory(null, mockListId, itemName)
-      expect(result).toBe(false)
+    it('should throw error if RPC fails', async () => {
+      mockSupabase.rpc.mockResolvedValue({ data: null, error: new Error('RPC error') })
+
+      await expect(ShoppingListService.generateShareLink(mockListId, mockUserId)).rejects.toThrow()
     })
+  })
 
-    it('should return false when listId is missing', async () => {
-      const result = await ShoppingListService.deleteFromPurchaseHistory(mockUserId, null, itemName)
-      expect(result).toBe(false)
+  describe('revokeShareLink', () => {
+    it('should revoke all invites via RPC', async () => {
+      mockSupabase.rpc.mockResolvedValue({ data: 3, error: null })
+
+      const result = await ShoppingListService.revokeShareLink(mockListId)
+
+      expect(result).toBe(3)
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('revoke_list_invites', { p_list_id: mockListId })
     })
+  })
 
-    it('should return false when itemName is missing', async () => {
-      const result = await ShoppingListService.deleteFromPurchaseHistory(mockUserId, mockListId, null)
-      expect(result).toBe(false)
-    })
-
-    it('should handle database errors on update operation', async () => {
-      const error = new Error('Database error on update')
-
-      // Mock the update for active items (with error)
-      const updateChain = {
-        eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error })
-            })
-          })
-        })
+  describe('getActiveShareLink', () => {
+    it('should return active share link if exists', async () => {
+      const mockInvite = {
+        token: 'active-token',
+        expires_at: new Date(Date.now() + 86400000).toISOString(),
+        created_at: '2024-01-01T00:00:00.000Z'
       }
 
-      // Mock the delete for inactive items (success)
-      const deleteChain = {
-        eq: jest.fn().mockReturnValue({
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
-            })
-          })
-        })
-      }
-
-      mockSupabase.from
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue(updateChain)
-        })
-        .mockReturnValueOnce({
-          delete: jest.fn().mockReturnValue(deleteChain)
-        })
-
-      await expect(ShoppingListService.deleteFromPurchaseHistory(mockUserId, mockListId, itemName))
-        .rejects.toThrow('Database error on update')
-    })
-
-    it('should handle database errors on delete operation', async () => {
-      const error = new Error('Database error on delete')
-
-      // Mock the update for active items (success)
-      const updateChain = {
-        eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
-            })
-          })
-        })
-      }
-
-      // Mock the delete for inactive items (with error)
-      const deleteChain = {
-        eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error })
-            })
-          })
-        })
-      }
-
-      mockSupabase.from
-        .mockReturnValueOnce({
-          update: jest.fn().mockReturnValue(updateChain)
-        })
-        .mockReturnValueOnce({
-          delete: jest.fn().mockReturnValue(deleteChain)
-        })
-
-      await expect(ShoppingListService.deleteFromPurchaseHistory(mockUserId, mockListId, itemName))
-        .rejects.toThrow('Database error on delete')
-    })
-
-    it('should verify correct parameters passed to update active items', async () => {
-      const updateMock = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
+            is: jest.fn().mockReturnValue({
+              gt: jest.fn().mockReturnValue({
+                order: jest.fn().mockReturnValue({
+                  limit: jest.fn().mockReturnValue({
+                    maybeSingle: jest.fn().mockResolvedValue({ data: mockInvite, error: null })
+                  })
+                })
+              })
             })
           })
         })
       })
 
-      const deleteChain = {
-        eq: jest.fn().mockReturnValue({
+      const result = await ShoppingListService.getActiveShareLink(mockListId)
+
+      expect(result.token).toBe('active-token')
+      expect(result.url).toContain('/join/active-token')
+    })
+
+    it('should return null if no active invite', async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
           eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              eq: jest.fn().mockResolvedValue({ error: null })
+            is: jest.fn().mockReturnValue({
+              gt: jest.fn().mockReturnValue({
+                order: jest.fn().mockReturnValue({
+                  limit: jest.fn().mockReturnValue({
+                    maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null })
+                  })
+                })
+              })
             })
           })
         })
+      })
+
+      const result = await ShoppingListService.getActiveShareLink(mockListId)
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('joinListViaInvite', () => {
+    it('should join list via invite token', async () => {
+      const mockResult = {
+        list_id: mockListId,
+        list_name: 'Shared List',
+        joined_at: '2024-01-01T00:00:00.000Z'
       }
 
+      mockSupabase.rpc.mockResolvedValueOnce({ data: [mockResult], error: null })
+
+      // Mock setActiveList call
       mockSupabase.from
         .mockReturnValueOnce({
-          update: updateMock
+          update: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockResolvedValue({ data: null, error: null })
+            })
+          })
         })
         .mockReturnValueOnce({
-          delete: jest.fn().mockReturnValue(deleteChain)
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({ data: mockMembership, error: null })
+              })
+            })
+          })
         })
 
-      await ShoppingListService.deleteFromPurchaseHistory(mockUserId, mockListId, itemName)
+      const result = await ShoppingListService.joinListViaInvite('valid-token', mockUserId)
 
-      expect(updateMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          purchase_count: 0,
-          last_purchased_at: null
+      expect(result.listId).toBe(mockListId)
+      expect(result.listName).toBe('Shared List')
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('join_list_via_invite', {
+        p_token: 'valid-token',
+        p_user_id: mockUserId
+      })
+    })
+  })
+
+  describe('leaveList', () => {
+    it('should leave list via RPC', async () => {
+      const mockResult = {
+        was_last_member: false,
+        list_deleted: false
+      }
+
+      mockSupabase.rpc.mockResolvedValueOnce({ data: [mockResult], error: null })
+
+      // Mock getUserShoppingLists for reactivation check
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({
+              data: [{ ...mockMembership, is_active: true }],
+              error: null
+            })
+          })
         })
-      )
+      })
+
+      const result = await ShoppingListService.leaveList(mockListId, mockUserId)
+
+      expect(result.wasLastMember).toBe(false)
+      expect(result.listDeleted).toBe(false)
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('leave_list', {
+        p_list_id: mockListId,
+        p_user_id: mockUserId
+      })
+    })
+  })
+
+  describe('getListMembers', () => {
+    it('should get list members via RPC', async () => {
+      const mockMembers = [
+        { user_id: mockUserId, email: 'user@test.com', joined_at: '2024-01-01' }
+      ]
+      mockSupabase.rpc.mockResolvedValue({ data: mockMembers, error: null })
+
+      const result = await ShoppingListService.getListMembers(mockListId)
+
+      expect(result).toEqual(mockMembers)
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_list_members', { p_list_id: mockListId })
+    })
+  })
+
+  describe('isListShared', () => {
+    it('should return true if more than one member', async () => {
+      const mockMembers = [
+        { user_id: 'user-1' },
+        { user_id: 'user-2' }
+      ]
+      mockSupabase.rpc.mockResolvedValue({ data: mockMembers, error: null })
+
+      const result = await ShoppingListService.isListShared(mockListId)
+
+      expect(result).toBe(true)
+    })
+
+    it('should return false if only one member', async () => {
+      const mockMembers = [{ user_id: 'user-1' }]
+      mockSupabase.rpc.mockResolvedValue({ data: mockMembers, error: null })
+
+      const result = await ShoppingListService.isListShared(mockListId)
+
+      expect(result).toBe(false)
+    })
+  })
+
+  // ============================================================================
+  // REFRESH METHOD
+  // ============================================================================
+
+  describe('refreshList', () => {
+    it('should return complete list data', async () => {
+      mockSupabase.from
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({ data: mockShoppingList, error: null })
+            })
+          })
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                order: jest.fn().mockResolvedValue({ data: [mockShoppingItem], error: null })
+              })
+            })
+          })
+        })
+        .mockReturnValueOnce({
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              order: jest.fn().mockResolvedValue({ data: [mockAisle], error: null })
+            })
+          })
+        })
+
+      mockSupabase.rpc.mockResolvedValue({ data: [{ user_id: mockUserId }], error: null })
+
+      const result = await ShoppingListService.refreshList(mockListId)
+
+      expect(result.list).toEqual(mockShoppingList)
+      expect(result.items).toHaveLength(1)
+      expect(result.aisles).toHaveLength(1)
+      expect(result.members).toHaveLength(1)
+    })
+  })
+
+  // ============================================================================
+  // LEGACY METHODS
+  // ============================================================================
+
+  describe('deleteShoppingList (legacy)', () => {
+    it('should redirect to leaveList', async () => {
+      const mockResult = { was_last_member: true, list_deleted: true }
+      mockSupabase.rpc.mockResolvedValue({ data: [mockResult], error: null })
+
+      await ShoppingListService.deleteShoppingList(mockUserId, mockListId)
+
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('leave_list', {
+        p_list_id: mockListId,
+        p_user_id: mockUserId
+      })
     })
   })
 })

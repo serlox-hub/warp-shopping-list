@@ -9,6 +9,8 @@ import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import ListSelector from '@/components/ListSelector';
 import TopPurchasedItems from '@/components/TopPurchasedItems';
+import ShareListButton from '@/components/ShareListButton';
+import ListMembersDisplay from '@/components/ListMembersDisplay';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { useNotification } from '@/contexts/NotificationContext';
@@ -67,28 +69,30 @@ export default function Home() {
     setAisleColors(colorMap);
   }, [t]);
 
-  const loadUserAisles = useCallback(async () => {
-    if (!userId) {
+  const loadListAisles = useCallback(async (listId) => {
+    if (!listId) {
       setCustomAisles([]);
       setAisleColors({});
       return;
     }
 
     try {
-      const dbAisles = await ShoppingListService.getUserAisles(userId);
+      const dbAisles = await ShoppingListService.getListAisles(listId);
       applyAisleState(dbAisles);
     } catch (error) {
-      console.error('Error loading user aisles:', error);
+      console.error('Error loading list aisles:', error);
       setCustomAisles([]);
       setAisleColors({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]); // Only depend on userId, applyAisleState is stable
+  }, []); // applyAisleState is stable
 
   const loadShoppingListData = useCallback(async () => {
     if (!userId) {
       setShoppingList(null);
       setItems([]);
+      setCustomAisles([]);
+      setAisleColors({});
       setDataLoading(false);
       return;
     }
@@ -99,17 +103,22 @@ export default function Home() {
 
       setShoppingList(list);
       setItems(listItems);
+
+      // Load aisles for this list
+      if (list?.id) {
+        await loadListAisles(list.id);
+      }
     } catch (error) {
       console.error('Error loading shopping list data:', error);
       setItems([]);
     } finally {
       setDataLoading(false);
     }
-  }, [userId]);
+  }, [userId, loadListAisles]);
 
   const loadTopItems = useCallback(async (listIdOverride) => {
     const listId = listIdOverride || shoppingList?.id;
-    if (!userId || !listId) {
+    if (!listId) {
       setTopItems([]);
       setItemUsageHistory([]);
       return;
@@ -117,7 +126,7 @@ export default function Home() {
 
     setTopItemsLoading(true);
     try {
-      const mostPurchased = await ShoppingListService.getMostPurchasedItems(userId, listId);
+      const mostPurchased = await ShoppingListService.getMostPurchasedItems(listId);
       const formattedItems = mostPurchased.map(item => ({
         item_name: item.name,
         purchase_count: item.purchase_count,
@@ -135,15 +144,12 @@ export default function Home() {
     } finally {
       setTopItemsLoading(false);
     }
-  }, [userId, shoppingList?.id]);
+  }, [shoppingList?.id]);
 
 
   useEffect(() => {
     if (userId) {
-      Promise.all([
-        loadUserAisles(),
-        loadShoppingListData()
-      ]);
+      loadShoppingListData();
     } else {
       setItems([]);
       setShoppingList(null);
@@ -168,10 +174,17 @@ export default function Home() {
     setShoppingList(newList);
     setEditingItem(null);
 
-    // Load items for the new list
+    // Reset top items and history for new list
+    setTopItems([]);
+    setItemUsageHistory([]);
+
+    // Load items and aisles for the new list
     try {
       const listItems = await ShoppingListService.getShoppingItems(newList.id);
       setItems(listItems);
+
+      // Load aisles for the new list
+      await loadListAisles(newList.id);
 
       // Reload history for the new list - pass the new list ID to avoid closure issue
       loadTopItems(newList.id);
@@ -179,6 +192,11 @@ export default function Home() {
       console.error('Error loading items for new list:', error);
       setItems([]);
     }
+  };
+
+  const handleLeaveList = async () => {
+    // After leaving a list, reload user's lists and switch to another
+    await loadShoppingListData();
   };
 
   const handleAddItem = async (itemData) => {
@@ -204,7 +222,6 @@ export default function Home() {
       comment: itemData.comment || '',
       completed: false,
       shopping_list_id: shoppingList.id,
-      user_id: user.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -216,7 +233,6 @@ export default function Home() {
       // Make the actual server request
       const newItem = await ShoppingListService.addShoppingItem(
         shoppingList.id,
-        user.id,
         {
           ...itemData,
           aisle_id: aisleId
@@ -474,14 +490,14 @@ export default function Home() {
   };
 
   const handleDeleteFromHistory = async (itemName) => {
-    if (!userId || !shoppingList?.id || !itemName) return;
+    if (!shoppingList?.id || !itemName) return;
 
     // Optimistic update: Remove item from topItems immediately
     const previousTopItems = topItems;
     setTopItems(prev => prev.filter(item => item.item_name !== itemName));
 
     try {
-      await ShoppingListService.deleteFromPurchaseHistory(userId, shoppingList.id, itemName);
+      await ShoppingListService.deleteFromPurchaseHistory(shoppingList.id, itemName);
       showSuccess(t('success.removedFromHistory', { itemName }));
     } catch (error) {
       console.error('Error deleting from purchase history:', error);
@@ -492,6 +508,8 @@ export default function Home() {
   };
 
   const handleUpdateAisles = async (pendingAisles) => {
+    if (!shoppingList?.id) return;
+
     const normalizedAisles = (pendingAisles || []).map((entry) => {
       if (typeof entry === 'string') {
         return {
@@ -516,15 +534,14 @@ export default function Home() {
     });
 
     try {
-      const updatedAisles = await ShoppingListService.updateUserAisles(user.id, englishPayload);
+      const updatedAisles = await ShoppingListService.updateListAisles(shoppingList.id, englishPayload);
       applyAisleState(updatedAisles);
 
-      if (shoppingList) {
-        const refreshedItems = await ShoppingListService.getShoppingItems(shoppingList.id);
-        setItems(refreshedItems);
-      }
+      // Refresh items to get updated aisle references
+      const refreshedItems = await ShoppingListService.getShoppingItems(shoppingList.id);
+      setItems(refreshedItems);
     } catch (error) {
-      console.error('Error updating user aisles:', error);
+      console.error('Error updating list aisles:', error);
     }
   };
 
@@ -594,7 +611,15 @@ export default function Home() {
             <div className="flex-1 min-w-0">
               <ListSelector currentList={shoppingList} onListChange={handleListChange} />
             </div>
-            <Header />
+            <div className="flex items-center gap-2">
+              <ListMembersDisplay
+                listId={shoppingList?.id}
+                currentUserId={userId}
+                onLeaveList={handleLeaveList}
+              />
+              <ShareListButton listId={shoppingList?.id} userId={userId} />
+              <Header />
+            </div>
           </div>
         </header>
 

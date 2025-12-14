@@ -266,7 +266,7 @@ describe('Home', () => {
       removeNotification: jest.fn()
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue([])
+    mockShoppingListService.getListAisles.mockResolvedValue([])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
@@ -278,7 +278,7 @@ describe('Home', () => {
     mockShoppingListService.deleteShoppingItem.mockResolvedValue(undefined)
     mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
     mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
-    mockShoppingListService.updateUserAisles.mockResolvedValue([])
+    mockShoppingListService.updateListAisles.mockResolvedValue([])
     mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
   })
 
@@ -312,7 +312,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValueOnce([
+    mockShoppingListService.getListAisles.mockResolvedValueOnce([
       { name: 'Produce', color: '#22c55e' },
       { name: 'Dairy', color: '#f97316' },
       { name: 'Other', color: '#6b7280' }
@@ -342,7 +342,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValueOnce([
+    mockShoppingListService.getListAisles.mockResolvedValueOnce([
       { name: 'Produce', color: '#22c55e' },
       { name: 'Dairy', color: '#f97316' },
       { name: 'Other', color: '#6b7280' }
@@ -385,13 +385,13 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce', 'Dairy'])
+    mockShoppingListService.getListAisles.mockResolvedValue(['Produce', 'Dairy'])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: mockItems })
 
     render(<Home />)
 
     await waitFor(() => {
-      expect(mockShoppingListService.getUserAisles).toHaveBeenCalledWith('user-1')
+      expect(mockShoppingListService.getListAisles).toHaveBeenCalledWith('list-1')
       expect(mockShoppingListService.getActiveShoppingListWithItems).toHaveBeenCalledWith('user-1')
       // getMostPurchasedItems is now lazy loaded, only called when modal opens
       expect(mockShoppingListService.getMostPurchasedItems).not.toHaveBeenCalled()
@@ -404,7 +404,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce', 'Dairy'])
+    mockShoppingListService.getListAisles.mockResolvedValue(['Produce', 'Dairy'])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: mockItems })
 
     render(<Home />)
@@ -436,7 +436,7 @@ describe('Home', () => {
       quantity: 1,
       completed: false
     }
-    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getListAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.addShoppingItem.mockResolvedValue(newItem)
@@ -452,7 +452,6 @@ describe('Home', () => {
     await waitFor(() => {
       expect(mockShoppingListService.addShoppingItem).toHaveBeenCalledWith(
         'list-1',
-        'user-1',
         expect.objectContaining({
           name: 'Test Item',
           aisle: 'Produce',
@@ -487,7 +486,7 @@ describe('Home', () => {
     }
 
     // Mock with at least one item so kebab menu is visible
-    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getListAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
     mockShoppingListService.addShoppingItem.mockResolvedValue({
       id: '4',
@@ -513,7 +512,7 @@ describe('Home', () => {
 
     // Now getMostPurchasedItems should be called (lazy loading)
     await waitFor(() => {
-      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1', 'list-1')
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('list-1')
     })
 
     const quickAddButton = await screen.findByText('Add Bananas')
@@ -522,7 +521,6 @@ describe('Home', () => {
     await waitFor(() => {
       expect(mockShoppingListService.addShoppingItem).toHaveBeenCalledWith(
         'list-1',
-        'user-1',
         expect.objectContaining({
           name: 'Bananas',
           aisle: 'Produce',
@@ -555,7 +553,7 @@ describe('Home', () => {
       quantity: 4
     }
 
-    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getListAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
     mockShoppingListService.getMostPurchasedItems.mockResolvedValue([serviceItem])
 
@@ -573,7 +571,7 @@ describe('Home', () => {
 
     // Now getMostPurchasedItems should be called (lazy loading)
     await waitFor(() => {
-      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1', 'list-1')
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('list-1')
     })
 
     await waitFor(() => {
@@ -589,7 +587,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getListAisles.mockResolvedValue(['Produce'])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
     mockShoppingListService.updateShoppingItem.mockResolvedValue({ ...mockItems[0], completed: true })
 
@@ -617,7 +615,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getListAisles.mockResolvedValue(['Produce'])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
     mockShoppingListService.deleteShoppingItem.mockResolvedValue(undefined)
 
@@ -642,7 +640,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getListAisles.mockResolvedValue(['Produce'])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
 
     render(<Home />)
@@ -669,7 +667,7 @@ describe('Home', () => {
 
     const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
     const updatedItem = { ...mockItems[0], name: 'Updated Item' }
-    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getListAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
     mockShoppingListService.updateShoppingItem.mockResolvedValue(updatedItem)
 
@@ -713,7 +711,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce', 'Dairy'])
+    mockShoppingListService.getListAisles.mockResolvedValue(['Produce', 'Dairy'])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: mockItems })
     mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
 
@@ -741,7 +739,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(['Produce'])
+    mockShoppingListService.getListAisles.mockResolvedValue(['Produce'])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
     mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
 
@@ -771,7 +769,7 @@ describe('Home', () => {
 
     const mockAisle = { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 }
 
-    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getListAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
 
     render(<Home />)
@@ -811,9 +809,9 @@ describe('Home', () => {
       { id: 'aisle-2', name: 'New Aisle', color: '#6b7280', display_order: 1 }
     ]
 
-    mockShoppingListService.getUserAisles.mockResolvedValue(mockAisles)
+    mockShoppingListService.getListAisles.mockResolvedValue(mockAisles)
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [mockItems[0]] })
-    mockShoppingListService.updateUserAisles.mockResolvedValue(mockUpdatedAisles)
+    mockShoppingListService.updateListAisles.mockResolvedValue(mockUpdatedAisles)
 
     render(<Home />)
 
@@ -831,7 +829,7 @@ describe('Home', () => {
     await user.click(screen.getByText('Update Aisles'))
 
     await waitFor(() => {
-      expect(mockShoppingListService.updateUserAisles).toHaveBeenCalled()
+      expect(mockShoppingListService.updateListAisles).toHaveBeenCalled()
     })
   })
 
@@ -841,7 +839,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
+    mockShoppingListService.getListAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
 
@@ -870,7 +868,7 @@ describe('Home', () => {
       quantity: 2
     }
 
-    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getListAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.getMostPurchasedItems.mockResolvedValue([serviceItem])
@@ -891,7 +889,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
+    mockShoppingListService.getListAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
@@ -924,7 +922,7 @@ describe('Home', () => {
       quantity: 2
     }
 
-    mockShoppingListService.getUserAisles.mockResolvedValue([mockAisle])
+    mockShoppingListService.getListAisles.mockResolvedValue([mockAisle])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.getMostPurchasedItems.mockResolvedValue([serviceItem])
@@ -952,7 +950,7 @@ describe('Home', () => {
       loading: false
     })
 
-    mockShoppingListService.getUserAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
+    mockShoppingListService.getListAisles.mockResolvedValue([{ name: 'Produce', color: '#22c55e' }])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems
       .mockResolvedValueOnce([]) // Initial load
@@ -989,9 +987,9 @@ describe('Home', () => {
     })
 
     // Verify each service method is called exactly once
-    expect(mockShoppingListService.getUserAisles).toHaveBeenCalledTimes(1)
+    expect(mockShoppingListService.getListAisles).toHaveBeenCalledTimes(1)
     expect(mockShoppingListService.getActiveShoppingListWithItems).toHaveBeenCalledTimes(1)
-    expect(mockShoppingListService.getUserAisles).toHaveBeenCalledWith(mockUser.id)
+    expect(mockShoppingListService.getListAisles).toHaveBeenCalledWith(mockShoppingList.id)
     expect(mockShoppingListService.getActiveShoppingListWithItems).toHaveBeenCalledWith(mockUser.id)
   })
 
@@ -1027,7 +1025,7 @@ describe('Home', () => {
       render(<Home />)
 
       await waitFor(() => {
-        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id, mockShoppingList.id)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockShoppingList.id)
       })
 
       // Wait for itemUsageHistory to be populated
@@ -1063,7 +1061,7 @@ describe('Home', () => {
       render(<Home />)
 
       await waitFor(() => {
-        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id, mockShoppingList.id)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockShoppingList.id)
       })
     })
 
@@ -1209,7 +1207,7 @@ describe('Home', () => {
       await waitFor(() => {
         // getMostPurchasedItems should be called once after updating item
         // (not on initial load because items list is not empty)
-        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id, mockShoppingList.id)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockShoppingList.id)
       })
     })
 
@@ -1234,7 +1232,7 @@ describe('Home', () => {
         items: [mockItemToEdit]
       })
 
-      mockShoppingListService.getUserAisles.mockResolvedValue([
+      mockShoppingListService.getListAisles.mockResolvedValue([
         { id: 'a1', name: 'Bakery', color: '#f59e0b' },
         { id: 'a2', name: 'Pantry', color: '#a855f7' }
       ])
@@ -1271,7 +1269,7 @@ describe('Home', () => {
       await waitFor(() => {
         // getMostPurchasedItems should be called once after updating item
         // (not on initial load because items list is not empty)
-        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockUser.id, mockShoppingList.id)
+        expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith(mockShoppingList.id)
       })
     })
 
@@ -1296,7 +1294,7 @@ describe('Home', () => {
         items: [mockItemToEdit]
       })
 
-      mockShoppingListService.getUserAisles.mockResolvedValue([
+      mockShoppingListService.getListAisles.mockResolvedValue([
         { id: 'a1', name: 'Dairy', color: '#f97316' }
       ])
 
@@ -1345,15 +1343,15 @@ describe('Home', () => {
       // This test verifies that getMostPurchasedItems service method
       // requires and uses the listId parameter to filter results per list
 
-      // Test that the method signature requires both userId and listId
+      // Test that the method signature requires listId
       expect(mockShoppingListService.getMostPurchasedItems).toBeDefined()
 
       // Calling with different listIds should work independently
-      mockShoppingListService.getMostPurchasedItems('user-1', 'list-a')
-      mockShoppingListService.getMostPurchasedItems('user-1', 'list-b')
+      mockShoppingListService.getMostPurchasedItems('list-a')
+      mockShoppingListService.getMostPurchasedItems('list-b')
 
-      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1', 'list-a')
-      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('user-1', 'list-b')
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('list-a')
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('list-b')
     })
 
     it('should return different history results for different lists', async () => {
@@ -1378,7 +1376,7 @@ describe('Home', () => {
       ]
 
       // Mock implementation returns different data based on listId
-      mockShoppingListService.getMostPurchasedItems.mockImplementation((userId, listId) => {
+      mockShoppingListService.getMostPurchasedItems.mockImplementation((listId) => {
         if (listId === 'list-a') {
           return Promise.resolve(historyA)
         } else if (listId === 'list-b') {
@@ -1388,13 +1386,13 @@ describe('Home', () => {
       })
 
       // Verify that with listA, only historyA items are returned
-      const resultA = await mockShoppingListService.getMostPurchasedItems('user-1', 'list-a')
+      const resultA = await mockShoppingListService.getMostPurchasedItems('list-a')
       expect(resultA).toEqual(historyA)
       expect(resultA.find(item => item.name === 'Apples')).toBeDefined()
       expect(resultA.find(item => item.name === 'Oranges')).toBeUndefined()
 
       // Verify that with listB, only historyB items are returned
-      const resultB = await mockShoppingListService.getMostPurchasedItems('user-1', 'list-b')
+      const resultB = await mockShoppingListService.getMostPurchasedItems('list-b')
       expect(resultB).toEqual(historyB)
       expect(resultB.find(item => item.name === 'Oranges')).toBeDefined()
       expect(resultB.find(item => item.name === 'Apples')).toBeUndefined()

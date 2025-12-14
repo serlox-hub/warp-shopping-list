@@ -138,5 +138,53 @@
     "completedCleared": "Completed items cleared",
     "allCleared": "All items cleared",
     "removedFromHistory": "\"{{itemName}}\" removed from purchase history"
+  },
+  "share": {
+    "shareList": "Share",
+    "title": "Share List",
+    "description": "Share this link with others to let them join your shopping list.",
+    "generateLink": "Generate Share Link",
+    "regenerate": "New Link",
+    "revoke": "Revoke",
+    "linkGenerated": "Share link created!",
+    "linkRevoked": "Share link revoked",
+    "linkCopied": "Link copied to clipboard!",
+    "errorGenerating": "Failed to generate share link",
+    "errorRevoking": "Failed to revoke share link",
+    "errorCopying": "Failed to copy link",
+    "expired": "Link expired",
+    "expiresIn1Day": "Expires in 1 day",
+    "expiresInDays": "Expires in {{days}} days",
+    "viewMembers": "View members",
+    "members": "List Members",
+    "membersCount": "{{count}} member(s) in this list",
+    "you": "You",
+    "member": "Member",
+    "leaveList": "Leave List",
+    "confirmLeave": "Are you sure you want to leave this list?",
+    "leftList": "You left the list",
+    "leftAndDeleted": "You left the list (list was deleted as you were the last member)",
+    "errorLeaving": "Failed to leave list",
+    "onlyMemberHint": "Share this list to collaborate with others"
+  },
+  "join": {
+    "title": "Join Shopping List",
+    "loginRequired": "Sign in to join this shared shopping list",
+    "joining": "Joining List...",
+    "pleaseWait": "Please wait while we add you to the list",
+    "success": "Successfully Joined!",
+    "joinedList": "You've joined \"{{listName}}\"",
+    "theList": "the list",
+    "redirecting": "Redirecting to your list...",
+    "alreadyMember": "Already a Member",
+    "alreadyMemberDescription": "You're already a member of this list",
+    "invalidTitle": "Invalid Link",
+    "invalidToken": "This invite link is invalid, expired, or has been revoked",
+    "errorTitle": "Something Went Wrong",
+    "genericError": "An error occurred while joining the list",
+    "goHome": "Go to Home"
+  },
+  "common": {
+    "loading": "Loading..."
   }
 }

@@ -2,16 +2,36 @@ import { supabase } from './supabase'
 import { getDefaultAisleColor } from '@/types/shoppingList'
 
 export class ShoppingListService {
+  // ============================================================================
+  // LIST QUERY METHODS (using list_members junction table)
+  // ============================================================================
+
   static async getUserShoppingLists(userId) {
     try {
       const { data, error } = await supabase
-        .from('shopping_lists')
-        .select('*')
+        .from('list_members')
+        .select(`
+          is_active,
+          joined_at,
+          shopping_lists (
+            id,
+            name,
+            created_by,
+            created_at,
+            updated_at
+          )
+        `)
         .eq('user_id', userId)
-        .order('list_order', { ascending: true });
+        .order('joined_at', { ascending: true });
 
       if (error) throw error;
-      return data || [];
+
+      // Flatten the response to match expected format
+      return (data || []).map(membership => ({
+        ...membership.shopping_lists,
+        is_active: membership.is_active,
+        joined_at: membership.joined_at
+      }));
     } catch (error) {
       console.error('Error getting user shopping lists:', error);
       throw error;
@@ -21,20 +41,36 @@ export class ShoppingListService {
   static async getActiveShoppingList(userId) {
     try {
       const { data, error } = await supabase
-        .from('shopping_lists')
-        .select('*')
+        .from('list_members')
+        .select(`
+          is_active,
+          joined_at,
+          shopping_lists (
+            id,
+            name,
+            created_by,
+            created_at,
+            updated_at
+          )
+        `)
         .eq('user_id', userId)
         .eq('is_active', true)
         .single();
 
       if (error) {
         if (error.code === 'PGRST116') {
-          return this.createShoppingList(userId, 'My Shopping List', true);
+          // No active list found - setup new user
+          const listId = await this.setupNewUser(userId);
+          return this.getActiveShoppingList(userId);
         }
         throw error;
       }
 
-      return data;
+      return {
+        ...data.shopping_lists,
+        is_active: data.is_active,
+        joined_at: data.joined_at
+      };
     } catch (error) {
       console.error('Error getting active shopping list:', error);
       throw error;
@@ -43,42 +79,60 @@ export class ShoppingListService {
 
   static async getActiveShoppingListWithItems(userId) {
     try {
-      const { data, error } = await supabase
-        .from('shopping_lists')
+      // First get the active list membership
+      const { data: membership, error: memberError } = await supabase
+        .from('list_members')
         .select(`
-          *,
-          shopping_items (
-            *,
-            aisle:user_aisles (
-              id,
-              name,
-              color,
-              display_order
-            )
+          is_active,
+          joined_at,
+          shopping_lists (
+            id,
+            name,
+            created_by,
+            created_at,
+            updated_at
           )
         `)
         .eq('user_id', userId)
         .eq('is_active', true)
-        .eq('shopping_items.active', true)
-        .order('created_at', { foreignTable: 'shopping_items', ascending: false })
         .single();
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          const newList = await this.createShoppingList(userId, 'My Shopping List', true);
-          return {
-            list: newList,
-            items: []
-          };
+      if (memberError) {
+        if (memberError.code === 'PGRST116') {
+          // No active list - setup new user
+          await this.setupNewUser(userId);
+          return this.getActiveShoppingListWithItems(userId);
         }
-        throw error;
+        throw memberError;
       }
 
-      const { shopping_items, ...listData } = data;
+      const listId = membership.shopping_lists.id;
+
+      // Get items with list_aisles
+      const { data: items, error: itemsError } = await supabase
+        .from('shopping_items')
+        .select(`
+          *,
+          aisle:list_aisles (
+            id,
+            name,
+            color,
+            display_order
+          )
+        `)
+        .eq('shopping_list_id', listId)
+        .eq('active', true)
+        .order('created_at', { ascending: false });
+
+      if (itemsError) throw itemsError;
 
       return {
-        list: listData,
-        items: shopping_items || []
+        list: {
+          ...membership.shopping_lists,
+          is_active: membership.is_active,
+          joined_at: membership.joined_at
+        },
+        items: items || []
       };
     } catch (error) {
       console.error('Error getting active shopping list with items:', error);
@@ -86,26 +140,46 @@ export class ShoppingListService {
     }
   }
 
+  static async setupNewUser(userId) {
+    try {
+      const { data, error } = await supabase.rpc('setup_new_user', {
+        p_user_id: userId
+      });
+
+      if (error) throw error;
+      return data; // Returns the list ID
+    } catch (error) {
+      console.error('Error setting up new user:', error);
+      throw error;
+    }
+  }
+
   static async createShoppingList(userId, name, setAsActive = false) {
     try {
-      if (setAsActive) {
-        await this.deactivateAllLists(userId);
-      }
-
-      const { data, error } = await supabase
+      // Create the list
+      const { data: list, error: listError } = await supabase
         .from('shopping_lists')
-        .insert([
-          {
-            user_id: userId,
-            name: name.trim(),
-            is_active: setAsActive
-          }
-        ])
+        .insert([{ name: name.trim(), created_by: userId }])
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (listError) throw listError;
+
+      // Add user as member (trigger will handle is_active logic)
+      const { error: memberError } = await supabase
+        .from('list_members')
+        .insert([{
+          list_id: list.id,
+          user_id: userId,
+          is_active: setAsActive
+        }]);
+
+      if (memberError) throw memberError;
+
+      // Create default aisles for the list
+      await this.createDefaultListAisles(list.id);
+
+      return { ...list, is_active: setAsActive };
     } catch (error) {
       console.error('Error creating shopping list:', error);
       throw error;
@@ -114,18 +188,16 @@ export class ShoppingListService {
 
   static async setActiveList(userId, listId) {
     try {
-      await this.deactivateAllLists(userId);
-
-      const { data, error } = await supabase
-        .from('shopping_lists')
-        .update({ is_active: true, updated_at: new Date().toISOString() })
-        .eq('id', listId)
-        .eq('user_id', userId)
-        .select()
-        .single();
+      // The trigger ensure_one_active_list will deactivate other lists
+      const { error } = await supabase
+        .from('list_members')
+        .update({ is_active: true })
+        .eq('list_id', listId)
+        .eq('user_id', userId);
 
       if (error) throw error;
-      return data;
+
+      return this.getActiveShoppingList(userId);
     } catch (error) {
       console.error('Error setting active list:', error);
       throw error;
@@ -135,46 +207,14 @@ export class ShoppingListService {
   static async deactivateAllLists(userId) {
     try {
       const { error } = await supabase
-        .from('shopping_lists')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .from('list_members')
+        .update({ is_active: false })
         .eq('user_id', userId);
 
       if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error deactivating lists:', error);
-      throw error;
-    }
-  }
-
-  static async deleteShoppingList(userId, listId) {
-    try {
-      const allLists = await this.getUserShoppingLists(userId);
-      if (allLists.length === 1) {
-        throw new Error('Cannot delete the last remaining list');
-      }
-
-      const listToDelete = allLists.find(list => list.id === listId);
-      const wasActive = listToDelete?.is_active;
-
-      const { error } = await supabase
-        .from('shopping_lists')
-        .delete()
-        .eq('id', listId)
-        .eq('user_id', userId);
-
-      if (error) throw error;
-
-      if (wasActive) {
-        const remainingLists = allLists.filter(list => list.id !== listId);
-        if (remainingLists.length > 0) {
-          await this.setActiveList(userId, remainingLists[0].id);
-        }
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error deleting shopping list:', error);
       throw error;
     }
   }
@@ -196,13 +236,17 @@ export class ShoppingListService {
     }
   }
 
+  // ============================================================================
+  // SHOPPING ITEMS METHODS (no user_id, uses list_aisles)
+  // ============================================================================
+
   static async getShoppingItems(listId) {
     try {
       const { data, error } = await supabase
         .from('shopping_items')
         .select(`
           *,
-          aisle:user_aisles (
+          aisle:list_aisles (
             id,
             name,
             color,
@@ -221,13 +265,14 @@ export class ShoppingListService {
     }
   }
 
-  static async addShoppingItem(listId, userId, itemData) {
+  static async addShoppingItem(listId, itemData) {
     try {
+      // Check for existing inactive item with same name (for reactivation)
       const { data: existingItem } = await supabase
         .from('shopping_items')
         .select(`
           *,
-          aisle:user_aisles (
+          aisle:list_aisles (
             id,
             name,
             color,
@@ -235,7 +280,6 @@ export class ShoppingListService {
           )
         `)
         .eq('shopping_list_id', listId)
-        .eq('user_id', userId)
         .eq('name', itemData.name)
         .eq('active', false)
         .order('updated_at', { ascending: false })
@@ -243,6 +287,7 @@ export class ShoppingListService {
         .maybeSingle();
 
       if (existingItem) {
+        // Reactivate existing item
         const { data, error } = await supabase
           .from('shopping_items')
           .update({
@@ -256,7 +301,7 @@ export class ShoppingListService {
           .eq('id', existingItem.id)
           .select(`
             *,
-            aisle:user_aisles (
+            aisle:list_aisles (
               id,
               name,
               color,
@@ -269,24 +314,22 @@ export class ShoppingListService {
         return data;
       }
 
+      // Create new item
       const { data, error } = await supabase
         .from('shopping_items')
-        .insert([
-          {
-            shopping_list_id: listId,
-            user_id: userId,
-            name: itemData.name,
-            aisle_id: itemData.aisle_id || null,
-            quantity: itemData.quantity || 1,
-            comment: itemData.comment || '',
-            completed: false,
-            purchase_count: 0,
-            active: true
-          }
-        ])
+        .insert([{
+          shopping_list_id: listId,
+          name: itemData.name,
+          aisle_id: itemData.aisle_id || null,
+          quantity: itemData.quantity || 1,
+          comment: itemData.comment || '',
+          completed: false,
+          purchase_count: 0,
+          active: true
+        }])
         .select(`
           *,
-          aisle:user_aisles (
+          aisle:list_aisles (
             id,
             name,
             color,
@@ -311,7 +354,7 @@ export class ShoppingListService {
         .eq('id', itemId)
         .select(`
           *,
-          aisle:user_aisles (
+          aisle:list_aisles (
             id,
             name,
             color,
@@ -385,19 +428,23 @@ export class ShoppingListService {
     }
   }
 
-  static async getUserAisles(userId) {
+  // ============================================================================
+  // LIST AISLES METHODS (replaces user_aisles)
+  // ============================================================================
+
+  static async getListAisles(listId) {
     try {
       const { data, error } = await supabase
-        .from('user_aisles')
+        .from('list_aisles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('list_id', listId)
         .order('display_order', { ascending: true });
 
       if (error) throw error;
 
       if (!data || data.length === 0) {
-        await this.createDefaultUserAisles(userId);
-        return this.getUserAisles(userId);
+        await this.createDefaultListAisles(listId);
+        return this.getListAisles(listId);
       }
 
       return data.map(aisle => ({
@@ -407,31 +454,31 @@ export class ShoppingListService {
         display_order: aisle.display_order
       }));
     } catch (error) {
-      console.error('Error getting user aisles:', error);
+      console.error('Error getting list aisles:', error);
       throw error;
     }
   }
 
-  static async createDefaultUserAisles(userId) {
+  static async createDefaultListAisles(listId) {
     try {
-      const { error } = await supabase.rpc('create_default_user_aisles', {
-        p_user_id: userId
+      const { error } = await supabase.rpc('create_default_list_aisles', {
+        p_list_id: listId
       });
 
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error('Error creating default user aisles:', error);
+      console.error('Error creating default list aisles:', error);
       throw error;
     }
   }
 
-  static async updateUserAisles(userId, aisles) {
+  static async updateListAisles(listId, aisles) {
     try {
       const { data: existingAisles, error: fetchError } = await supabase
-        .from('user_aisles')
+        .from('list_aisles')
         .select('*')
-        .eq('user_id', userId);
+        .eq('list_id', listId);
 
       if (fetchError) throw fetchError;
 
@@ -452,7 +499,7 @@ export class ShoppingListService {
           const existing = existingAislesMap.get(aisle.id);
           operations.push(
             supabase
-              .from('user_aisles')
+              .from('list_aisles')
               .update({
                 name: aisle.name,
                 color: aisle.color || existing.color || getDefaultAisleColor(aisle.name),
@@ -464,9 +511,9 @@ export class ShoppingListService {
         } else {
           operations.push(
             supabase
-              .from('user_aisles')
+              .from('list_aisles')
               .insert({
-                user_id: userId,
+                list_id: listId,
                 name: aisle.name,
                 color: aisle.color || getDefaultAisleColor(aisle.name),
                 display_order: aisle.display_order ?? index + 1
@@ -483,7 +530,7 @@ export class ShoppingListService {
         const idsToDelete = aislesToDelete.map(a => a.id);
         operations.push(
           supabase
-            .from('user_aisles')
+            .from('list_aisles')
             .delete()
             .in('id', idsToDelete)
         );
@@ -491,15 +538,26 @@ export class ShoppingListService {
 
       await Promise.all(operations);
 
-      return this.getUserAisles(userId);
+      return this.getListAisles(listId);
     } catch (error) {
-      console.error('Error updating user aisles:', error);
+      console.error('Error updating list aisles:', error);
       throw error;
     }
   }
 
-  static async getMostPurchasedItems(userId, listId, limit = 8) {
-    if (!userId || !listId) return [];
+  // Legacy method name for backward compatibility
+  static async getUserAisles(userId) {
+    console.warn('getUserAisles is deprecated, use getListAisles instead');
+    // This will fail without a listId - components need to be updated
+    throw new Error('getUserAisles is deprecated. Use getListAisles(listId) instead.');
+  }
+
+  // ============================================================================
+  // PURCHASE HISTORY METHODS (list-scoped, no user_id)
+  // ============================================================================
+
+  static async getMostPurchasedItems(listId, limit = 8) {
+    if (!listId) return [];
 
     try {
       const { data, error } = await supabase
@@ -510,13 +568,12 @@ export class ShoppingListService {
           quantity,
           purchase_count,
           last_purchased_at,
-          aisle:user_aisles (
+          aisle:list_aisles (
             id,
             name,
             color
           )
         `)
-        .eq('user_id', userId)
         .eq('shopping_list_id', listId)
         .gt('purchase_count', 0)
         .order('purchase_count', { ascending: false })
@@ -531,14 +588,10 @@ export class ShoppingListService {
     }
   }
 
-  static async deleteFromPurchaseHistory(userId, listId, itemName) {
-    if (!userId || !listId || !itemName) return false;
+  static async deleteFromPurchaseHistory(listId, itemName) {
+    if (!listId || !itemName) return false;
 
     try {
-      // Reset purchase_count to 0 for active items with this name in this list
-      // AND delete all inactive items with this name from this list
-      // This completely removes them from purchase history for this specific list
-
       const operations = [];
 
       // Reset purchase_count on active items
@@ -550,7 +603,6 @@ export class ShoppingListService {
             last_purchased_at: null,
             updated_at: new Date().toISOString()
           })
-          .eq('user_id', userId)
           .eq('shopping_list_id', listId)
           .eq('name', itemName)
           .eq('active', true)
@@ -561,7 +613,6 @@ export class ShoppingListService {
         supabase
           .from('shopping_items')
           .delete()
-          .eq('user_id', userId)
           .eq('shopping_list_id', listId)
           .eq('name', itemName)
           .eq('active', false)
@@ -569,7 +620,6 @@ export class ShoppingListService {
 
       const results = await Promise.all(operations);
 
-      // Check for errors in any operation
       for (const result of results) {
         if (result.error) throw result.error;
       }
@@ -579,5 +629,227 @@ export class ShoppingListService {
       console.error('Error deleting from purchase history:', error);
       throw error;
     }
+  }
+
+  // ============================================================================
+  // SHARING METHODS
+  // ============================================================================
+
+  static async generateShareLink(listId, userId) {
+    try {
+      const { data, error } = await supabase.rpc('generate_list_invite', {
+        p_list_id: listId,
+        p_user_id: userId
+      });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new Error('Failed to generate invite');
+      }
+
+      const invite = data[0];
+      const baseUrl = typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+      return {
+        token: invite.token,
+        url: `${baseUrl}/join/${invite.token}`,
+        expiresAt: invite.expires_at
+      };
+    } catch (error) {
+      console.error('Error generating share link:', error);
+      throw error;
+    }
+  }
+
+  static async revokeShareLink(listId) {
+    try {
+      const { data, error } = await supabase.rpc('revoke_list_invites', {
+        p_list_id: listId
+      });
+
+      if (error) throw error;
+      return data; // Returns count of revoked invites
+    } catch (error) {
+      console.error('Error revoking share link:', error);
+      throw error;
+    }
+  }
+
+  static async getActiveShareLink(listId) {
+    try {
+      const { data, error } = await supabase
+        .from('list_invites')
+        .select('*')
+        .eq('list_id', listId)
+        .is('revoked_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) return null;
+
+      const baseUrl = typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+      return {
+        token: data.token,
+        url: `${baseUrl}/join/${data.token}`,
+        expiresAt: data.expires_at,
+        createdAt: data.created_at
+      };
+    } catch (error) {
+      console.error('Error getting active share link:', error);
+      throw error;
+    }
+  }
+
+  static async joinListViaInvite(token, userId) {
+    try {
+      const { data, error } = await supabase.rpc('join_list_via_invite', {
+        p_token: token,
+        p_user_id: userId
+      });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new Error('Failed to join list');
+      }
+
+      const result = data[0];
+
+      // Set the new list as active for this user
+      await this.setActiveList(userId, result.list_id);
+
+      return {
+        listId: result.list_id,
+        listName: result.list_name,
+        joinedAt: result.joined_at
+      };
+    } catch (error) {
+      console.error('Error joining list via invite:', error);
+      throw error;
+    }
+  }
+
+  static async leaveList(listId, userId) {
+    try {
+      const { data, error } = await supabase.rpc('leave_list', {
+        p_list_id: listId,
+        p_user_id: userId
+      });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new Error('Failed to leave list');
+      }
+
+      const result = data[0];
+
+      // If list was active and user still has lists, activate another one
+      if (!result.list_deleted) {
+        const lists = await this.getUserShoppingLists(userId);
+        if (lists.length > 0 && !lists.some(l => l.is_active)) {
+          await this.setActiveList(userId, lists[0].id);
+        }
+      }
+
+      return {
+        wasLastMember: result.was_last_member,
+        listDeleted: result.list_deleted
+      };
+    } catch (error) {
+      console.error('Error leaving list:', error);
+      throw error;
+    }
+  }
+
+  static async getListMembers(listId) {
+    try {
+      const { data, error } = await supabase.rpc('get_list_members', {
+        p_list_id: listId
+      });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error getting list members:', error);
+      throw error;
+    }
+  }
+
+  static async isListShared(listId) {
+    try {
+      const members = await this.getListMembers(listId);
+      return members.length > 1;
+    } catch (error) {
+      console.error('Error checking if list is shared:', error);
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // REFRESH METHOD (for manual sync in collaborative lists)
+  // ============================================================================
+
+  static async refreshList(listId) {
+    try {
+      // Fetch list metadata
+      const { data: list, error: listError } = await supabase
+        .from('shopping_lists')
+        .select('*')
+        .eq('id', listId)
+        .single();
+
+      if (listError) throw listError;
+
+      // Fetch items with aisles
+      const { data: items, error: itemsError } = await supabase
+        .from('shopping_items')
+        .select(`
+          *,
+          aisle:list_aisles (
+            id,
+            name,
+            color,
+            display_order
+          )
+        `)
+        .eq('shopping_list_id', listId)
+        .eq('active', true)
+        .order('created_at', { ascending: false });
+
+      if (itemsError) throw itemsError;
+
+      // Fetch aisles
+      const aisles = await this.getListAisles(listId);
+
+      // Fetch members
+      const members = await this.getListMembers(listId);
+
+      return {
+        list,
+        items: items || [],
+        aisles,
+        members
+      };
+    } catch (error) {
+      console.error('Error refreshing list:', error);
+      throw error;
+    }
+  }
+
+  // Legacy method - redirect to leaveList
+  static async deleteShoppingList(userId, listId) {
+    console.warn('deleteShoppingList is deprecated, use leaveList instead');
+    return this.leaveList(listId, userId);
   }
 }

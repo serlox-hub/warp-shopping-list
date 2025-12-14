@@ -140,5 +140,53 @@
     "completedCleared": "Elementos completados limpiados",
     "allCleared": "Todos los elementos limpiados",
     "removedFromHistory": "\"{{itemName}}\" eliminado del historial de compras"
+  },
+  "share": {
+    "shareList": "Compartir",
+    "title": "Compartir Lista",
+    "description": "Comparte este enlace con otros para que se unan a tu lista de compras.",
+    "generateLink": "Generar Enlace",
+    "regenerate": "Nuevo Enlace",
+    "revoke": "Revocar",
+    "linkGenerated": "¡Enlace de compartir creado!",
+    "linkRevoked": "Enlace de compartir revocado",
+    "linkCopied": "¡Enlace copiado al portapapeles!",
+    "errorGenerating": "Error al generar el enlace",
+    "errorRevoking": "Error al revocar el enlace",
+    "errorCopying": "Error al copiar el enlace",
+    "expired": "Enlace expirado",
+    "expiresIn1Day": "Expira en 1 día",
+    "expiresInDays": "Expira en {{days}} días",
+    "viewMembers": "Ver miembros",
+    "members": "Miembros de la Lista",
+    "membersCount": "{{count}} miembro(s) en esta lista",
+    "you": "Tú",
+    "member": "Miembro",
+    "leaveList": "Abandonar Lista",
+    "confirmLeave": "¿Estás seguro de que quieres abandonar esta lista?",
+    "leftList": "Has abandonado la lista",
+    "leftAndDeleted": "Has abandonado la lista (la lista fue eliminada porque eras el último miembro)",
+    "errorLeaving": "Error al abandonar la lista",
+    "onlyMemberHint": "Comparte esta lista para colaborar con otros"
+  },
+  "join": {
+    "title": "Unirse a Lista de Compras",
+    "loginRequired": "Inicia sesión para unirte a esta lista de compras compartida",
+    "joining": "Uniéndose a la Lista...",
+    "pleaseWait": "Por favor espera mientras te agregamos a la lista",
+    "success": "¡Te has unido exitosamente!",
+    "joinedList": "Te has unido a \"{{listName}}\"",
+    "theList": "la lista",
+    "redirecting": "Redirigiendo a tu lista...",
+    "alreadyMember": "Ya eres Miembro",
+    "alreadyMemberDescription": "Ya eres miembro de esta lista",
+    "invalidTitle": "Enlace Inválido",
+    "invalidToken": "Este enlace de invitación es inválido, ha expirado o fue revocado",
+    "errorTitle": "Algo Salió Mal",
+    "genericError": "Ocurrió un error al unirse a la lista",
+    "goHome": "Ir al Inicio"
+  },
+  "common": {
+    "loading": "Cargando..."
   }
 }
