@@ -26,7 +26,7 @@ export default function ListMembersDisplay({ listId, currentUserId, onLeaveList 
 
     setLoading(true);
     try {
-      const data = await ShoppingListService.getListMembers(listId);
+      const data = await ShoppingListService.getListMembers(listId, currentUserId);
       setMembers(data || []);
     } catch (error) {
       console.error('Error loading list members:', error);
@@ -99,7 +99,7 @@ export default function ListMembersDisplay({ listId, currentUserId, onLeaveList 
         {loading ? (
           <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
         ) : (
-          <>
+          <div className="flex items-center -space-x-2">
             {members.slice(0, 3).map((member, index) => (
               <div
                 key={member.user_id}
@@ -117,7 +117,7 @@ export default function ListMembersDisplay({ listId, currentUserId, onLeaveList 
                 +{members.length - 3}
               </div>
             )}
-          </>
+          </div>
         )}
       </button>
 

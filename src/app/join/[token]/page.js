@@ -1,17 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, use } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 import LoginForm from '@/components/LoginForm';
 
 export default function JoinListPage({ params }) {
-  const { token } = params;
+  const { token } = use(params);
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
   const t = useTranslations();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [status, setStatus] = useState('loading'); // loading, invalid, joining, success, error, already_member
   const [listInfo, setListInfo] = useState(null);
@@ -53,13 +59,13 @@ export default function JoinListPage({ params }) {
     }
   };
 
-  // Show loading while checking auth
-  if (authLoading) {
+  // Show loading while checking auth or before client mount (avoid hydration mismatch)
+  if (authLoading || !mounted) {
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4" />
-          <p className="text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
+          <p className="text-slate-600 dark:text-slate-400">&nbsp;</p>
         </div>
       </div>
     );
@@ -85,7 +91,7 @@ export default function JoinListPage({ params }) {
               </p>
             </div>
           </div>
-          <LoginForm />
+          <LoginForm redirectTo={pathname} />
         </div>
       </div>
     );

@@ -33,7 +33,7 @@ export default function ListSelector({ currentList, onListChange }) {
       await Promise.all(
         userLists.map(async (list) => {
           try {
-            const isShared = await ShoppingListService.isListShared(list.id);
+            const isShared = await ShoppingListService.isListShared(list.id, user.id);
             if (isShared) {
               sharedIds.add(list.id);
             }

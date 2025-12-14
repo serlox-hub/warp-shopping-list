@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 
-export default function LoginForm() {
+export default function LoginForm({ redirectTo = null }) {
   const { signInWithGoogle } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -12,7 +12,7 @@ export default function LoginForm() {
     try {
       setLoading(true);
       setError(null);
-      await signInWithGoogle();
+      await signInWithGoogle(redirectTo);
     } catch (error) {
       setError(error.message);
     } finally {

@@ -69,12 +69,18 @@ export const AuthProvider = ({ children }) => {
     return () => subscription?.unsubscribe();
   }, [updateUserState]);
 
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (redirectTo = null) => {
     try {
+      // Build callback URL with optional redirect_to parameter
+      let callbackUrl = `${window.location.origin}/auth/callback`;
+      if (redirectTo) {
+        callbackUrl += `?redirect_to=${encodeURIComponent(redirectTo)}`;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl,
         },
       });
       if (error) throw error;

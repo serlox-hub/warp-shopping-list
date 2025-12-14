@@ -156,28 +156,26 @@ export class ShoppingListService {
 
   static async createShoppingList(userId, name, setAsActive = false) {
     try {
-      // Create the list
-      const { data: list, error: listError } = await supabase
-        .from('shopping_lists')
-        .insert([{ name: name.trim(), created_by: userId }])
-        .select()
-        .single();
+      // Use RPC function to create list (bypasses RLS issues)
+      const { data: listId, error: createError } = await supabase.rpc('create_shopping_list', {
+        p_user_id: userId,
+        p_name: name.trim(),
+        p_set_active: setAsActive
+      });
 
-      if (listError) throw listError;
-
-      // Add user as member (trigger will handle is_active logic)
-      const { error: memberError } = await supabase
-        .from('list_members')
-        .insert([{
-          list_id: list.id,
-          user_id: userId,
-          is_active: setAsActive
-        }]);
-
-      if (memberError) throw memberError;
+      if (createError) throw createError;
 
       // Create default aisles for the list
-      await this.createDefaultListAisles(list.id);
+      await this.createDefaultListAisles(listId);
+
+      // Fetch the created list to return full data
+      const { data: list, error: fetchError } = await supabase
+        .from('shopping_lists')
+        .select('*')
+        .eq('id', listId)
+        .single();
+
+      if (fetchError) throw fetchError;
 
       return { ...list, is_active: setAsActive };
     } catch (error) {
@@ -772,10 +770,11 @@ export class ShoppingListService {
     }
   }
 
-  static async getListMembers(listId) {
+  static async getListMembers(listId, userId) {
     try {
       const { data, error } = await supabase.rpc('get_list_members', {
-        p_list_id: listId
+        p_list_id: listId,
+        p_user_id: userId
       });
 
       if (error) throw error;
@@ -786,9 +785,9 @@ export class ShoppingListService {
     }
   }
 
-  static async isListShared(listId) {
+  static async isListShared(listId, userId) {
     try {
-      const members = await this.getListMembers(listId);
+      const members = await this.getListMembers(listId, userId);
       return members.length > 1;
     } catch (error) {
       console.error('Error checking if list is shared:', error);
@@ -800,7 +799,7 @@ export class ShoppingListService {
   // REFRESH METHOD (for manual sync in collaborative lists)
   // ============================================================================
 
-  static async refreshList(listId) {
+  static async refreshList(listId, userId) {
     try {
       // Fetch list metadata
       const { data: list, error: listError } = await supabase
@@ -832,8 +831,8 @@ export class ShoppingListService {
       // Fetch aisles
       const aisles = await this.getListAisles(listId);
 
-      // Fetch members
-      const members = await this.getListMembers(listId);
+      // Fetch members (only if userId provided)
+      const members = userId ? await this.getListMembers(listId, userId) : [];
 
       return {
         list,

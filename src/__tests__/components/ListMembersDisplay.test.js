@@ -50,7 +50,7 @@ describe('ListMembersDisplay', () => {
     render(<ListMembersDisplay {...defaultProps} />);
 
     await waitFor(() => {
-      expect(mockShoppingListService.getListMembers).toHaveBeenCalledWith('list-1');
+      expect(mockShoppingListService.getListMembers).toHaveBeenCalledWith('list-1', 'user-1');
     });
 
     // Should show avatars
@@ -67,7 +67,7 @@ describe('ListMembersDisplay', () => {
     const { container } = render(<ListMembersDisplay {...defaultProps} />);
 
     await waitFor(() => {
-      expect(mockShoppingListService.getListMembers).toHaveBeenCalledWith('list-1');
+      expect(mockShoppingListService.getListMembers).toHaveBeenCalledWith('list-1', 'user-1');
     });
 
     // Wait for loading to complete and check that nothing renders
@@ -347,7 +347,7 @@ describe('ListMembersDisplay', () => {
     const { rerender } = render(<ListMembersDisplay {...defaultProps} />);
 
     await waitFor(() => {
-      expect(mockShoppingListService.getListMembers).toHaveBeenCalledWith('list-1');
+      expect(mockShoppingListService.getListMembers).toHaveBeenCalledWith('list-1', 'user-1');
     });
 
     mockShoppingListService.getListMembers.mockClear();
@@ -355,7 +355,7 @@ describe('ListMembersDisplay', () => {
     rerender(<ListMembersDisplay {...defaultProps} listId="list-2" />);
 
     await waitFor(() => {
-      expect(mockShoppingListService.getListMembers).toHaveBeenCalledWith('list-2');
+      expect(mockShoppingListService.getListMembers).toHaveBeenCalledWith('list-2', 'user-1');
     });
   });
 });

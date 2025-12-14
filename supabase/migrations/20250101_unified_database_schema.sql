@@ -701,7 +701,8 @@ COMMENT ON FUNCTION public.create_default_user_preferences IS 'Creates default p
 -- Function to get all members of a list (bypasses RLS to avoid recursion)
 CREATE OR REPLACE FUNCTION public.get_list_members(p_list_id UUID, p_user_id UUID)
 RETURNS TABLE (
-    member_user_id UUID,
+    user_id UUID,
+    email TEXT,
     is_active BOOLEAN,
     joined_at TIMESTAMP WITH TIME ZONE
 ) AS $$
@@ -709,24 +710,83 @@ BEGIN
     -- First verify the requesting user is a member of the list
     IF NOT EXISTS (
         SELECT 1 FROM public.list_members
-        WHERE list_id = p_list_id AND user_id = p_user_id
+        WHERE list_id = p_list_id AND list_members.user_id = p_user_id
     ) THEN
         RAISE EXCEPTION 'User is not a member of this list';
     END IF;
 
-    -- Return all members
+    -- Return all members with their email (use AS to avoid ambiguity with RETURNS TABLE columns)
     RETURN QUERY
-    SELECT lm.user_id, lm.is_active, lm.joined_at
+    SELECT lm.user_id AS user_id, au.email::TEXT AS email, lm.is_active AS is_active, lm.joined_at AS joined_at
     FROM public.list_members lm
+    JOIN auth.users au ON au.id = lm.user_id
     WHERE lm.list_id = p_list_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-COMMENT ON FUNCTION public.get_list_members IS 'Gets all members of a list. Requires caller to be a member. Uses SECURITY DEFINER to bypass RLS.';
+COMMENT ON FUNCTION public.get_list_members IS 'Gets all members of a list with emails. Requires caller to be a member. Uses SECURITY DEFINER to bypass RLS.';
+
+-- Function to create a shopping list (bypasses RLS)
+CREATE OR REPLACE FUNCTION public.create_shopping_list(
+    p_user_id UUID,
+    p_name TEXT,
+    p_set_active BOOLEAN DEFAULT false
+)
+RETURNS UUID AS $$
+DECLARE
+    v_list_id UUID;
+BEGIN
+    -- Verify the caller is the user (security check)
+    IF auth.uid() IS NULL OR auth.uid() != p_user_id THEN
+        RAISE EXCEPTION 'Unauthorized: user mismatch';
+    END IF;
+
+    -- Create the list
+    INSERT INTO public.shopping_lists (name, created_by)
+    VALUES (p_name, p_user_id)
+    RETURNING id INTO v_list_id;
+
+    -- Add user as member
+    INSERT INTO public.list_members (list_id, user_id, is_active)
+    VALUES (v_list_id, p_user_id, p_set_active);
+
+    RETURN v_list_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+SET row_security = off;
+
+COMMENT ON FUNCTION public.create_shopping_list IS 'Creates a new shopping list and adds the user as a member. Uses SECURITY DEFINER with RLS bypass.';
 
 -- =============================================================================
 -- 5. TRIGGERS
 -- =============================================================================
+
+-- Trigger function to ensure only one active list per user
+CREATE OR REPLACE FUNCTION public.ensure_single_active_list()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- If setting this membership as active, deactivate all other lists for this user
+    IF NEW.is_active = true THEN
+        UPDATE public.list_members
+        SET is_active = false
+        WHERE user_id = NEW.user_id
+          AND list_id != NEW.list_id
+          AND is_active = true;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION public.ensure_single_active_list IS 'Trigger function to ensure each user has only one active list';
+
+-- Trigger to ensure single active list per user
+CREATE TRIGGER ensure_single_active_list_trigger
+    BEFORE INSERT OR UPDATE ON public.list_members
+    FOR EACH ROW
+    EXECUTE FUNCTION public.ensure_single_active_list();
+
+COMMENT ON TRIGGER ensure_single_active_list_trigger ON public.list_members IS 'Automatically deactivates other lists when a new list is set as active';
 
 -- Trigger function to cleanup orphaned lists when last member leaves
 CREATE OR REPLACE FUNCTION public.cleanup_empty_lists()

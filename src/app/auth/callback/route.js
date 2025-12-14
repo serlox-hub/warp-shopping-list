@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 export async function GET(request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const redirectTo = requestUrl.searchParams.get('redirect_to')
 
   if (code) {
     const cookieStore = cookies()
@@ -33,6 +34,10 @@ export async function GET(request) {
     await supabase.auth.exchangeCodeForSession(code)
   }
 
-  // Redirect to the home page
-  return NextResponse.redirect(requestUrl.origin)
+  // Redirect to the original page or home
+  const redirectUrl = redirectTo
+    ? new URL(redirectTo, requestUrl.origin).toString()
+    : requestUrl.origin
+
+  return NextResponse.redirect(redirectUrl)
 }

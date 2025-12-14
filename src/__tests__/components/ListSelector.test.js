@@ -749,8 +749,8 @@ describe('ListSelector', () => {
     render(<ListSelector currentList={sharedList} onListChange={jest.fn()} />)
 
     await waitFor(() => {
-      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-1')
-      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-2')
+      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-1', 'user-1')
+      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-2', 'user-1')
     })
 
     // The shared indicator should be visible for shared list
@@ -769,7 +769,7 @@ describe('ListSelector', () => {
     render(<ListSelector currentList={privateList} onListChange={jest.fn()} />)
 
     await waitFor(() => {
-      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-1')
+      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-1', 'user-1')
     })
 
     // Should not have shared indicator

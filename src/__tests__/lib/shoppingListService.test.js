@@ -210,26 +210,33 @@ describe('ShoppingListService', () => {
   })
 
   describe('createShoppingList', () => {
-    it('should create a new shopping list with membership', async () => {
-      const newList = { ...mockShoppingList, id: 'new-list-123' }
+    it('should create a new shopping list with membership via RPC', async () => {
+      const newListId = 'new-list-123'
+      const newList = { ...mockShoppingList, id: newListId }
 
-      mockSupabase.from
-        .mockReturnValueOnce({
-          insert: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({ data: newList, error: null })
-            })
+      // Mock RPC call to create_shopping_list
+      mockSupabase.rpc.mockResolvedValueOnce({ data: newListId, error: null })
+
+      // Mock createDefaultListAisles RPC call
+      mockSupabase.rpc.mockResolvedValueOnce({ data: null, error: null })
+
+      // Mock fetch of created list
+      mockSupabase.from.mockReturnValueOnce({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({ data: newList, error: null })
           })
         })
-        .mockReturnValueOnce({
-          insert: jest.fn().mockResolvedValue({ data: null, error: null })
-        })
-
-      mockSupabase.rpc.mockResolvedValue({ data: null, error: null })
+      })
 
       const result = await ShoppingListService.createShoppingList(mockUserId, 'Test List', true)
 
-      expect(result.name).toBe('My Shopping List')
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('create_shopping_list', {
+        p_user_id: mockUserId,
+        p_name: 'Test List',
+        p_set_active: true
+      })
+      expect(result.id).toBe(newListId)
       expect(result.is_active).toBe(true)
     })
   })
@@ -710,10 +717,10 @@ describe('ShoppingListService', () => {
       ]
       mockSupabase.rpc.mockResolvedValue({ data: mockMembers, error: null })
 
-      const result = await ShoppingListService.getListMembers(mockListId)
+      const result = await ShoppingListService.getListMembers(mockListId, mockUserId)
 
       expect(result).toEqual(mockMembers)
-      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_list_members', { p_list_id: mockListId })
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_list_members', { p_list_id: mockListId, p_user_id: mockUserId })
     })
   })
 
@@ -725,7 +732,7 @@ describe('ShoppingListService', () => {
       ]
       mockSupabase.rpc.mockResolvedValue({ data: mockMembers, error: null })
 
-      const result = await ShoppingListService.isListShared(mockListId)
+      const result = await ShoppingListService.isListShared(mockListId, mockUserId)
 
       expect(result).toBe(true)
     })
@@ -734,7 +741,7 @@ describe('ShoppingListService', () => {
       const mockMembers = [{ user_id: 'user-1' }]
       mockSupabase.rpc.mockResolvedValue({ data: mockMembers, error: null })
 
-      const result = await ShoppingListService.isListShared(mockListId)
+      const result = await ShoppingListService.isListShared(mockListId, mockUserId)
 
       expect(result).toBe(false)
     })
@@ -773,7 +780,7 @@ describe('ShoppingListService', () => {
 
       mockSupabase.rpc.mockResolvedValue({ data: [{ user_id: mockUserId }], error: null })
 
-      const result = await ShoppingListService.refreshList(mockListId)
+      const result = await ShoppingListService.refreshList(mockListId, mockUserId)
 
       expect(result.list).toEqual(mockShoppingList)
       expect(result.items).toHaveLength(1)

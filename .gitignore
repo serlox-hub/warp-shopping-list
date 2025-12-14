@@ -41,3 +41,5 @@ next-env.d.ts
 # OS files
 Thumbs.db
 .env
+.env.pro
+supabase/.env
