@@ -55,8 +55,8 @@ export default function Header() {
   return (
     <div data-testid="header-container">
       {user && (
-        <div className="relative inline-flex items-center gap-3 z-[80] flex-shrink-0">
-          <div ref={menuRef} className="relative flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 px-3 py-2 shadow-sm backdrop-blur z-[80]">
+        <div className="relative inline-flex items-center gap-3 z-20 flex-shrink-0">
+          <div ref={menuRef} className="relative flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/70 px-3 py-2 shadow-sm backdrop-blur z-20">
             <button
               type="button"
               onClick={toggleMenu}
@@ -87,7 +87,7 @@ export default function Header() {
               <div
                 role="menu"
                 aria-label={t('header.menu.open')}
-                className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 z-[80]"
+                className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 z-20"
               >
                 <button
                   type="button"

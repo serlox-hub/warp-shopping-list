@@ -41,6 +41,9 @@ export default function Home() {
   const [itemUsageHistory, setItemUsageHistory] = useState([]);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [isListShared, setIsListShared] = useState(false);
   const englishCustomAisles = useMemo(() => customAisles.filter(a => a && a.name).map(a => a.name), [customAisles]);
   const localizedCustomAisles = useMemo(() => {
     const englishNames = customAisles.filter(a => a && a.name).map(a => a.name);
@@ -618,8 +621,18 @@ export default function Home() {
                 listId={shoppingList?.id}
                 currentUserId={userId}
                 onLeaveList={handleLeaveList}
+                externalOpen={showMembersModal}
+                onExternalClose={() => setShowMembersModal(false)}
+                showButton={false}
+                onMembersLoad={(data) => setIsListShared(data.isShared)}
               />
-              <ShareListButton listId={shoppingList?.id} userId={userId} />
+              <ShareListButton
+                listId={shoppingList?.id}
+                userId={userId}
+                externalOpen={showShareModal}
+                onExternalClose={() => setShowShareModal(false)}
+                showButton={false}
+              />
               <Header />
             </div>
           </div>
@@ -703,6 +716,36 @@ export default function Home() {
                       className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 z-20"
                       role="menu"
                     >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          setShowShareModal(true);
+                        }}
+                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                      >
+                        <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                        <span>{t('share.shareList')}</span>
+                      </button>
+
+                      {isListShared && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowActionsMenu(false);
+                            setShowMembersModal(true);
+                          }}
+                          className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                        >
+                          <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          <span>{t('share.viewMembers')}</span>
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => {

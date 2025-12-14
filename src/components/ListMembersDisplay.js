@@ -5,14 +5,23 @@ import { useTranslations } from '@/contexts/LanguageContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 
-export default function ListMembersDisplay({ listId, currentUserId, onLeaveList }) {
+export default function ListMembersDisplay({ listId, currentUserId, onLeaveList, externalOpen = false, onExternalClose, showButton = true, onMembersLoad }) {
   const t = useTranslations();
   const { showError, showSuccess } = useNotification();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [leavingList, setLeavingList] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+
+  // Use external control if provided, otherwise use internal state
+  const isOpen = externalOpen || internalOpen;
+  const setIsOpen = (value) => {
+    setInternalOpen(value);
+    if (!value && onExternalClose) {
+      onExternalClose();
+    }
+  };
 
   useEffect(() => {
     if (listId) {
@@ -28,6 +37,11 @@ export default function ListMembersDisplay({ listId, currentUserId, onLeaveList 
     try {
       const data = await ShoppingListService.getListMembers(listId, currentUserId);
       setMembers(data || []);
+
+      // Notify parent about shared status
+      if (onMembersLoad) {
+        onMembersLoad({ isShared: (data || []).length > 1, count: (data || []).length });
+      }
     } catch (error) {
       console.error('Error loading list members:', error);
     } finally {
@@ -83,22 +97,16 @@ export default function ListMembersDisplay({ listId, currentUserId, onLeaveList 
     return colors[index];
   };
 
-  if (!isShared && !loading) {
-    return null; // Don't show anything if list is not shared
-  }
-
   return (
     <>
-      {/* Compact member avatars display */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="flex items-center -space-x-2 hover:opacity-80 transition-opacity"
-        aria-label={t('share.viewMembers')}
-      >
-        {loading ? (
-          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
-        ) : (
+      {showButton && isShared && !loading && (
+        /* Compact member avatars display */
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="flex items-center -space-x-2 hover:opacity-80 transition-opacity"
+          aria-label={t('share.viewMembers')}
+        >
           <div className="flex items-center -space-x-2">
             {members.slice(0, 3).map((member, index) => (
               <div
@@ -118,12 +126,12 @@ export default function ListMembersDisplay({ listId, currentUserId, onLeaveList 
               </div>
             )}
           </div>
-        )}
-      </button>
+        </button>
+      )}
 
       {/* Members modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div
             className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4"
             onClick={(e) => e.stopPropagation()}

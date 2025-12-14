@@ -5,10 +5,19 @@ import { useTranslations } from '@/contexts/LanguageContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 
-export default function ShareListButton({ listId, userId }) {
+export default function ShareListButton({ listId, userId, externalOpen = false, onExternalClose, showButton = true }) {
   const t = useTranslations();
   const { showSuccess, showError } = useNotification();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Use external control if provided, otherwise use internal state
+  const isOpen = externalOpen || internalOpen;
+  const setIsOpen = (value) => {
+    setInternalOpen(value);
+    if (!value && onExternalClose) {
+      onExternalClose();
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [shareLink, setShareLink] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -89,20 +98,22 @@ export default function ShareListButton({ listId, userId }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-        aria-label={t('share.shareList')}
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-        </svg>
-        <span className="hidden sm:inline">{t('share.shareList')}</span>
-      </button>
+      {showButton && (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+          aria-label={t('share.shareList')}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+          <span className="hidden sm:inline">{t('share.shareList')}</span>
+        </button>
+      )}
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div
             className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4"
             onClick={(e) => e.stopPropagation()}
