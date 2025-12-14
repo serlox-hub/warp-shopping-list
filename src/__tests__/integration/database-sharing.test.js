@@ -9,30 +9,34 @@
  * - setup_new_user()
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { describe, test, expect, beforeAll, beforeEach, afterAll } from '@jest/globals';
 import {
   createServiceClient,
   createTestUser,
-  cleanDatabase
+  cleanDatabase,
+  createTestUserId
 } from '../helpers/supabase-test-client';
 
 describe('Database Sharing Functions', () => {
   let serviceClient;
-  let user1Id, user2Id;
+  // Use constant IDs for predictability
+  const user1Id = createTestUserId('user1');
+  const user2Id = createTestUserId('user2');
 
   beforeAll(async () => {
     serviceClient = createServiceClient();
+    // Initial cleanup
+    await cleanDatabase(serviceClient);
+  });
 
-    // Create test users in auth.users
-    user1Id = await createTestUser(serviceClient, 'user1');
-    user2Id = await createTestUser(serviceClient, 'user2');
+  afterAll(async () => {
+    // Final cleanup
+    await cleanDatabase(serviceClient);
   });
 
   beforeEach(async () => {
-    // Clean database before each test
+    // Clean database and recreate test users before each test
     await cleanDatabase(serviceClient);
-
-    // Recreate test users (cleanDatabase removes them)
     await createTestUser(serviceClient, 'user1');
     await createTestUser(serviceClient, 'user2');
   });
@@ -118,8 +122,9 @@ describe('Database Sharing Functions', () => {
 
     beforeEach(async () => {
       // Setup user1 with a list
-      const { data } = await serviceClient
+      const { data, error } = await serviceClient
         .rpc('setup_new_user', { p_user_id: user1Id });
+      if (error) throw new Error(`setup_new_user failed: ${error.message}`);
       listId = data;
     });
 
@@ -181,16 +186,19 @@ describe('Database Sharing Functions', () => {
 
     beforeEach(async () => {
       // Setup user1 with a list
-      const { data } = await serviceClient
+      const { data, error } = await serviceClient
         .rpc('setup_new_user', { p_user_id: user1Id });
+      if (error) throw new Error(`setup_new_user failed: ${error.message}`);
       listId = data;
 
       // Generate invite
-      const { data: inviteData } = await serviceClient
+      const { data: inviteData, error: inviteError } = await serviceClient
         .rpc('generate_list_invite', {
           p_list_id: listId,
           p_user_id: user1Id
         });
+      if (inviteError) throw new Error(`generate_list_invite failed: ${inviteError.message}`);
+      if (!inviteData || !inviteData[0]) throw new Error('generate_list_invite returned no data');
       inviteToken = inviteData[0].token;
     });
 
@@ -278,8 +286,9 @@ describe('Database Sharing Functions', () => {
 
     beforeEach(async () => {
       // Setup user1 with a list
-      const { data } = await serviceClient
+      const { data, error } = await serviceClient
         .rpc('setup_new_user', { p_user_id: user1Id });
+      if (error) throw new Error(`setup_new_user failed: ${error.message}`);
       listId = data;
     });
 
@@ -329,18 +338,22 @@ describe('Database Sharing Functions', () => {
 
     beforeEach(async () => {
       // Setup user1 with a list
-      const { data } = await serviceClient
+      const { data, error } = await serviceClient
         .rpc('setup_new_user', { p_user_id: user1Id });
+      if (error) throw new Error(`setup_new_user failed: ${error.message}`);
       listId = data;
     });
 
     test('should remove user from list', async () => {
       // Add user2 to the list
-      const { data: inviteData } = await serviceClient
+      const { data: inviteData, error: inviteError } = await serviceClient
         .rpc('generate_list_invite', {
           p_list_id: listId,
           p_user_id: user1Id
         });
+      expect(inviteError).toBeNull();
+      expect(inviteData).toHaveLength(1);
+
       await serviceClient.rpc('join_list_via_invite', {
         p_token: inviteData[0].token,
         p_user_id: user2Id

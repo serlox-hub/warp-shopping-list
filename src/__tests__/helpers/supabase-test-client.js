@@ -118,10 +118,20 @@ export async function deleteTestUser(serviceClient, userId) {
 
 /**
  * Clean all data from test database (use with caution!)
+ * Returns true if cleanup was successful
  */
 export async function cleanDatabase(serviceClient) {
-  // Clean auth.users first (test users) - delete the standard test users
-  // This must be done first so foreign key constraints don't prevent deletion
+  // Clean public tables FIRST to avoid RLS issues during CASCADE deletes
+  // Order: dependent tables first, then parent tables
+  // Use not.is(null) on id columns to match all rows (id is never null)
+  await serviceClient.from('shopping_items').delete().not('id', 'is', null);
+  await serviceClient.from('list_invites').delete().not('id', 'is', null);
+  await serviceClient.from('list_aisles').delete().not('id', 'is', null);
+  await serviceClient.from('list_members').delete().not('list_id', 'is', null);
+  await serviceClient.from('shopping_lists').delete().not('id', 'is', null);
+  await serviceClient.from('user_preferences').delete().not('id', 'is', null);
+
+  // Now delete auth.users (no CASCADE issues since public tables are clean)
   const testUserIds = [
     '00000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000002',
@@ -136,14 +146,21 @@ export async function cleanDatabase(serviceClient) {
     }
   }
 
-  // Wait a bit for cascade deletes to complete
+  // Small delay to ensure all deletes are committed
   await new Promise(resolve => setTimeout(resolve, 100));
 
-  // Clean remaining data in reverse dependency order (in case cascade didn't get everything)
-  await serviceClient.from('shopping_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await serviceClient.from('list_invites').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await serviceClient.from('list_aisles').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await serviceClient.from('list_members').delete().neq('list_id', '00000000-0000-0000-0000-000000000000');
-  await serviceClient.from('shopping_lists').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await serviceClient.from('user_preferences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  return true;
+}
+
+/**
+ * Setup test environment with clean database and test users
+ * Use this at the start of each test group
+ */
+export async function setupTestEnvironment(serviceClient) {
+  await cleanDatabase(serviceClient);
+
+  const user1Id = await createTestUser(serviceClient, 'user1');
+  const user2Id = await createTestUser(serviceClient, 'user2');
+
+  return { user1Id, user2Id };
 }

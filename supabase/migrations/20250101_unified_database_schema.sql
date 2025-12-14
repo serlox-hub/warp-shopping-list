@@ -200,36 +200,66 @@ CREATE POLICY "List members can delete lists (via leave_list function)"
         )
     );
 
+-- Allow service operations (cascade deletes) - when no auth context
+CREATE POLICY "Service can delete lists"
+    ON public.shopping_lists FOR DELETE
+    USING (auth.uid() IS NULL);
+
+-- Allow service operations to manage lists (for SECURITY DEFINER functions)
+CREATE POLICY "Service can view lists"
+    ON public.shopping_lists FOR SELECT
+    USING (auth.uid() IS NULL);
+
+CREATE POLICY "Service can insert lists"
+    ON public.shopping_lists FOR INSERT
+    WITH CHECK (auth.uid() IS NULL);
+
+CREATE POLICY "Service can update lists"
+    ON public.shopping_lists FOR UPDATE
+    USING (auth.uid() IS NULL);
+
 -- =============================================================================
 -- RLS POLICIES - LIST MEMBERS
 -- =============================================================================
 -- Users can manage their own membership and view other members of their lists
 
-CREATE POLICY "Users can view members of lists they belong to"
+-- Note: To avoid infinite recursion, this policy only allows users to see their own memberships.
+-- To get other members of a list, use the get_list_members() function.
+CREATE POLICY "Users can view their own memberships"
     ON public.list_members FOR SELECT
-    USING (
-        -- Can see their own membership
-        user_id = auth.uid()
-        OR
-        -- Can see other members of lists they're in
-        EXISTS (
-            SELECT 1 FROM public.list_members lm
-            WHERE lm.list_id = list_members.list_id
-            AND lm.user_id = auth.uid()
-        )
-    );
+    USING (user_id = auth.uid());
+
+-- Allow service operations to read memberships (for SECURITY DEFINER functions)
+CREATE POLICY "Service can view memberships"
+    ON public.list_members FOR SELECT
+    USING (auth.uid() IS NULL);
 
 CREATE POLICY "Users can join lists (via invite function)"
     ON public.list_members FOR INSERT
     WITH CHECK (user_id = auth.uid());
 
+-- Allow service operations to insert memberships (for SECURITY DEFINER functions)
+CREATE POLICY "Service can insert memberships"
+    ON public.list_members FOR INSERT
+    WITH CHECK (auth.uid() IS NULL);
+
 CREATE POLICY "Users can update their own membership (set active list)"
     ON public.list_members FOR UPDATE
     USING (user_id = auth.uid());
 
+-- Allow service operations to update memberships (for triggers)
+CREATE POLICY "Service can update memberships"
+    ON public.list_members FOR UPDATE
+    USING (auth.uid() IS NULL);
+
 CREATE POLICY "Users can leave lists (delete own membership)"
     ON public.list_members FOR DELETE
     USING (user_id = auth.uid());
+
+-- Allow service operations (auth cascade deletes) - when no auth context
+CREATE POLICY "Service can delete memberships"
+    ON public.list_members FOR DELETE
+    USING (auth.uid() IS NULL);
 
 -- =============================================================================
 -- RLS POLICIES - LIST INVITES
@@ -270,6 +300,24 @@ CREATE POLICY "List members can delete invites"
             AND list_members.user_id = auth.uid()
         )
     );
+
+-- Allow service operations (cascade deletes) - when no auth context
+CREATE POLICY "Service can delete invites"
+    ON public.list_invites FOR DELETE
+    USING (auth.uid() IS NULL);
+
+-- Allow service operations to manage invites (for SECURITY DEFINER functions)
+CREATE POLICY "Service can view invites"
+    ON public.list_invites FOR SELECT
+    USING (auth.uid() IS NULL);
+
+CREATE POLICY "Service can insert invites"
+    ON public.list_invites FOR INSERT
+    WITH CHECK (auth.uid() IS NULL);
+
+CREATE POLICY "Service can update invites"
+    ON public.list_invites FOR UPDATE
+    USING (auth.uid() IS NULL);
 
 -- =============================================================================
 -- RLS POLICIES - LIST AISLES
@@ -316,6 +364,20 @@ CREATE POLICY "List members can delete aisles"
         )
     );
 
+-- Allow service operations (cascade deletes) - when no auth context
+CREATE POLICY "Service can delete aisles"
+    ON public.list_aisles FOR DELETE
+    USING (auth.uid() IS NULL);
+
+-- Allow service operations to manage aisles (for SECURITY DEFINER functions)
+CREATE POLICY "Service can view aisles"
+    ON public.list_aisles FOR SELECT
+    USING (auth.uid() IS NULL);
+
+CREATE POLICY "Service can insert aisles"
+    ON public.list_aisles FOR INSERT
+    WITH CHECK (auth.uid() IS NULL);
+
 -- =============================================================================
 -- RLS POLICIES - SHOPPING ITEMS
 -- =============================================================================
@@ -361,6 +423,11 @@ CREATE POLICY "List members can delete items"
         )
     );
 
+-- Allow service operations (cascade deletes) - when no auth context
+CREATE POLICY "Service can delete items"
+    ON public.shopping_items FOR DELETE
+    USING (auth.uid() IS NULL);
+
 -- =============================================================================
 -- RLS POLICIES - USER PREFERENCES
 -- =============================================================================
@@ -369,6 +436,16 @@ CREATE POLICY "List members can delete items"
 CREATE POLICY "Users can manage their own preferences"
     ON public.user_preferences FOR ALL
     USING (auth.uid() = user_id);
+
+-- Allow service operations (cascade deletes) - when no auth context
+CREATE POLICY "Service can delete preferences"
+    ON public.user_preferences FOR DELETE
+    USING (auth.uid() IS NULL);
+
+-- Allow service operations to manage preferences (for SECURITY DEFINER functions)
+CREATE POLICY "Service can insert preferences"
+    ON public.user_preferences FOR INSERT
+    WITH CHECK (auth.uid() IS NULL);
 
 -- =============================================================================
 -- 4. DATABASE FUNCTIONS
@@ -450,7 +527,7 @@ BEGIN
     -- Generate unique token
     LOOP
         v_token := public.generate_invite_token();
-        EXIT WHEN NOT EXISTS (SELECT 1 FROM public.list_invites WHERE token = v_token);
+        EXIT WHEN NOT EXISTS (SELECT 1 FROM public.list_invites li WHERE li.token = v_token);
     END LOOP;
 
     -- Set expiration to 7 days from now
@@ -459,7 +536,7 @@ BEGIN
     -- Insert invite
     INSERT INTO public.list_invites (list_id, token, created_by, expires_at)
     VALUES (p_list_id, v_token, p_user_id, v_expires_at)
-    RETURNING id, list_invites.token, list_invites.expires_at INTO v_invite_id, v_token, v_expires_at;
+    RETURNING id INTO v_invite_id;
 
     RETURN QUERY SELECT v_invite_id, v_token, v_expires_at;
 END;
@@ -531,7 +608,7 @@ BEGIN
         FROM public.shopping_lists sl
         WHERE sl.id = v_invite.list_id;
 
-        RETURN QUERY SELECT v_list.id, v_list.name, timezone('utc'::text, now());
+        RETURN QUERY SELECT v_list.id, v_list.name, now();
         RETURN;
     END IF;
 
@@ -621,6 +698,32 @@ $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION public.create_default_user_preferences IS 'Creates default preferences for a new user';
 
+-- Function to get all members of a list (bypasses RLS to avoid recursion)
+CREATE OR REPLACE FUNCTION public.get_list_members(p_list_id UUID, p_user_id UUID)
+RETURNS TABLE (
+    member_user_id UUID,
+    is_active BOOLEAN,
+    joined_at TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+    -- First verify the requesting user is a member of the list
+    IF NOT EXISTS (
+        SELECT 1 FROM public.list_members
+        WHERE list_id = p_list_id AND user_id = p_user_id
+    ) THEN
+        RAISE EXCEPTION 'User is not a member of this list';
+    END IF;
+
+    -- Return all members
+    RETURN QUERY
+    SELECT lm.user_id, lm.is_active, lm.joined_at
+    FROM public.list_members lm
+    WHERE lm.list_id = p_list_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+COMMENT ON FUNCTION public.get_list_members IS 'Gets all members of a list. Requires caller to be a member. Uses SECURITY DEFINER to bypass RLS.';
+
 -- =============================================================================
 -- 5. TRIGGERS
 -- =============================================================================
@@ -698,7 +801,9 @@ BEGIN
     END IF;
 
     -- If deactivating a list, check if user has no active lists
-    IF NEW.is_active = false AND OLD.is_active = true THEN
+    -- Only do this at trigger depth 1 to avoid recursive auto-activation
+    -- when deactivating lists as a side effect of activating another list
+    IF NEW.is_active = false AND OLD.is_active = true AND pg_trigger_depth() = 1 THEN
         -- Check if this was the user's only active list
         IF NOT EXISTS (
             SELECT 1 FROM public.list_members
@@ -706,17 +811,17 @@ BEGIN
               AND is_active = true
               AND list_id != NEW.list_id
         ) THEN
-            -- Make the first available list active
+            -- Make the first available list active (excluding current one)
             UPDATE public.list_members
             SET is_active = true
             WHERE user_id = NEW.user_id
               AND list_id = (
                   SELECT list_id FROM public.list_members
                   WHERE user_id = NEW.user_id
+                    AND list_id != NEW.list_id
                   ORDER BY joined_at ASC
                   LIMIT 1
-              )
-              AND list_id != NEW.list_id;
+              );
         END IF;
     END IF;
 
@@ -781,6 +886,9 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authentic
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO anon;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
+
+-- Ensure postgres role can manage all tables (for auth cascade deletes)
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres;
 
 -- =============================================================================
 -- SCHEMA COMPLETE

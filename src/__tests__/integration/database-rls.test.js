@@ -11,34 +11,38 @@ import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/g
 import {
   createServiceClient,
   createTestUser,
-  cleanDatabase
+  cleanDatabase,
+  createTestUserId
 } from '../helpers/supabase-test-client';
 
 describe('Database RLS Policies', () => {
   let serviceClient;
-  let user1Id, user2Id;
+  const user1Id = createTestUserId('user1');
+  const user2Id = createTestUserId('user2');
   let user1List, user2List;
 
   beforeAll(async () => {
     serviceClient = createServiceClient();
+    await cleanDatabase(serviceClient);
+  });
 
-    // Create test users in auth.users
-    user1Id = await createTestUser(serviceClient, 'user1');
-    user2Id = await createTestUser(serviceClient, 'user2');
+  afterAll(async () => {
+    await cleanDatabase(serviceClient);
   });
 
   beforeEach(async () => {
     await cleanDatabase(serviceClient);
-
-    // Recreate test users (cleanDatabase removes them)
     await createTestUser(serviceClient, 'user1');
     await createTestUser(serviceClient, 'user2');
 
     // Setup both users with lists
-    const { data: list1 } = await serviceClient
+    const { data: list1, error: err1 } = await serviceClient
       .rpc('setup_new_user', { p_user_id: user1Id });
-    const { data: list2 } = await serviceClient
+    if (err1) throw new Error(`setup_new_user user1 failed: ${err1.message}`);
+
+    const { data: list2, error: err2 } = await serviceClient
       .rpc('setup_new_user', { p_user_id: user2Id });
+    if (err2) throw new Error(`setup_new_user user2 failed: ${err2.message}`);
 
     user1List = list1;
     user2List = list2;

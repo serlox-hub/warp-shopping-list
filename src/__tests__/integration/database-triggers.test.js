@@ -12,23 +12,26 @@ import { describe, test, expect, beforeAll, afterAll, beforeEach } from '@jest/g
 import {
   createServiceClient,
   createTestUser,
-  cleanDatabase
+  cleanDatabase,
+  createTestUserId
 } from '../helpers/supabase-test-client';
 
 describe('Database Triggers', () => {
   let serviceClient;
-  let user1Id, user2Id;
+  const user1Id = createTestUserId('user1');
+  const user2Id = createTestUserId('user2');
 
   beforeAll(async () => {
     serviceClient = createServiceClient();
-    user1Id = await createTestUser(serviceClient, 'user1');
-    user2Id = await createTestUser(serviceClient, 'user2');
+    await cleanDatabase(serviceClient);
+  });
+
+  afterAll(async () => {
+    await cleanDatabase(serviceClient);
   });
 
   beforeEach(async () => {
     await cleanDatabase(serviceClient);
-
-    // Recreate test users (cleanDatabase removes them)
     await createTestUser(serviceClient, 'user1');
     await createTestUser(serviceClient, 'user2');
   });
