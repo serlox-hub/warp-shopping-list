@@ -11,6 +11,7 @@ jest.mock('../../lib/shoppingListService', () => ({
     updateShoppingListName: jest.fn(),
     deleteShoppingList: jest.fn(),
     getActiveShoppingList: jest.fn(),
+    isListShared: jest.fn(),
   },
 }));
 
@@ -50,6 +51,7 @@ describe('ListSelector', () => {
     jest.clearAllMocks()
     mockTranslations.mockImplementation((key) => key)
     mockShoppingListService.getUserShoppingLists.mockResolvedValue([mockList])
+    mockShoppingListService.isListShared.mockResolvedValue(false)
   })
 
   it('should render without crashing', async () => {
@@ -734,5 +736,74 @@ describe('ListSelector', () => {
     // Verify it was called exactly once with correct user ID
     expect(mockShoppingListService.getUserShoppingLists).toHaveBeenCalledTimes(1)
     expect(mockShoppingListService.getUserShoppingLists).toHaveBeenCalledWith(mockUser.id)
+  })
+
+  it('should show shared indicator for shared lists', async () => {
+    const sharedList = { id: 'list-1', name: 'Shared List' }
+    const privateList = { id: 'list-2', name: 'Private List' }
+    mockShoppingListService.getUserShoppingLists.mockResolvedValue([sharedList, privateList])
+    mockShoppingListService.isListShared.mockImplementation(async (listId) => {
+      return listId === 'list-1'
+    })
+
+    render(<ListSelector currentList={sharedList} onListChange={jest.fn()} />)
+
+    await waitFor(() => {
+      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-1')
+      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-2')
+    })
+
+    // The shared indicator should be visible for shared list
+    await waitFor(() => {
+      const button = screen.getByTitle('listSelector.switchList')
+      // Check if the shared icon SVG is present (users icon)
+      expect(button.querySelector('svg[title="share.members"]')).toBeInTheDocument()
+    })
+  })
+
+  it('should not show shared indicator for private lists', async () => {
+    const privateList = { id: 'list-1', name: 'Private List' }
+    mockShoppingListService.getUserShoppingLists.mockResolvedValue([privateList])
+    mockShoppingListService.isListShared.mockResolvedValue(false)
+
+    render(<ListSelector currentList={privateList} onListChange={jest.fn()} />)
+
+    await waitFor(() => {
+      expect(mockShoppingListService.isListShared).toHaveBeenCalledWith('list-1')
+    })
+
+    // Should not have shared indicator
+    await waitFor(() => {
+      const button = screen.getByTitle('listSelector.switchList')
+      expect(button.querySelector('svg[title="share.members"]')).not.toBeInTheDocument()
+    })
+  })
+
+  it('should show shared indicator in dropdown list items', async () => {
+    const user = userEvent.setup()
+    const sharedList = { id: 'list-1', name: 'Shared List' }
+    const privateList = { id: 'list-2', name: 'Private List' }
+    mockShoppingListService.getUserShoppingLists.mockResolvedValue([sharedList, privateList])
+    mockShoppingListService.isListShared.mockImplementation(async (listId) => {
+      return listId === 'list-1'
+    })
+
+    render(<ListSelector currentList={sharedList} onListChange={jest.fn()} />)
+
+    await waitFor(() => {
+      expect(mockShoppingListService.isListShared).toHaveBeenCalled()
+    })
+
+    // Open dropdown
+    await user.click(screen.getByTitle('listSelector.switchList'))
+
+    // Check for shared indicators in dropdown
+    await waitFor(() => {
+      const dropdown = document.querySelector('.absolute.left-0')
+      expect(dropdown).toBeInTheDocument()
+      // Shared list should have the indicator
+      const sharedIcons = dropdown.querySelectorAll('svg[title="share.members"]')
+      expect(sharedIcons.length).toBeGreaterThan(0)
+    })
   })
 })
