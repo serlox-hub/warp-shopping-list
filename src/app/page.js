@@ -38,7 +38,6 @@ export default function Home() {
   const [topItems, setTopItems] = useState([]);
   const [topItemsLoading, setTopItemsLoading] = useState(false);
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
-  const [itemUsageHistory, setItemUsageHistory] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
@@ -124,7 +123,6 @@ export default function Home() {
     const listId = listIdOverride || shoppingList?.id;
     if (!listId) {
       setTopItems([]);
-      setItemUsageHistory([]);
       return;
     }
 
@@ -140,11 +138,9 @@ export default function Home() {
         usage_key: `${item.name}::${item.aisle?.name || ''}`
       }));
       setTopItems(formattedItems);
-      setItemUsageHistory(formattedItems);
     } catch (error) {
       console.error('Error loading top purchased items:', error);
       setTopItems([]);
-      setItemUsageHistory([]);
     } finally {
       setTopItemsLoading(false);
     }
@@ -162,25 +158,23 @@ export default function Home() {
       setAisleColors({});
       setDataLoading(false);
       setIsTopItemsOpen(false);
-      setItemUsageHistory([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]); // Only trigger on userId change
 
   useEffect(() => {
-    if (userId && !dataLoading && items.length === 0 && topItems.length === 0) {
+    if (userId && !dataLoading && shoppingList?.id && topItems.length === 0) {
       loadTopItems();
     }
-  }, [userId, dataLoading, items.length, topItems.length, loadTopItems]);
+  }, [userId, dataLoading, shoppingList?.id, topItems.length, loadTopItems]);
 
 
   const handleListChange = async (newList) => {
     setShoppingList(newList);
     setEditingItem(null);
 
-    // Reset top items and history for new list
+    // Reset top items for new list
     setTopItems([]);
-    setItemUsageHistory([]);
 
     // Load items and aisles for the new list
     try {
@@ -496,16 +490,17 @@ export default function Home() {
   const handleDeleteFromHistory = async (itemName) => {
     if (!shoppingList?.id || !itemName) return;
 
-    // Optimistic update: Remove item from topItems immediately
-    const previousTopItems = topItems;
-    setTopItems(prev => prev.filter(item => item.item_name !== itemName));
+    // Optimistic update: Remove item from topItems
+    const previousTopItems = [...topItems];
+    const filtered = topItems.filter(item => item.item_name !== itemName);
+    setTopItems([...filtered]);
 
     try {
       await ShoppingListService.deleteFromPurchaseHistory(shoppingList.id, itemName);
       showSuccess(t('success.removedFromHistory', { itemName }));
     } catch (error) {
       console.error('Error deleting from purchase history:', error);
-      // Rollback: Restore the item
+      // Rollback: Restore the items
       setTopItems(previousTopItems);
       showError(t('errors.removeFromHistoryFailed'));
     }
@@ -744,7 +739,7 @@ export default function Home() {
         onClose={() => setShowAddModal(false)}
         onAddItem={handleAddItem}
         customAisles={localizedCustomAisles}
-        itemUsageHistory={itemUsageHistory}
+        itemUsageHistory={topItems}
         existingItems={items}
         aisleColors={aisleColors}
       />

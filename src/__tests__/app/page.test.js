@@ -474,8 +474,8 @@ describe('Home', () => {
     await waitFor(() => {
       expect(mockShoppingListService.getListAisles).toHaveBeenCalledWith('list-1')
       expect(mockShoppingListService.getActiveShoppingListWithItems).toHaveBeenCalledWith('user-1')
-      // getMostPurchasedItems is now lazy loaded, only called when modal opens
-      expect(mockShoppingListService.getMostPurchasedItems).not.toHaveBeenCalled()
+      // getMostPurchasedItems is now called on initial load to populate suggestions
+      expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledWith('list-1')
     })
   })
 
@@ -548,6 +548,7 @@ describe('Home', () => {
     })
 
     await waitFor(() => {
+      // Called twice: once on initial load, once after adding item
       expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledTimes(2)
     })
   })
@@ -1238,7 +1239,7 @@ describe('Home', () => {
       await user.click(addButton)
 
       await waitFor(() => {
-        // Should be called twice: once on load, once after adding item
+        // Called twice: once on initial load, once after adding item
         expect(mockShoppingListService.getMostPurchasedItems).toHaveBeenCalledTimes(2)
       })
     })
@@ -1397,14 +1398,14 @@ describe('Home', () => {
       mockShoppingListService.updateShoppingItem.mockResolvedValue(updatedItem)
       mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
 
-      // Clear any initial mock calls before rendering
-      mockShoppingListService.getMostPurchasedItems.mockClear()
-
       render(<Home />)
 
       await waitFor(() => {
         expect(screen.getByTestId(`aisle-section-Dairy`)).toBeInTheDocument()
       })
+
+      // Clear mock calls after initial load to track only update-related calls
+      mockShoppingListService.getMostPurchasedItems.mockClear()
 
       // Edit the item
       const editButton = screen.getByText('Edit')
@@ -1421,9 +1422,8 @@ describe('Home', () => {
         expect(mockShoppingListService.updateShoppingItem).toHaveBeenCalled()
       })
 
-      // getMostPurchasedItems should NOT be called at all:
-      // - Not on initial load (items list is not empty)
-      // - Not after update (only quantity/comment changed, not name/aisle)
+      // getMostPurchasedItems should NOT be called after update
+      // (only quantity/comment changed, not name/aisle)
       expect(mockShoppingListService.getMostPurchasedItems).not.toHaveBeenCalled()
     })
   })

@@ -483,46 +483,44 @@ export default function AddItemModal({
                             : 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
                         }`}
                       >
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {suggestion.highlightSegments?.length
-                              ? suggestion.highlightSegments.map((segment, index) =>
-                                  segment.match ? (
-                                    <mark
-                                      key={`${suggestion.item_name}-${index}-match`}
-                                      data-testid="highlight-segment-match"
-                                      className="rounded-sm bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-200 px-0.5"
-                                    >
-                                      {segment.text}
-                                    </mark>
-                                  ) : (
-                                    <span key={`${suggestion.item_name}-${index}-plain`}>
-                                      {segment.text}
-                                    </span>
-                                  )
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate min-w-0">
+                          {suggestion.highlightSegments?.length
+                            ? suggestion.highlightSegments.map((segment, index) =>
+                                segment.match ? (
+                                  <mark
+                                    key={`${suggestion.item_name}-${index}-match`}
+                                    data-testid="highlight-segment-match"
+                                    className="rounded-sm bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-200 px-0.5"
+                                  >
+                                    {segment.text}
+                                  </mark>
+                                ) : (
+                                  <span key={`${suggestion.item_name}-${index}-plain`}>
+                                    {segment.text}
+                                  </span>
                                 )
-                              : suggestion.item_name}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                            {suggestion.displayAisle && (
-                              <span
-                                className="inline-flex items-center rounded-full border px-2 py-0.5 font-medium"
-                                style={{
-                                  backgroundColor: suggestion.badgeBackground,
-                                  color: suggestion.badgeTextColor,
-                                  borderColor: suggestion.badgeBorderColor
-                                }}
-                              >
-                                {suggestion.displayAisle}
-                              </span>
-                            )}
-                          </div>
+                              )
+                            : suggestion.item_name}
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {suggestion.displayAisle && (
+                            <span
+                              className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                              style={{
+                                backgroundColor: suggestion.badgeBackground,
+                                color: suggestion.badgeTextColor,
+                                borderColor: suggestion.badgeBorderColor
+                              }}
+                            >
+                              {suggestion.displayAisle}
+                            </span>
+                          )}
+                          {suggestion.isInCurrentList && (
+                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                              {t('topItems.alreadyAdded')}
+                            </span>
+                          )}
                         </div>
-                        {suggestion.isInCurrentList && (
-                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                            {t('topItems.alreadyAdded')}
-                          </span>
-                        )}
                       </button>
                     ))}
                   </div>
