@@ -60,7 +60,7 @@ export class ShoppingListService {
       if (error) {
         if (error.code === 'PGRST116') {
           // No active list found - setup new user
-          const listId = await this.setupNewUser(userId);
+          await this.setupNewUser(userId);
           return this.getActiveShoppingList(userId);
         }
         throw error;
@@ -752,12 +752,10 @@ export class ShoppingListService {
 
       const result = data[0];
 
-      // If list was active and user still has lists, activate another one
-      if (!result.list_deleted) {
-        const lists = await this.getUserShoppingLists(userId);
-        if (lists.length > 0 && !lists.some(l => l.is_active)) {
-          await this.setActiveList(userId, lists[0].id);
-        }
+      // If user has other lists and none is active, activate one
+      const lists = await this.getUserShoppingLists(userId);
+      if (lists.length > 0 && !lists.some(l => l.is_active)) {
+        await this.setActiveList(userId, lists[0].id);
       }
 
       return {

@@ -798,6 +798,15 @@ describe('ShoppingListService', () => {
       const mockResult = { was_last_member: true, list_deleted: true }
       mockSupabase.rpc.mockResolvedValue({ data: [mockResult], error: null })
 
+      // Mock getUserShoppingLists (called after leave_list to check for remaining lists)
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({ data: [], error: null })
+          })
+        })
+      })
+
       await ShoppingListService.deleteShoppingList(mockUserId, mockListId)
 
       expect(mockSupabase.rpc).toHaveBeenCalledWith('leave_list', {
