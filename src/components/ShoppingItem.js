@@ -109,7 +109,7 @@ export default function ShoppingItem({
 
   return (
     <div
-      className={`p-4 border rounded-xl transition-all duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 ${
+      className={`px-4 py-2.5 border rounded-lg transition-all duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 ${
         item.completed
           ? 'bg-slate-100/70 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 opacity-80'
           : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-400/60 hover:shadow-sm'

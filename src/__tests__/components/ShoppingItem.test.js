@@ -179,16 +179,16 @@ describe('ShoppingItem', () => {
 
   it('should apply correct styling based on completion status', () => {
     const { rerender } = render(<ShoppingItem {...defaultProps} />)
-    
+
     // Check incomplete styling
-    let container = screen.getByText('Apples').closest('div.p-4')
+    let container = screen.getByText('Apples').closest('div.px-4')
     expect(container).toHaveClass('bg-white')
-    
+
     // Check completed styling
     const completedItem = { ...defaultItem, completed: true }
     rerender(<ShoppingItem {...defaultProps} item={completedItem} />)
-    
-    container = screen.getByText('Apples').closest('div.p-4')
+
+    container = screen.getByText('Apples').closest('div.px-4')
     expect(container).toHaveClass('opacity-80')
   })
 })
