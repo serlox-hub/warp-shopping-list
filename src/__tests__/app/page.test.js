@@ -196,9 +196,10 @@ jest.mock('../../components/LoginForm', () => {
 })
 
 jest.mock('../../components/ListSelector', () => {
-  return function MockListSelector({ currentList, onListChange }) {
+  return function MockListSelector({ currentList, onListChange, completedCount = 0, totalCount = 0 }) {
     return (
       <div data-testid="list-selector">
+        {totalCount > 0 && <span>{completedCount}/{totalCount}</span>}
         <span>Current: {currentList?.name || 'None'}</span>
         <button onClick={() => onListChange({ id: '2', name: 'New List' })}>
           Change List
@@ -495,7 +496,7 @@ describe('Home', () => {
       expect(screen.getByTestId('aisle-section-Dairy')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('1/2 completed')).toBeInTheDocument()
+    expect(screen.getByText('1/2')).toBeInTheDocument()
     // Header menu button should be present (actions are now in Header menu)
     expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
   })

@@ -574,9 +574,6 @@ export default function Home() {
   const completedCount = items.filter(item => item.completed).length;
   const totalCount = items.length;
   const hasItems = totalCount > 0;
-  const progressPercentage = hasItems
-    ? (completedCount / totalCount) * 100
-    : 0;
   const hasTopItemsData = topItems.length > 0;
   const canOpenTopItems = hasItems ? true : (hasTopItemsData || topItemsLoading);
 
@@ -613,7 +610,12 @@ export default function Home() {
         <header className="flex flex-col gap-4">
           <div className="flex flex-row items-center justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <ListSelector currentList={shoppingList} onListChange={handleListChange} />
+              <ListSelector
+                currentList={shoppingList}
+                onListChange={handleListChange}
+                completedCount={completedCount}
+                totalCount={totalCount}
+              />
             </div>
             <div className="flex items-center gap-2">
               <ListMembersDisplay
@@ -647,61 +649,6 @@ export default function Home() {
             </div>
           </div>
         </header>
-
-
-        {hasItems && (
-          <div className="relative flex items-center justify-between bg-white/40 dark:bg-slate-900/40 rounded-xl px-4 py-2 border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2">
-              {/* Circular Progress Indicator */}
-              <div className="relative w-8 h-8">
-                <svg className="w-8 h-8 transform -rotate-90">
-                  {/* Background circle */}
-                  <circle
-                    cx="16"
-                    cy="16"
-                    r="14"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    fill="none"
-                    className="text-slate-200 dark:text-slate-700"
-                  />
-                  {/* Progress circle */}
-                  <circle
-                    cx="16"
-                    cy="16"
-                    r="14"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 14}`}
-                    strokeDashoffset={`${2 * Math.PI * 14 * (1 - progressPercentage / 100)}`}
-                    className="text-emerald-500 dark:text-emerald-400 transition-all duration-300"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                    {Math.round(progressPercentage)}
-                  </span>
-                </div>
-              </div>
-
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {t('shoppingList.itemsCompleted', { completed: completedCount, total: totalCount })}
-              </span>
-            </div>
-
-            {/* Completion badge - only show when all done */}
-            {completedCount === totalCount && (
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-semibold hidden sm:inline">¡Completado!</span>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Shopping List by Aisles */}
         <div className="space-y-6">

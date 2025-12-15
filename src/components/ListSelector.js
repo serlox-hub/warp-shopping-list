@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { ShoppingListService } from '@/lib/shoppingListService';
 
-export default function ListSelector({ currentList, onListChange }) {
+export default function ListSelector({ currentList, onListChange, completedCount = 0, totalCount = 0 }) {
   const { user } = useAuth();
   const t = useTranslations();
   const [lists, setLists] = useState([]);
@@ -182,9 +182,19 @@ export default function ListSelector({ currentList, onListChange }) {
         className={triggerButtonClass}
         title={t('listSelector.switchList')}
       >
-        <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
+{totalCount > 0 ? (
+          <span className={`text-xs font-semibold min-w-[1.5rem] text-center ${
+            completedCount === totalCount
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : 'text-slate-500 dark:text-slate-400'
+          }`}>
+            {completedCount}/{totalCount}
+          </span>
+        ) : (
+          <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        )}
         <span className="text-sm font-medium max-w-32 truncate text-slate-900 dark:text-slate-100">
           {currentList.name}
         </span>
