@@ -146,34 +146,71 @@ export default function ShoppingItem({
           <div className="relative">
             <button
               type="button"
-              onClick={(event) => toggleMenu(event, 'aisle')}
-              className={`p-2 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                canChangeAisle
-                  ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
-                  : 'text-gray-400 cursor-not-allowed'
-              }`}
+              onClick={(event) => toggleMenu(event, 'actions')}
+              className="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-haspopup="menu"
-              aria-expanded={openMenu === 'aisle'}
-              aria-label={t('shoppingList.changeAisle')}
-              disabled={!canChangeAisle}
+              aria-expanded={openMenu === 'actions' || openMenu === 'aisle'}
+              aria-label={t('shoppingList.itemActions')}
             >
-              <span className="sr-only">{t('shoppingList.changeAisle')}</span>
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M4 5a3 3 0 013-3h6.172a3 3 0 012.121.879l6.828 6.828a3 3 0 010 4.242l-7.172 7.172a3 3 0 01-4.242 0L3.879 14.707A3 3 0 013 12.586V5zm3-1h6.172a1 1 0 01.707.293l6.828 6.828a1 1 0 010 1.414l-7.172 7.172a1 1 0 01-1.414 0l-6.828-6.828A1 1 0 014 12.586V5a1 1 0 011-1z" />
-                <circle cx="9" cy="8" r="1.4" opacity="0.45" />
+              <span className="sr-only">{t('shoppingList.itemActions')}</span>
+              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
               </svg>
             </button>
-            {openMenu === 'aisle' && (
+            {openMenu === 'actions' && (
               <div
-                className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20 py-2"
+                className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20 py-1"
                 onClick={(event) => event.stopPropagation()}
               >
-                <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  {t('shoppingList.currentAisle')}
-                </div>
-                <div className="px-3 pb-2 text-sm text-gray-700 dark:text-gray-200">
-                  {getAisleLabel(item.aisle)}
-                </div>
+                <button
+                  type="button"
+                  onClick={handleEdit}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 transition-colors duration-150"
+                >
+                  {t('common.edit')}
+                </button>
+                {canChangeAisle && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenMenu('aisle');
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 transition-colors duration-150 flex items-center justify-between"
+                  >
+                    <span>{t('shoppingList.changeAisle')}</span>
+                    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors duration-150"
+                >
+                  {t('common.delete')}
+                </button>
+              </div>
+            )}
+            {openMenu === 'aisle' && (
+              <div
+                className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20 py-1"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setOpenMenu('actions');
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors duration-150 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                  </svg>
+                  <span>{t('shoppingList.changeAisle')}</span>
+                </button>
                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                 <div className="max-h-60 overflow-y-auto">
                   {availableAisles.map((aisle) => {
@@ -204,43 +241,6 @@ export default function ShoppingItem({
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </div>
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={(event) => toggleMenu(event, 'actions')}
-              className="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-haspopup="menu"
-              aria-expanded={openMenu === 'actions'}
-              aria-label={t('shoppingList.itemActions')}
-            >
-              <span className="sr-only">{t('shoppingList.itemActions')}</span>
-              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zm0 5.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3z" />
-              </svg>
-            </button>
-            {openMenu === 'actions' && (
-              <div
-                className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20 py-1"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={handleEdit}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 transition-colors duration-150"
-                >
-                  {t('common.edit')}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors duration-150"
-                >
-                  {t('common.delete')}
-                </button>
               </div>
             )}
           </div>

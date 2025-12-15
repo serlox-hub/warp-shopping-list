@@ -147,8 +147,13 @@ describe('ShoppingItem', () => {
     const user = userEvent.setup()
     render(<ShoppingItem {...defaultProps} />)
 
-    const changeAisleButton = screen.getByLabelText('Change aisle')
-    await user.click(changeAisleButton)
+    // First open the kebab menu
+    const actionsButton = screen.getByLabelText('Item actions')
+    await user.click(actionsButton)
+
+    // Then click on "Change aisle" to open the submenu
+    const changeAisleOption = screen.getByText('Change aisle')
+    await user.click(changeAisleOption)
 
     const bakeryOption = screen.getByRole('button', { name: 'Bakery' })
     await user.click(bakeryOption)
@@ -160,8 +165,13 @@ describe('ShoppingItem', () => {
     const user = userEvent.setup()
     render(<ShoppingItem {...defaultProps} />)
 
-    const changeAisleButton = screen.getByLabelText('Change aisle')
-    await user.click(changeAisleButton)
+    // First open the kebab menu
+    const actionsButton = screen.getByLabelText('Item actions')
+    await user.click(actionsButton)
+
+    // Then click on "Change aisle" to open the submenu
+    const changeAisleOption = screen.getByText('Change aisle')
+    await user.click(changeAisleOption)
 
     const currentOption = screen.getByRole('button', { name: 'Produce' })
     await user.click(currentOption)
