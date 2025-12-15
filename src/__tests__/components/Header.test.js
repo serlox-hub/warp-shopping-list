@@ -41,49 +41,6 @@ describe('Header', () => {
     expect(screen.getByTestId('header-container')).toBeInTheDocument()
   })
 
-  it('should show user information when user is present', () => {
-    mockAuth.user = {
-      id: 'user-1',
-      email: 'test@example.com',
-      user_metadata: {
-        full_name: 'Test User',
-        avatar_url: 'https://example.com/avatar.jpg'
-      }
-    }
-    
-    render(<Header />)
-    
-    expect(screen.getByAltText('User avatar')).toBeInTheDocument()
-    expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
-  })
-
-  it('should show email when full name is not available', () => {
-    mockAuth.user = {
-      id: 'user-1',
-      email: 'test@example.com',
-      user_metadata: {}
-    }
-    
-    render(<Header />)
-
-    expect(screen.getByText('T')).toBeInTheDocument()
-  })
-
-  it('should not show avatar when avatar_url is not available', () => {
-    mockAuth.user = {
-      id: 'user-1',
-      email: 'test@example.com',
-      user_metadata: {
-        full_name: 'Test User'
-      }
-    }
-    
-    render(<Header />)
-    
-    expect(screen.queryByAltText('User avatar')).not.toBeInTheDocument()
-    expect(screen.getByText('T')).toBeInTheDocument()
-  })
-
   it('should handle preferences button click', async () => {
     const user = userEvent.setup()
     mockAuth.user = { id: 'user-1', email: 'test@example.com' }
