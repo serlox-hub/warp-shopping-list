@@ -51,9 +51,23 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      updateUserState(session?.user ?? null);
-      setLoading(false);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        updateUserState(session?.user ?? null);
+      } catch {
+        // If session is corrupted, clear storage and continue without session
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        if (supabaseUrl) {
+          const projectRef = supabaseUrl.split('//')[1]?.split('.')[0];
+          if (projectRef) {
+            localStorage.removeItem(`sb-${projectRef}-auth-token`);
+          }
+        }
+        updateUserState(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     getInitialSession();
