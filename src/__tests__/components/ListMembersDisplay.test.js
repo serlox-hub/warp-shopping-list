@@ -283,11 +283,14 @@ describe('ListMembersDisplay', () => {
 
     render(<ListMembersDisplay {...defaultProps} />);
 
-    // Should show loading indicator briefly
-    expect(screen.getByLabelText('share.viewMembers')).toBeInTheDocument();
-
+    // Component only shows button after loading completes and there are multiple members
+    // Wait for loading to complete and then verify the button appears
     await waitFor(() => {
       expect(mockShoppingListService.getListMembers).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('share.viewMembers')).toBeInTheDocument();
     });
   });
 
@@ -335,7 +338,7 @@ describe('ListMembersDisplay', () => {
     await waitFor(() => {
       // user1@example.com -> US (first two characters of local part)
       // Look for initials in the modal (avatar containers)
-      const modal = document.querySelector('.fixed.inset-0.z-50');
+      const modal = document.querySelector('.fixed.inset-0');
       expect(modal).toBeInTheDocument();
       // Initials are displayed in avatar divs
       const avatars = modal.querySelectorAll('.rounded-full');

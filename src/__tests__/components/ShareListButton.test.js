@@ -126,13 +126,9 @@ describe('ShareListButton', () => {
       expect(screen.getByDisplayValue(mockLink.url)).toBeInTheDocument();
     });
 
-    // Find and click copy button (it's the button next to the input in the modal)
-    const modal = document.querySelector('.fixed.inset-0.z-50');
-    const copyButtons = modal.querySelectorAll('button');
-    // The copy button is typically after the input, inside the link display area
-    const copyButton = Array.from(copyButtons).find(btn =>
-      btn.closest('.flex.items-center.gap-2.p-3')
-    );
+    // Find and click copy button by looking for buttons within the link display area
+    const modal = document.querySelector('.fixed.inset-0');
+    const copyButton = modal?.querySelector('.flex.items-center.gap-2.p-3 button');
     if (copyButton) {
       await user.click(copyButton);
     }

@@ -119,8 +119,73 @@ jest.mock('../../components/AisleManager', () => {
 })
 
 jest.mock('../../components/Header', () => {
-  return function MockHeader() {
-    return <div data-testid="header">Header</div>
+  return function MockHeader({
+    onShareList,
+    onViewMembers,
+    onManageAisles,
+    onOpenHistory,
+    onClearCompleted,
+    onClearAll,
+    completedCount = 0,
+    totalCount = 0,
+    canOpenHistory = false,
+    isListShared = false,
+  }) {
+    const [menuOpen, setMenuOpen] = React.useState(false)
+    return (
+      <div data-testid="header">
+        <button
+          type="button"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="header.menu.open"
+        >
+          Menu
+        </button>
+        {menuOpen && (
+          <div role="menu">
+            {onShareList && (
+              <button onClick={() => { setMenuOpen(false); onShareList(); }}>
+                share.shareList
+              </button>
+            )}
+            {isListShared && onViewMembers && (
+              <button onClick={() => { setMenuOpen(false); onViewMembers(); }}>
+                share.viewMembers
+              </button>
+            )}
+            {onManageAisles && (
+              <button onClick={() => { setMenuOpen(false); onManageAisles(); }}>
+                Manage Aisles
+              </button>
+            )}
+            {onOpenHistory && (
+              <button
+                onClick={() => { setMenuOpen(false); if (canOpenHistory) onOpenHistory(); }}
+                disabled={!canOpenHistory}
+              >
+                History
+              </button>
+            )}
+            {onClearCompleted && (
+              <button
+                onClick={() => { setMenuOpen(false); onClearCompleted(); }}
+                disabled={completedCount === 0}
+              >
+                Clear Completed ({completedCount})
+              </button>
+            )}
+            {onClearAll && (
+              <button
+                onClick={() => { setMenuOpen(false); onClearAll(); }}
+                disabled={totalCount === 0}
+              >
+                Clear All
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 })
 
@@ -431,8 +496,8 @@ describe('Home', () => {
     })
 
     expect(screen.getByText('1/2 completed')).toBeInTheDocument()
-    // Kebab menu button should be present (actions are now in menu)
-    expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
+    // Header menu button should be present (actions are now in Header menu)
+    expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
   })
 
   it('should handle adding new item', async () => {
@@ -523,8 +588,8 @@ describe('Home', () => {
       expect(screen.getByTestId('floating-add-button')).toBeInTheDocument()
     })
 
-    // Open kebab menu first
-    await user.click(screen.getByLabelText('Acciones'))
+    // Open Header menu first
+    await user.click(screen.getByLabelText('header.menu.open'))
 
     // Click "History" button in the menu
     await user.click(screen.getByText('History'))
@@ -582,8 +647,8 @@ describe('Home', () => {
       expect(screen.getByTestId('floating-add-button')).toBeInTheDocument()
     })
 
-    // Open kebab menu first
-    await user.click(screen.getByLabelText('Acciones'))
+    // Open Header menu first
+    await user.click(screen.getByLabelText('header.menu.open'))
 
     // Click "History" button in the menu
     await user.click(screen.getByText('History'))
@@ -737,11 +802,11 @@ describe('Home', () => {
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
+      expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
     })
 
-    // Open kebab menu
-    await user.click(screen.getByLabelText('Acciones'))
+    // Open Header menu
+    await user.click(screen.getByLabelText('header.menu.open'))
 
     // Click "Clear Completed" in the menu
     await user.click(screen.getByText('Clear Completed (1)'))
@@ -765,11 +830,11 @@ describe('Home', () => {
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
+      expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
     })
 
-    // Open kebab menu
-    await user.click(screen.getByLabelText('Acciones'))
+    // Open Header menu
+    await user.click(screen.getByLabelText('header.menu.open'))
 
     // Click "Clear All" in the menu
     await user.click(screen.getByText('Clear All'))
@@ -794,11 +859,11 @@ describe('Home', () => {
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
+      expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
     })
 
-    // Open kebab menu
-    await user.click(screen.getByLabelText('Acciones'))
+    // Open Header menu
+    await user.click(screen.getByLabelText('header.menu.open'))
 
     // Click "Manage Aisles" in the menu
     await user.click(screen.getByText('Manage Aisles'))
@@ -835,11 +900,11 @@ describe('Home', () => {
     render(<Home />)
 
     await waitFor(() => {
-      expect(screen.getByLabelText('Acciones')).toBeInTheDocument()
+      expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
     })
 
-    // Open kebab menu
-    await user.click(screen.getByLabelText('Acciones'))
+    // Open Header menu
+    await user.click(screen.getByLabelText('header.menu.open'))
 
     // Click "Manage Aisles" in the menu
     await user.click(screen.getByText('Manage Aisles'))

@@ -39,7 +39,6 @@ export default function Home() {
   const [topItemsLoading, setTopItemsLoading] = useState(false);
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
   const [itemUsageHistory, setItemUsageHistory] = useState([]);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
@@ -633,7 +632,18 @@ export default function Home() {
                 onExternalClose={() => setShowShareModal(false)}
                 showButton={false}
               />
-              <Header />
+              <Header
+                onShareList={() => setShowShareModal(true)}
+                onViewMembers={() => setShowMembersModal(true)}
+                onManageAisles={() => setShowAisleManager(true)}
+                onOpenHistory={handleOpenTopItems}
+                onClearCompleted={handleClearCompleted}
+                onClearAll={handleClearAll}
+                completedCount={completedCount}
+                totalCount={totalCount}
+                canOpenHistory={canOpenTopItems}
+                isListShared={isListShared}
+              />
             </div>
           </div>
         </header>
@@ -681,136 +691,15 @@ export default function Home() {
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Completion badge - only show when all done */}
-              {completedCount === totalCount && (
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-sm font-semibold hidden sm:inline">¡Completado!</span>
-                </div>
-              )}
-
-              {/* Kebab Menu - Always visible */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowActionsMenu(!showActionsMenu)}
-                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  aria-label="Acciones"
-                  aria-haspopup="menu"
-                  aria-expanded={showActionsMenu}
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                  </svg>
-                </button>
-                {showActionsMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowActionsMenu(false)}
-                    ></div>
-                    <div
-                      className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 z-20"
-                      role="menu"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowActionsMenu(false);
-                          setShowShareModal(true);
-                        }}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
-                      >
-                        <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                        </svg>
-                        <span>{t('share.shareList')}</span>
-                      </button>
-
-                      {isListShared && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowActionsMenu(false);
-                            setShowMembersModal(true);
-                          }}
-                          className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
-                        >
-                          <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                          <span>{t('share.viewMembers')}</span>
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowActionsMenu(false);
-                          setShowAisleManager(true);
-                        }}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
-                      >
-                        <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                        <span>{t('shoppingList.manageAisles')}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowActionsMenu(false);
-                          canOpenTopItems && handleOpenTopItems();
-                        }}
-                        disabled={!canOpenTopItems}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V5a3 3 0 013-3h2a3 3 0 013 3v2m-1 4h-8m2 4h4m-9-8h14a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2v-9a2 2 0 012-2z" />
-                        </svg>
-                        <span>{t('topItems.openButton')}</span>
-                      </button>
-
-                      <div className="border-t border-slate-200 dark:border-slate-700 my-1"></div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowActionsMenu(false);
-                          handleClearCompleted();
-                        }}
-                        disabled={completedCount === 0}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>{t('shoppingList.clearCompleted', { count: completedCount })}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowActionsMenu(false);
-                          handleClearAll();
-                        }}
-                        disabled={totalCount === 0}
-                        className="w-full px-4 py-3 text-left text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        <span>{t('shoppingList.clearAll')}</span>
-                      </button>
-                    </div>
-                  </>
-                )}
+            {/* Completion badge - only show when all done */}
+            {completedCount === totalCount && (
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-semibold hidden sm:inline">¡Completado!</span>
               </div>
-            </div>
+            )}
           </div>
         )}
 
