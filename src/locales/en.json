@@ -48,8 +48,8 @@
     "deleteConfirm": "Are you sure you want to remove \"{{itemName}}\" from your purchase history?"
   },
   "addItemForm": {
-    "addTitle": "Add New Item",
-    "editTitle": "Edit Item",
+    "addTitle": "Add",
+    "editTitle": "Edit",
     "itemName": "Item Name",
     "itemNamePlaceholder": "Enter item name",
     "aisle": "Aisle",

@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import FloatingAddButton from '@/components/FloatingAddButton';
-import AddItemModal from '@/components/AddItemModal';
-import EditItemModal from '@/components/EditItemModal';
+import ItemModal from '@/components/ItemModal';
 import AisleSection from '@/components/AisleSection';
 import AisleManager from '@/components/AisleManager';
 import Header from '@/components/Header';
@@ -257,10 +256,11 @@ export default function Home() {
     if (!previousItem) return;
 
     // Convert aisle name/object to aisle_id
-    let aisleId = updatedItem.aisle_id;
+    // Always check updatedItem.aisle first (new value from modal), then fall back to aisle_id
+    let aisleId = null;
     let aisleObj = null;
 
-    if (!aisleId && updatedItem.aisle) {
+    if (updatedItem.aisle) {
       // Handle both string aisle names and aisle objects
       const aisleName = typeof updatedItem.aisle === 'string'
         ? updatedItem.aisle
@@ -268,9 +268,10 @@ export default function Home() {
 
       if (aisleName) {
         aisleObj = customAisles.find(a => a.name === aisleName);
-        aisleId = aisleObj?.id || updatedItem.aisle?.id || null;
+        aisleId = aisleObj?.id || updatedItem.aisle?.id || updatedItem.aisle_id || null;
       }
-    } else if (aisleId) {
+    } else if (updatedItem.aisle_id) {
+      aisleId = updatedItem.aisle_id;
       aisleObj = customAisles.find(a => a.id === aisleId);
     }
 
@@ -440,10 +441,6 @@ export default function Home() {
 
   const handleEditItem = (item) => {
     setEditingItem(item);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingItem(null);
   };
 
   const handleClearCompleted = async () => {
@@ -720,25 +717,21 @@ export default function Home() {
         </div>
       )}
 
-      {/* Edit Item Modal */}
-      {editingItem && (
-        <EditItemModal
-          item={editingItem}
-          onUpdateItem={handleUpdateItem}
-          onClose={handleCancelEdit}
-          customAisles={localizedCustomAisles}
-        />
-      )}
-
       {/* Floating Add Button */}
       <FloatingAddButton onClick={() => setShowAddModal(true)} />
 
-      {/* Add Item Modal */}
-      <AddItemModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onAddItem={handleAddItem}
+      {/* Item Modal - used for both add and edit */}
+      <ItemModal
+        isOpen={showAddModal || !!editingItem}
+        onClose={() => {
+          setShowAddModal(false);
+          setEditingItem(null);
+        }}
+        onSubmit={editingItem ? handleUpdateItem : handleAddItem}
+        mode={editingItem ? 'edit' : 'add'}
+        item={editingItem}
         customAisles={localizedCustomAisles}
+        englishAisles={englishCustomAisles}
         itemUsageHistory={topItems}
         existingItems={items}
         aisleColors={aisleColors}

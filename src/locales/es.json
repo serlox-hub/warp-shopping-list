@@ -48,8 +48,8 @@
     "deleteConfirm": "¿Estás seguro de que quieres eliminar \"{{itemName}}\" de tu historial de compras?"
   },
   "addItemForm": {
-    "addTitle": "Agregar Nuevo Artículo",
-    "editTitle": "Editar Artículo",
+    "addTitle": "Agregar",
+    "editTitle": "Editar",
     "itemName": "Nombre del Artículo",
     "itemNamePlaceholder": "Ingresa el nombre del artículo",
     "aisle": "Pasillo",

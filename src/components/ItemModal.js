@@ -139,11 +139,14 @@ const buildHighlightSegments = (originalName, query, matchType) => {
 const DEFAULT_QUANTITY = 1;
 const MAX_SUGGESTIONS = 20;
 
-export default function AddItemModal({
+export default function ItemModal({
   isOpen,
   onClose,
-  onAddItem,
+  onSubmit,
+  mode = 'add',
+  item = null,
   customAisles = DEFAULT_AISLES,
+  englishAisles = DEFAULT_AISLES,
   itemUsageHistory = [],
   existingItems = [],
   aisleColors = {}
@@ -155,8 +158,12 @@ export default function AddItemModal({
   const [comment, setComment] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showAisleDropdown, setShowAisleDropdown] = useState(false);
   const suggestionCloseTimeout = useRef(null);
   const nameInputRef = useRef(null);
+  const aisleDropdownRef = useRef(null);
+
+  const isEditMode = mode === 'edit';
 
   const englishToLocalized = useMemo(() => ({
     Produce: t('aisles.produce'),
@@ -193,6 +200,17 @@ export default function AddItemModal({
     return localizedToEnglish[defaultLocalized] || defaultLocalized || 'Other';
   }, [getDefaultLocalizedAisle, localizedToEnglish]);
 
+  const getAisleColor = useCallback((aisleOption) => {
+    if (!aisleOption) return null;
+    const englishAisle = localizedToEnglish[aisleOption] || aisleOption;
+    return aisleColors[aisleOption] || getDefaultAisleColor(englishAisle) || null;
+  }, [aisleColors, localizedToEnglish]);
+
+  const handleSelectAisle = useCallback((selectedAisle) => {
+    setAisle(selectedAisle);
+    setShowAisleDropdown(false);
+  }, []);
+
   const resetForm = useCallback(() => {
     setName('');
     setAisle(getDefaultLocalizedAisle());
@@ -200,29 +218,79 @@ export default function AddItemModal({
     setComment('');
     setSuggestions([]);
     setShowSuggestions(false);
+    setShowAisleDropdown(false);
   }, [getDefaultLocalizedAisle]);
 
-  // Reset form when modal opens
+  const initializeFromItem = useCallback(() => {
+    if (!item) return;
+
+    setName(item.name || '');
+
+    // Handle both string aisle names and aisle objects
+    const itemAisleName = typeof item.aisle === 'string'
+      ? item.aisle
+      : item.aisle?.name;
+
+    const matchingLocalizedAisle = customAisles.find(
+      (localizedAisle) => localizedToEnglish[localizedAisle] === itemAisleName
+    );
+
+    setAisle(
+      matchingLocalizedAisle ||
+      englishToLocalized[itemAisleName] ||
+      itemAisleName ||
+      getDefaultLocalizedAisle()
+    );
+
+    setQuantity(item.quantity || DEFAULT_QUANTITY);
+    setComment(item.comment || '');
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setShowAisleDropdown(false);
+  }, [item, customAisles, englishToLocalized, localizedToEnglish, getDefaultLocalizedAisle]);
+
+  // Initialize form when modal opens
   useEffect(() => {
     if (isOpen) {
-      resetForm();
-      // Focus on name input when modal opens
+      if (isEditMode && item) {
+        initializeFromItem();
+      } else {
+        resetForm();
+      }
       setTimeout(() => {
         nameInputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen, resetForm]);
+  }, [isOpen, isEditMode, item, resetForm, initializeFromItem]);
 
   // Handle Escape key
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        if (showAisleDropdown) {
+          setShowAisleDropdown(false);
+        } else {
+          onClose();
+        }
       }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, showAisleDropdown]);
+
+  // Handle click outside aisle dropdown
+  useEffect(() => {
+    if (!showAisleDropdown) return;
+
+    const handleClickOutside = (event) => {
+      if (aisleDropdownRef.current && !aisleDropdownRef.current.contains(event.target)) {
+        setShowAisleDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showAisleDropdown]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -257,6 +325,9 @@ export default function AddItemModal({
   }, [itemUsageHistory]);
 
   const computeSuggestions = useCallback((rawQuery) => {
+    // Don't show suggestions in edit mode
+    if (isEditMode) return [];
+
     const trimmedQuery = rawQuery?.trim() || '';
     const normalizedQuery = normalizeText(rawQuery);
     if (normalizedQuery.length < 3) return [];
@@ -341,30 +412,42 @@ export default function AddItemModal({
     }
 
     return rankedSuggestions.slice(0, MAX_SUGGESTIONS);
-  }, [normalizedUsageHistory, existingItemsSet, englishToLocalized, aisleColors]);
+  }, [isEditMode, normalizedUsageHistory, existingItemsSet, englishToLocalized, aisleColors]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    const englishAisle = localizedToEnglish[aisle] || aisle;
+    // Convert localized aisle to English using the parallel arrays
+    const aisleIndex = customAisles.indexOf(aisle);
+    const englishAisle = aisleIndex >= 0 && englishAisles[aisleIndex]
+      ? englishAisles[aisleIndex]
+      : (localizedToEnglish[aisle] || aisle);
 
-    onAddItem({
+    const submitData = {
       name: name.trim(),
       aisle: englishAisle,
       quantity: parseInt(quantity, 10),
       comment: comment.trim()
-    });
+    };
 
-    resetForm();
+    if (isEditMode && item) {
+      onSubmit({ ...item, ...submitData });
+    } else {
+      onSubmit(submitData);
+      resetForm();
+    }
+
     onClose();
   };
 
   const handleNameChange = (value) => {
     setName(value);
-    const newSuggestions = computeSuggestions(value);
-    setSuggestions(newSuggestions);
-    setShowSuggestions(newSuggestions.length > 0);
+    if (!isEditMode) {
+      const newSuggestions = computeSuggestions(value);
+      setSuggestions(newSuggestions);
+      setShowSuggestions(newSuggestions.length > 0);
+    }
   };
 
   const handleSuggestionSelection = (suggestion) => {
@@ -379,7 +462,7 @@ export default function AddItemModal({
       localizedToEnglish[suggestion.displayAisle] ||
       getDefaultEnglishAisle();
 
-    onAddItem({
+    onSubmit({
       name: suggestion.item_name?.trim() || '',
       aisle: englishAisle,
       quantity: sanitizedQuantity,
@@ -391,7 +474,7 @@ export default function AddItemModal({
   };
 
   const handleInputFocus = () => {
-    if (suggestions.length > 0) {
+    if (!isEditMode && suggestions.length > 0) {
       setShowSuggestions(true);
     }
     if (suggestionCloseTimeout.current) {
@@ -429,9 +512,26 @@ export default function AddItemModal({
         <form onSubmit={handleSubmit}>
           {/* Modal Header */}
           <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              {t('addItemForm.addTitle')}
-            </h2>
+            <div className="flex items-center gap-3">
+              {isEditMode && (
+                <svg
+                  className="w-6 h-6 text-indigo-500 dark:text-indigo-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              )}
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {isEditMode ? t('addItemForm.editTitle') : t('addItemForm.addTitle')}
+              </h2>
+            </div>
             <button
               type="button"
               onClick={onClose}
@@ -463,7 +563,7 @@ export default function AddItemModal({
                   required
                   autoComplete="off"
                 />
-                {showSuggestions && (
+                {!isEditMode && showSuggestions && (
                   <div
                     data-testid="item-suggestions"
                     className="absolute z-20 mt-1 w-full max-h-64 overflow-auto rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg"
@@ -534,17 +634,73 @@ export default function AddItemModal({
                 <label className={labelClass}>
                   {t('addItemForm.aisle')}
                 </label>
-                <select
-                  value={aisle}
-                  onChange={(e) => setAisle(e.target.value)}
-                  className={controlClass}
-                >
-                  {customAisles.map((aisleOption) => (
-                    <option key={aisleOption} value={aisleOption}>
-                      {aisleOption}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative" ref={aisleDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAisleDropdown(!showAisleDropdown)}
+                    className={`${controlClass} text-left flex items-center justify-between`}
+                    aria-haspopup="listbox"
+                    aria-expanded={showAisleDropdown}
+                  >
+                    <span className="flex items-center gap-2">
+                      {getAisleColor(aisle) && (
+                        <span
+                          className="inline-flex h-2.5 w-2.5 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
+                          style={{ backgroundColor: getAisleColor(aisle) }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="truncate">{aisle}</span>
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${showAisleDropdown ? 'rotate-180' : ''}`}
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {showAisleDropdown && (
+                    <div
+                      className="absolute z-30 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      role="listbox"
+                    >
+                      {customAisles.map((aisleOption) => {
+                        const isCurrent = aisleOption === aisle;
+                        const aisleColor = getAisleColor(aisleOption);
+                        return (
+                          <button
+                            key={aisleOption}
+                            type="button"
+                            role="option"
+                            aria-selected={isCurrent}
+                            onClick={() => handleSelectAisle(aisleOption)}
+                            className={`w-full px-3 py-2 text-left text-sm transition-colors duration-150 flex items-center gap-2 ${
+                              isCurrent
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                                : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700'
+                            }`}
+                          >
+                            {aisleColor && (
+                              <span
+                                className="inline-flex h-2.5 w-2.5 rounded-full border border-slate-200 dark:border-slate-600 shrink-0"
+                                style={{ backgroundColor: aisleColor }}
+                                aria-hidden="true"
+                              />
+                            )}
+                            <span className="truncate">{aisleOption}</span>
+                            {isCurrent && (
+                              <svg className="w-4 h-4 ml-auto shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -598,7 +754,7 @@ export default function AddItemModal({
               type="submit"
               className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
             >
-              {t('addItemForm.addButton')}
+              {isEditMode ? t('addItemForm.updateButton') : t('addItemForm.addButton')}
             </button>
           </div>
         </form>
