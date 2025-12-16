@@ -516,10 +516,16 @@ export default function Home() {
       return entry;
     });
 
+    // Build a map of English name -> existing aisle for proper ID matching
+    const existingAislesByName = new Map(
+      customAisles.map(aisle => [aisle.name, aisle])
+    );
+
     const englishPayload = normalizedAisles.map((localizedAisle, index) => {
       const englishNames = mapLocalizedToEnglish([localizedAisle.name], t);
       const englishName = englishNames[0];
-      const existing = customAisles[index];
+      // Match by name instead of index to preserve ID across reordering
+      const existing = existingAislesByName.get(englishName);
 
       return {
         id: existing?.id,

@@ -138,10 +138,37 @@ jest.mock('../../components/AisleSection', () => {
 })
 
 jest.mock('../../components/AisleManager', () => {
-  return function MockAisleManager({ onUpdateAisles, onClose }) {
+  return function MockAisleManager({ aisles, onUpdateAisles, onClose }) {
+    const [localAisles, setLocalAisles] = React.useState(aisles || [])
+
+    React.useEffect(() => {
+      setLocalAisles(aisles || [])
+    }, [aisles])
+
+    const handleMoveUp = (index) => {
+      if (index === 0) return
+      setLocalAisles(prev => {
+        const copy = [...prev]
+        ;[copy[index - 1], copy[index]] = [copy[index], copy[index - 1]]
+        return copy
+      })
+    }
+
     return (
       <div data-testid="aisle-manager">
-        <button onClick={() => onUpdateAisles(['New Aisle'])}>
+        {localAisles.map((aisle, index) => (
+          <div key={aisle.name || index} data-testid={`aisle-row-${index}`}>
+            <span>{aisle.name}</span>
+            <button
+              aria-label="aisle.moveUp"
+              onClick={() => handleMoveUp(index)}
+              disabled={index === 0}
+            >
+              Move Up
+            </button>
+          </div>
+        ))}
+        <button onClick={() => onUpdateAisles(localAisles)}>
           Update Aisles
         </button>
         <button onClick={onClose}>Close</button>
@@ -949,6 +976,60 @@ describe('Home', () => {
     await waitFor(() => {
       expect(mockShoppingListService.updateListAisles).toHaveBeenCalled()
     })
+  })
+
+  it('should preserve aisle IDs when reordering aisles', async () => {
+    const user = userEvent.setup()
+    mockUseAuth.mockReturnValue({
+      user: mockUser,
+      loading: false
+    })
+
+    // Original order: Produce (id:1), Dairy (id:2), Meat (id:3)
+    const mockAisles = [
+      { id: 'aisle-1', name: 'Produce', color: '#22c55e', display_order: 1 },
+      { id: 'aisle-2', name: 'Dairy', color: '#3b82f6', display_order: 2 },
+      { id: 'aisle-3', name: 'Meat', color: '#ef4444', display_order: 3 }
+    ]
+
+    mockShoppingListService.getListAisles.mockResolvedValue(mockAisles)
+    mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
+    mockShoppingListService.updateListAisles.mockResolvedValue(mockAisles)
+    mockShoppingListService.getShoppingItems.mockResolvedValue([])
+
+    render(<Home />)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('header.menu.open')).toBeInTheDocument()
+    })
+
+    // Open Header menu
+    await user.click(screen.getByLabelText('header.menu.open'))
+
+    // Click "Manage Aisles" in the menu
+    await user.click(screen.getByText('Manage Aisles'))
+
+    // Move Dairy up (simulating reorder: Dairy, Produce, Meat)
+    const moveUpButtons = screen.getAllByLabelText('aisle.moveUp')
+    await user.click(moveUpButtons[1]) // Click move up on Dairy (second item)
+
+    // Save changes
+    await user.click(screen.getByText('Update Aisles'))
+
+    await waitFor(() => {
+      expect(mockShoppingListService.updateListAisles).toHaveBeenCalled()
+    })
+
+    // Verify the payload has correct IDs matched by name, not by index
+    const updateCall = mockShoppingListService.updateListAisles.mock.calls[0]
+    const payload = updateCall[1]
+
+    // After reorder: Dairy should be first but keep id:aisle-2
+    expect(payload[0]).toMatchObject({ id: 'aisle-2', name: 'Dairy', display_order: 1 })
+    // Produce should be second but keep id:aisle-1
+    expect(payload[1]).toMatchObject({ id: 'aisle-1', name: 'Produce', display_order: 2 })
+    // Meat stays third with id:aisle-3
+    expect(payload[2]).toMatchObject({ id: 'aisle-3', name: 'Meat', display_order: 3 })
   })
 
   it('should show empty state when no items', async () => {
