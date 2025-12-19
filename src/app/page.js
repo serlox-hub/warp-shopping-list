@@ -700,28 +700,36 @@ export default function Home() {
           />
         )}
       </div>
-      {isTopItemsOpen && (
+      {/* History Drawer */}
+      <div
+        className={`fixed inset-0 z-[120] transition-opacity duration-300 ${
+          isTopItemsOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* Backdrop */}
         <div
-          className="fixed inset-0 z-[120] flex justify-end bg-black/30 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/30 backdrop-blur-sm"
           onClick={() => setIsTopItemsOpen(false)}
+        />
+        {/* Drawer */}
+        <div
+          className={`absolute top-0 right-0 h-full w-full max-w-md bg-white dark:bg-slate-900 shadow-2xl transform transition-transform duration-300 ease-out ${
+            isTopItemsOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+          onClick={(event) => event.stopPropagation()}
         >
-          <div
-            className="w-full max-w-md h-full sm:h-auto sm:max-h-[85vh] sm:my-10 sm:mr-8 overflow-hidden rounded-none sm:rounded-2xl flex flex-col"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <TopPurchasedItems
-              items={topItems}
-              loading={topItemsLoading}
-              onAddItem={handleQuickAddFromUsage}
-              onDeleteItem={handleDeleteFromHistory}
-              customAisles={localizedCustomAisles}
-              existingItemNames={items.map(item => item.name)}
-              onClose={() => setIsTopItemsOpen(false)}
-              aisleColors={aisleColors}
-            />
-          </div>
+          <TopPurchasedItems
+            items={topItems}
+            loading={topItemsLoading}
+            onAddItem={handleQuickAddFromUsage}
+            onDeleteItem={handleDeleteFromHistory}
+            customAisles={localizedCustomAisles}
+            existingItemNames={items.map(item => item.name)}
+            onClose={() => setIsTopItemsOpen(false)}
+            aisleColors={aisleColors}
+          />
         </div>
-      )}
+      </div>
 
       {/* Floating Add Button */}
       <FloatingAddButton onClick={() => setShowAddModal(true)} />

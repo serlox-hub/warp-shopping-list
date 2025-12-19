@@ -55,8 +55,8 @@ export default function TopPurchasedItems({
   const showFullSpinner = loading && !hasItems;
 
   return (
-    <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg transition-colors duration-200">
-      <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+    <section className="h-full flex flex-col bg-white dark:bg-slate-900 transition-colors duration-200">
+      <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {t('topItems.title')}
@@ -94,7 +94,7 @@ export default function TopPurchasedItems({
         )}
       </div>
 
-      <div className="px-4 py-3">
+      <div className="flex-1 overflow-y-auto px-4 py-3">
         {showFullSpinner ? (
           <div className="flex items-center justify-center py-6">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -124,21 +124,21 @@ export default function TopPurchasedItems({
                     <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[180px]">
                       {item.item_name}
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                       <span>{t('topItems.purchasedCount', { count: item.purchase_count })}</span>
-                      {item.displayAisle && (
-                        <span
-                          className="inline-flex items-center px-2 py-0.5 rounded-full border border-transparent font-medium"
-                          style={{
-                            backgroundColor: badgeColor,
-                            color: badgeTextColor,
-                            borderColor: badgeBorderColor
-                          }}
-                        >
-                          {item.displayAisle}
-                        </span>
-                      )}
                     </div>
+                    {item.displayAisle && (
+                      <span
+                        className="inline-flex items-center px-2 py-0.5 rounded-full border border-transparent font-medium text-xs mt-1"
+                        style={{
+                          backgroundColor: badgeColor,
+                          color: badgeTextColor,
+                          borderColor: badgeBorderColor
+                        }}
+                      >
+                        {item.displayAisle}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">

@@ -39,7 +39,7 @@
     "subtitle": "Quickly add your previously purchased products",
     "empty": "Your purchase history will appear here as you add items.",
     "purchasedCount": "Purchased {{count}} times",
-    "addButton": "Add to list",
+    "addButton": "Add",
     "alreadyAdded": "Already in list",
     "openButton": "History",
     "refreshing": "Updating...",

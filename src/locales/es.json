@@ -39,7 +39,7 @@
     "subtitle": "Agrega rápidamente tus productos comprados anteriormente",
     "empty": "Tu historial de compras aparecerá aquí a medida que agregues artículos.",
     "purchasedCount": "Comprado {{count}} veces",
-    "addButton": "Agregar a la lista",
+    "addButton": "Añadir",
     "alreadyAdded": "Ya en la lista",
     "openButton": "Historial",
     "refreshing": "Actualizando...",
