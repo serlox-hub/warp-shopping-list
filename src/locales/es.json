@@ -119,6 +119,20 @@
     "account": {
       "title": "Cuenta",
       "subtitle": "Información de tu cuenta"
+    },
+    "installApp": {
+      "title": "Aplicación",
+      "installed": "App instalada correctamente",
+      "addToHomeScreen": "Añadir a pantalla de inicio",
+      "description": "Accede más rápido y úsala como una app nativa",
+      "ios": {
+        "step1": "Pulsa el botón <strong>Compartir</strong>",
+        "step2": "Selecciona <strong>Añadir a pantalla de inicio</strong>"
+      },
+      "android": {
+        "step1": "Pulsa el menú del navegador",
+        "step2": "Selecciona <strong>Añadir a pantalla de inicio</strong> o <strong>Instalar</strong>"
+      }
     }
   },
   "errors": {

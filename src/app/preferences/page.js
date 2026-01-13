@@ -184,7 +184,7 @@ export default function PreferencesPage() {
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               {t('preferences.account.subtitle')}
             </p>
-            
+
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <div className="relative">
@@ -221,6 +221,102 @@ export default function PreferencesPage() {
               </div>
             </div>
           </div>
+
+          {/* Install App Section */}
+          <InstallAppSection t={t} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InstallAppSection({ t }) {
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    // Check if running as installed PWA
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+    setIsStandalone(standalone);
+
+    // Check if iOS device
+    setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent));
+  }, []);
+
+  if (isStandalone) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+          {t('preferences.installApp.title')}
+        </h2>
+        <div className="flex items-center space-x-2">
+          <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            {t('preferences.installApp.installed')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+        {t('preferences.installApp.title')}
+      </h2>
+      <div className="flex items-start space-x-3">
+        <svg className="w-6 h-6 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+            {t('preferences.installApp.addToHomeScreen')}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t('preferences.installApp.description')}
+          </p>
+          {isIOS ? (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                <p
+                  className="text-xs text-gray-500 dark:text-gray-400"
+                  dangerouslySetInnerHTML={{ __html: t('preferences.installApp.ios.step1') }}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-400 w-4 text-center">→</span>
+                <p
+                  className="text-xs text-gray-500 dark:text-gray-400"
+                  dangerouslySetInnerHTML={{ __html: t('preferences.installApp.ios.step2') }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+                <p
+                  className="text-xs text-gray-500 dark:text-gray-400"
+                  dangerouslySetInnerHTML={{ __html: t('preferences.installApp.android.step1') }}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-400 w-4 text-center">→</span>
+                <p
+                  className="text-xs text-gray-500 dark:text-gray-400"
+                  dangerouslySetInnerHTML={{ __html: t('preferences.installApp.android.step2') }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

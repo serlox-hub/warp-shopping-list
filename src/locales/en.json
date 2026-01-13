@@ -119,6 +119,20 @@
     "account": {
       "title": "Account",
       "subtitle": "Your account information"
+    },
+    "installApp": {
+      "title": "Application",
+      "installed": "App installed successfully",
+      "addToHomeScreen": "Add to home screen",
+      "description": "Access faster and use it as a native app",
+      "ios": {
+        "step1": "Tap the <strong>Share</strong> button",
+        "step2": "Select <strong>Add to Home Screen</strong>"
+      },
+      "android": {
+        "step1": "Tap the browser menu",
+        "step2": "Select <strong>Add to Home Screen</strong> or <strong>Install</strong>"
+      }
     }
   },
   "errors": {
