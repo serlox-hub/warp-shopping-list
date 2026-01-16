@@ -10,7 +10,9 @@ export default function ShoppingItem({
   onEdit,
   availableAisles = [],
   onChangeAisle,
-  aisleColors = {}
+  aisleColors = {},
+  availableSupermarkets = [],
+  onChangeSupermarket
 }) {
   const t = useTranslations();
   const [openMenu, setOpenMenu] = useState(null);
@@ -81,6 +83,14 @@ export default function ShoppingItem({
     onChangeAisle?.(item.id, selectedAisle);
   };
 
+  const handleSelectSupermarket = (event, selectedSupermarketId) => {
+    event?.stopPropagation();
+    setOpenMenu(null);
+    const currentSupermarketId = item.supermarket_id || item.supermarket?.id;
+    if (selectedSupermarketId === currentSupermarketId) return;
+    onChangeSupermarket?.(item.id, selectedSupermarketId);
+  };
+
   const handleKeyDown = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -106,6 +116,8 @@ export default function ShoppingItem({
   };
 
   const canChangeAisle = availableAisles.length > 0;
+  const canChangeSupermarket = availableSupermarkets.length > 0;
+  const currentSupermarketId = item.supermarket_id || item.supermarket?.id;
 
   return (
     <div
@@ -149,7 +161,7 @@ export default function ShoppingItem({
               onClick={(event) => toggleMenu(event, 'actions')}
               className="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-haspopup="menu"
-              aria-expanded={openMenu === 'actions' || openMenu === 'aisle'}
+              aria-expanded={openMenu === 'actions' || openMenu === 'aisle' || openMenu === 'supermarket'}
               aria-label={t('shoppingList.itemActions')}
             >
               <span className="sr-only">{t('shoppingList.itemActions')}</span>
@@ -179,6 +191,21 @@ export default function ShoppingItem({
                     className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 transition-colors duration-150 flex items-center justify-between"
                   >
                     <span>{t('shoppingList.changeAisle')}</span>
+                    <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                )}
+                {canChangeSupermarket && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setOpenMenu('supermarket');
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 transition-colors duration-150 flex items-center justify-between"
+                  >
+                    <span>{t('shoppingList.changeSupermarket')}</span>
                     <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
                     </svg>
@@ -237,6 +264,66 @@ export default function ShoppingItem({
                           ></span>
                         )}
                         <span>{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {openMenu === 'supermarket' && (
+              <div
+                className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20 py-1"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setOpenMenu('actions');
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors duration-150 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                  </svg>
+                  <span>{t('shoppingList.changeSupermarket')}</span>
+                </button>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                <div className="max-h-60 overflow-y-auto">
+                  {/* Option to remove supermarket assignment */}
+                  <button
+                    type="button"
+                    onClick={(event) => handleSelectSupermarket(event, null)}
+                    className={`w-full px-3 py-2 text-left text-sm transition-colors duration-150 flex items-center gap-2 ${
+                      !currentSupermarketId
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
+                    }`}
+                    aria-current={!currentSupermarketId ? 'true' : undefined}
+                  >
+                    <span className="inline-flex h-2.5 w-2.5 rounded-full border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700" aria-hidden="true"></span>
+                    <span>{t('shoppingList.noSupermarket')}</span>
+                  </button>
+                  {availableSupermarkets.map((supermarket) => {
+                    const isCurrent = supermarket.id === currentSupermarketId;
+                    return (
+                      <button
+                        key={supermarket.id}
+                        type="button"
+                        onClick={(event) => handleSelectSupermarket(event, supermarket.id)}
+                        className={`w-full px-3 py-2 text-left text-sm transition-colors duration-150 flex items-center gap-2 ${
+                          isCurrent
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                            : 'text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800'
+                        }`}
+                        aria-current={isCurrent ? 'true' : undefined}
+                      >
+                        <span
+                          className="inline-flex h-2.5 w-2.5 rounded-full border border-gray-200 dark:border-gray-700"
+                          style={{ backgroundColor: supermarket.color }}
+                          aria-hidden="true"
+                        ></span>
+                        <span>{supermarket.name}</span>
                       </button>
                     );
                   })}

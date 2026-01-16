@@ -108,12 +108,18 @@ export class ShoppingListService {
 
       const listId = membership.shopping_lists.id;
 
-      // Get items with list_aisles
+      // Get items with list_aisles and supermarket
       const { data: items, error: itemsError } = await supabase
         .from('shopping_items')
         .select(`
           *,
           aisle:list_aisles (
+            id,
+            name,
+            color,
+            display_order
+          ),
+          supermarket:list_supermarkets (
             id,
             name,
             color,
@@ -249,6 +255,12 @@ export class ShoppingListService {
             name,
             color,
             display_order
+          ),
+          supermarket:list_supermarkets (
+            id,
+            name,
+            color,
+            display_order
           )
         `)
         .eq('shopping_list_id', listId)
@@ -275,6 +287,12 @@ export class ShoppingListService {
             name,
             color,
             display_order
+          ),
+          supermarket:list_supermarkets (
+            id,
+            name,
+            color,
+            display_order
           )
         `)
         .eq('shopping_list_id', listId)
@@ -291,6 +309,7 @@ export class ShoppingListService {
           .update({
             active: true,
             aisle_id: itemData.aisle_id || existingItem.aisle_id,
+            supermarket_id: itemData.supermarket_id !== undefined ? itemData.supermarket_id : existingItem.supermarket_id,
             quantity: itemData.quantity || 1,
             comment: itemData.comment || '',
             completed: false,
@@ -300,6 +319,12 @@ export class ShoppingListService {
           .select(`
             *,
             aisle:list_aisles (
+              id,
+              name,
+              color,
+              display_order
+            ),
+            supermarket:list_supermarkets (
               id,
               name,
               color,
@@ -319,6 +344,7 @@ export class ShoppingListService {
           shopping_list_id: listId,
           name: itemData.name,
           aisle_id: itemData.aisle_id || null,
+          supermarket_id: itemData.supermarket_id || null,
           quantity: itemData.quantity || 1,
           comment: itemData.comment || '',
           completed: false,
@@ -328,6 +354,12 @@ export class ShoppingListService {
         .select(`
           *,
           aisle:list_aisles (
+            id,
+            name,
+            color,
+            display_order
+          ),
+          supermarket:list_supermarkets (
             id,
             name,
             color,
@@ -353,6 +385,12 @@ export class ShoppingListService {
         .select(`
           *,
           aisle:list_aisles (
+            id,
+            name,
+            color,
+            display_order
+          ),
+          supermarket:list_supermarkets (
             id,
             name,
             color,
@@ -566,7 +604,13 @@ export class ShoppingListService {
           quantity,
           purchase_count,
           last_purchased_at,
+          supermarket_id,
           aisle:list_aisles (
+            id,
+            name,
+            color
+          ),
+          supermarket:list_supermarkets (
             id,
             name,
             color
@@ -808,12 +852,18 @@ export class ShoppingListService {
 
       if (listError) throw listError;
 
-      // Fetch items with aisles
+      // Fetch items with aisles and supermarket
       const { data: items, error: itemsError } = await supabase
         .from('shopping_items')
         .select(`
           *,
           aisle:list_aisles (
+            id,
+            name,
+            color,
+            display_order
+          ),
+          supermarket:list_supermarkets (
             id,
             name,
             color,
@@ -849,4 +899,103 @@ export class ShoppingListService {
     console.warn('deleteShoppingList is deprecated, use leaveList instead');
     return this.leaveList(listId, userId);
   }
+
+  // ============================================================================
+  // LIST SUPERMARKETS METHODS
+  // ============================================================================
+
+  static async getListSupermarkets(listId) {
+    try {
+      const { data, error } = await supabase
+        .from('list_supermarkets')
+        .select('*')
+        .eq('list_id', listId)
+        .order('display_order', { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []).map(supermarket => ({
+        id: supermarket.id,
+        name: supermarket.name,
+        color: supermarket.color || '#6b7280',
+        display_order: supermarket.display_order
+      }));
+    } catch (error) {
+      console.error('Error getting list supermarkets:', error);
+      throw error;
+    }
+  }
+
+  static async updateListSupermarkets(listId, supermarkets) {
+    try {
+      const { data: existingSupermarkets, error: fetchError } = await supabase
+        .from('list_supermarkets')
+        .select('*')
+        .eq('list_id', listId);
+
+      if (fetchError) throw fetchError;
+
+      const existingSupermarketsMap = new Map(
+        (existingSupermarkets || []).map(s => [s.id, s])
+      );
+
+      const incomingSupermarketIds = new Set(
+        supermarkets.filter(s => s.id).map(s => s.id)
+      );
+
+      const operations = [];
+
+      for (let index = 0; index < supermarkets.length; index++) {
+        const supermarket = supermarkets[index];
+
+        if (supermarket.id && existingSupermarketsMap.has(supermarket.id)) {
+          const existing = existingSupermarketsMap.get(supermarket.id);
+          operations.push(
+            supabase
+              .from('list_supermarkets')
+              .update({
+                name: supermarket.name,
+                color: supermarket.color || existing.color || '#6b7280',
+                display_order: supermarket.display_order ?? index + 1,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', supermarket.id)
+          );
+        } else {
+          operations.push(
+            supabase
+              .from('list_supermarkets')
+              .insert({
+                list_id: listId,
+                name: supermarket.name,
+                color: supermarket.color || '#6b7280',
+                display_order: supermarket.display_order ?? index + 1
+              })
+          );
+        }
+      }
+
+      const supermarketsToDelete = existingSupermarkets.filter(
+        existing => !incomingSupermarketIds.has(existing.id)
+      );
+
+      if (supermarketsToDelete.length > 0) {
+        const idsToDelete = supermarketsToDelete.map(s => s.id);
+        operations.push(
+          supabase
+            .from('list_supermarkets')
+            .delete()
+            .in('id', idsToDelete)
+        );
+      }
+
+      await Promise.all(operations);
+
+      return this.getListSupermarkets(listId);
+    } catch (error) {
+      console.error('Error updating list supermarkets:', error);
+      throw error;
+    }
+  }
+
 }

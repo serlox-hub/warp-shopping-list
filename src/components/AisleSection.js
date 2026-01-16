@@ -13,7 +13,9 @@ export default function AisleSection({
   onEdit,
   aisleColors = {},
   availableAisles = [],
-  onChangeAisle
+  onChangeAisle,
+  availableSupermarkets = [],
+  onChangeSupermarket
 }) {
   const t = useTranslations();
   const sortedItems = sortItemsInAisle([...items]);
@@ -50,6 +52,8 @@ export default function AisleSection({
             availableAisles={availableAisles}
             onChangeAisle={onChangeAisle}
             aisleColors={aisleColors}
+            availableSupermarkets={availableSupermarkets}
+            onChangeSupermarket={onChangeSupermarket}
           />
         ))}
       </div>

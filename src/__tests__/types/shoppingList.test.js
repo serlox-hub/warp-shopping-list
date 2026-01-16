@@ -266,9 +266,9 @@ describe('shoppingList types and utilities', () => {
         { id: '2', name: 'Milk', aisle: 'Dairy' },
         { id: '3', name: 'Banana', aisle: 'Produce' },
       ]
-      
+
       const result = updateItemsAisle(items, 'Produce', 'Fresh Produce')
-      
+
       expect(result[0].aisle).toBe('Fresh Produce')
       expect(result[1].aisle).toBe('Dairy')
       expect(result[2].aisle).toBe('Fresh Produce')
@@ -279,15 +279,108 @@ describe('shoppingList types and utilities', () => {
         { id: '1', name: 'Milk', aisle: 'Dairy' },
         { id: '2', name: 'Bread', aisle: 'Bakery' },
       ]
-      
+
       const result = updateItemsAisle(items, 'Produce', 'Fresh Produce')
-      
+
       expect(result).toEqual(items)
     })
 
     it('should handle empty items array', () => {
       const result = updateItemsAisle([], 'Old', 'New')
       expect(result).toEqual([])
+    })
+  })
+
+  // ============================================================================
+  // SUPERMARKET HELPER FUNCTIONS (tested as pure functions)
+  // These mirror the logic in page.js for groupedBySupermarket
+  // ============================================================================
+
+  describe('groupItemsBySupermarket logic', () => {
+    const supermarkets = [
+      { id: 'super-1', name: 'Mercadona' },
+      { id: 'super-2', name: 'Carrefour' }
+    ]
+
+    // Pure function equivalent of the useMemo in page.js
+    // Now uses supermarket_id (single) instead of supermarkets[] (multiple)
+    const groupItemsBySupermarket = (items, supermarkets) => {
+      if (!supermarkets || supermarkets.length === 0) return null
+
+      const result = { unassigned: [] }
+
+      supermarkets.forEach(sm => {
+        result[sm.id] = []
+      })
+
+      items.forEach(item => {
+        const smId = item.supermarket_id || item.supermarket?.id
+        if (smId && result[smId]) {
+          result[smId].push(item)
+        } else {
+          result.unassigned.push(item)
+        }
+      })
+
+      return result
+    }
+
+    it('should return null if no supermarkets exist', () => {
+      const items = [{ id: '1', name: 'Apple' }]
+
+      expect(groupItemsBySupermarket(items, [])).toBe(null)
+      expect(groupItemsBySupermarket(items, null)).toBe(null)
+    })
+
+    it('should put items without supermarket_id in unassigned', () => {
+      const items = [
+        { id: '1', name: 'Apple' },
+        { id: '2', name: 'Banana', supermarket_id: null }
+      ]
+
+      const result = groupItemsBySupermarket(items, supermarkets)
+
+      expect(result.unassigned).toHaveLength(2)
+      expect(result['super-1']).toHaveLength(0)
+      expect(result['super-2']).toHaveLength(0)
+    })
+
+    it('should group items by their assigned supermarket', () => {
+      const items = [
+        { id: '1', name: 'Apple', supermarket_id: 'super-1', completed: false },
+        { id: '2', name: 'Banana', supermarket_id: 'super-2', completed: true }
+      ]
+
+      const result = groupItemsBySupermarket(items, supermarkets)
+
+      expect(result['super-1']).toHaveLength(1)
+      expect(result['super-1'][0].name).toBe('Apple')
+      expect(result['super-2']).toHaveLength(1)
+      expect(result['super-2'][0].name).toBe('Banana')
+      expect(result.unassigned).toHaveLength(0)
+    })
+
+    it('should put items with deleted supermarket references in unassigned', () => {
+      const items = [
+        { id: '1', name: 'Apple', supermarket_id: 'deleted-super', completed: false }
+      ]
+
+      const result = groupItemsBySupermarket(items, supermarkets)
+
+      expect(result.unassigned).toHaveLength(1)
+      expect(result.unassigned[0].name).toBe('Apple')
+      expect(result['super-1']).toHaveLength(0)
+      expect(result['super-2']).toHaveLength(0)
+    })
+
+    it('should support supermarket.id from nested object', () => {
+      const items = [
+        { id: '1', name: 'Apple', supermarket: { id: 'super-1' }, completed: false }
+      ]
+
+      const result = groupItemsBySupermarket(items, supermarkets)
+
+      expect(result['super-1']).toHaveLength(1)
     })
   })
 })

@@ -5,6 +5,8 @@ import FloatingAddButton from '@/components/FloatingAddButton';
 import ItemModal from '@/components/ItemModal';
 import AisleSection from '@/components/AisleSection';
 import AisleManager from '@/components/AisleManager';
+import SupermarketManager from '@/components/SupermarketManager';
+import SupermarketSection from '@/components/SupermarketSection';
 import Header from '@/components/Header';
 import LoginForm from '@/components/LoginForm';
 import ListSelector from '@/components/ListSelector';
@@ -34,6 +36,8 @@ export default function Home() {
   const [customAisles, setCustomAisles] = useState([]);
   const [aisleColors, setAisleColors] = useState({});
   const [showAisleManager, setShowAisleManager] = useState(false);
+  const [showSupermarketManager, setShowSupermarketManager] = useState(false);
+  const [supermarkets, setSupermarkets] = useState([]);
   const [topItems, setTopItems] = useState([]);
   const [topItemsLoading, setTopItemsLoading] = useState(false);
   const [isTopItemsOpen, setIsTopItemsOpen] = useState(false);
@@ -89,12 +93,28 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // applyAisleState is stable
 
+  const loadListSupermarkets = useCallback(async (listId) => {
+    if (!listId) {
+      setSupermarkets([]);
+      return;
+    }
+
+    try {
+      const dbSupermarkets = await ShoppingListService.getListSupermarkets(listId);
+      setSupermarkets(dbSupermarkets);
+    } catch (error) {
+      console.error('Error loading list supermarkets:', error);
+      setSupermarkets([]);
+    }
+  }, []);
+
   const loadShoppingListData = useCallback(async () => {
     if (!userId) {
       setShoppingList(null);
       setItems([]);
       setCustomAisles([]);
       setAisleColors({});
+      setSupermarkets([]);
       setDataLoading(false);
       return;
     }
@@ -106,9 +126,12 @@ export default function Home() {
       setShoppingList(list);
       setItems(listItems);
 
-      // Load aisles for this list
+      // Load aisles and supermarkets for this list
       if (list?.id) {
-        await loadListAisles(list.id);
+        await Promise.all([
+          loadListAisles(list.id),
+          loadListSupermarkets(list.id)
+        ]);
       }
     } catch (error) {
       console.error('Error loading shopping list data:', error);
@@ -116,7 +139,7 @@ export default function Home() {
     } finally {
       setDataLoading(false);
     }
-  }, [userId, loadListAisles]);
+  }, [userId, loadListAisles, loadListSupermarkets]);
 
   const loadTopItems = useCallback(async (listIdOverride) => {
     const listId = listIdOverride || shoppingList?.id;
@@ -134,7 +157,8 @@ export default function Home() {
         last_aisle: item.aisle?.name || null,
         last_quantity: item.quantity || 1,
         usage_aisle: item.aisle?.name || null,
-        usage_key: `${item.name}::${item.aisle?.name || ''}`
+        usage_key: `${item.name}::${item.aisle?.name || ''}`,
+        supermarket_id: item.supermarket_id || null
       }));
       setTopItems(formattedItems);
     } catch (error) {
@@ -155,6 +179,7 @@ export default function Home() {
       setTopItems([]);
       setCustomAisles([]);
       setAisleColors({});
+      setSupermarkets([]);
       setDataLoading(false);
       setIsTopItemsOpen(false);
     }
@@ -172,13 +197,17 @@ export default function Home() {
     setShoppingList(newList);
     setEditingItem(null);
 
-    // Reset top items for new list
+    // Reset state for new list
     setTopItems([]);
 
-    // Load items and aisles for the new list
+    // Load items, aisles, and supermarkets for the new list
     try {
-      const listItems = await ShoppingListService.getShoppingItems(newList.id);
+      const [listItems, dbSupermarkets] = await Promise.all([
+        ShoppingListService.getShoppingItems(newList.id),
+        ShoppingListService.getListSupermarkets(newList.id)
+      ]);
       setItems(listItems);
+      setSupermarkets(dbSupermarkets);
 
       // Load aisles for the new list
       await loadListAisles(newList.id);
@@ -209,12 +238,18 @@ export default function Home() {
       aisleObj = customAisles.find(a => a.id === aisleId);
     }
 
+    // Get supermarket object if assigned
+    const supermarketId = itemData.supermarket_id || null;
+    const supermarketObj = supermarketId ? supermarkets.find(s => s.id === supermarketId) : null;
+
     // Create optimistic item with temporary ID
     const optimisticItem = {
       id: `temp-${Date.now()}-${Math.random()}`,
       name: itemData.name,
       aisle: aisleObj || { id: aisleId, name: itemData.aisle || 'Other' },
       aisle_id: aisleId,
+      supermarket: supermarketObj,
+      supermarket_id: supermarketId,
       quantity: itemData.quantity || 1,
       comment: itemData.comment || '',
       completed: false,
@@ -232,7 +267,8 @@ export default function Home() {
         shoppingList.id,
         {
           ...itemData,
-          aisle_id: aisleId
+          aisle_id: aisleId,
+          supermarket_id: supermarketId
         }
       );
 
@@ -256,12 +292,10 @@ export default function Home() {
     if (!previousItem) return;
 
     // Convert aisle name/object to aisle_id
-    // Always check updatedItem.aisle first (new value from modal), then fall back to aisle_id
     let aisleId = null;
     let aisleObj = null;
 
     if (updatedItem.aisle) {
-      // Handle both string aisle names and aisle objects
       const aisleName = typeof updatedItem.aisle === 'string'
         ? updatedItem.aisle
         : updatedItem.aisle?.name;
@@ -275,12 +309,20 @@ export default function Home() {
       aisleObj = customAisles.find(a => a.id === aisleId);
     }
 
+    // Get supermarket object if assigned
+    const supermarketId = updatedItem.supermarket_id !== undefined
+      ? updatedItem.supermarket_id
+      : previousItem.supermarket_id;
+    const supermarketObj = supermarketId ? supermarkets.find(s => s.id === supermarketId) : null;
+
     // Create optimistic updated item
     const optimisticItem = {
       ...previousItem,
       name: updatedItem.name,
       aisle: aisleObj || previousItem.aisle,
       aisle_id: aisleId,
+      supermarket: supermarketObj,
+      supermarket_id: supermarketId,
       quantity: updatedItem.quantity,
       comment: updatedItem.comment,
       updated_at: new Date().toISOString()
@@ -297,6 +339,7 @@ export default function Home() {
       const updated = await ShoppingListService.updateShoppingItem(updatedItem.id, {
         name: updatedItem.name,
         aisle_id: aisleId,
+        supermarket_id: supermarketId,
         quantity: updatedItem.quantity,
         comment: updatedItem.comment
       });
@@ -313,7 +356,6 @@ export default function Home() {
       const aisleChanged = previousAisleName !== newAisleName;
 
       // Refresh top items if item details changed or if completed
-      // This ensures suggestions always show current item names and aisles
       if (nameChanged || aisleChanged || updated.completed) {
         loadTopItems();
       }
@@ -347,9 +389,9 @@ export default function Home() {
         completed: newCompleted
       });
 
-      // Update with server response (in case server changed something)
-      setItems(prev => prev.map(item =>
-        item.id === updated.id ? updated : item
+      // Update with server response
+      setItems(prev => prev.map(i =>
+        i.id === updated.id ? updated : i
       ));
 
       // If item was just completed, refresh top items in background
@@ -409,6 +451,50 @@ export default function Home() {
     }
   };
 
+  const handleChangeItemSupermarket = async (itemId, newSupermarketId) => {
+    const item = items.find(entry => entry.id === itemId);
+    if (!item) return;
+
+    const currentSupermarketId = item.supermarket_id || item.supermarket?.id;
+    if (newSupermarketId === currentSupermarketId) return;
+
+    // Find supermarket object (null if removing assignment)
+    const supermarketObj = newSupermarketId
+      ? supermarkets.find(s => s.id === newSupermarketId)
+      : null;
+
+    const previousSupermarket = item.supermarket;
+    const previousSupermarketId = item.supermarket_id;
+
+    // Optimistic update: Change supermarket immediately
+    setItems(prev => prev.map(entry =>
+      entry.id === itemId
+        ? { ...entry, supermarket: supermarketObj, supermarket_id: newSupermarketId, updated_at: new Date().toISOString() }
+        : entry
+    ));
+
+    try {
+      // Make the actual server request
+      const updated = await ShoppingListService.updateShoppingItem(itemId, {
+        supermarket_id: newSupermarketId
+      });
+
+      // Update with server response
+      setItems(prev => prev.map(entry =>
+        entry.id === updated.id ? updated : entry
+      ));
+    } catch (error) {
+      console.error('Error changing item supermarket:', error);
+      // Rollback: Revert to previous supermarket
+      setItems(prev => prev.map(entry =>
+        entry.id === itemId
+          ? { ...entry, supermarket: previousSupermarket, supermarket_id: previousSupermarketId }
+          : entry
+      ));
+      showError(t('errors.changeSupermarketFailed'));
+    }
+  };
+
   const handleDeleteItem = async (itemId) => {
     const itemToDelete = items.find(item => item.id === itemId);
     if (!itemToDelete) return;
@@ -452,7 +538,6 @@ export default function Home() {
     setItems(prev => prev.filter(item => !item.completed));
 
     try {
-      // Make the actual server request
       await ShoppingListService.clearCompletedItems(shoppingList.id);
     } catch (error) {
       console.error('Error clearing completed items:', error);
@@ -547,17 +632,45 @@ export default function Home() {
     }
   };
 
+  const handleUpdateSupermarkets = async (pendingSupermarkets) => {
+    if (!shoppingList?.id) return;
+
+    // Build a map of existing supermarkets by name for ID matching
+    const existingSupermarketsByName = new Map(
+      supermarkets.map(s => [s.name, s])
+    );
+
+    const payload = (pendingSupermarkets || []).map((supermarket, index) => {
+      const existing = existingSupermarketsByName.get(supermarket.name);
+      return {
+        id: supermarket.id || existing?.id,
+        name: supermarket.name,
+        color: supermarket.color || '#6b7280',
+        display_order: index + 1
+      };
+    });
+
+    try {
+      const updatedSupermarkets = await ShoppingListService.updateListSupermarkets(shoppingList.id, payload);
+      setSupermarkets(updatedSupermarkets);
+    } catch (error) {
+      console.error('Error updating list supermarkets:', error);
+    }
+  };
+
   const handleQuickAddFromUsage = async (usageItem) => {
     if (!shoppingList || !user) return;
 
     const targetAisle = usageItem.last_aisle || 'Other';
     const targetQuantity = usageItem.last_quantity || 1;
+    const targetSupermarketId = usageItem.supermarket_id || null;
 
     await handleAddItem({
       name: usageItem.item_name,
       aisle: targetAisle,
       quantity: targetQuantity,
-      comment: ''
+      comment: '',
+      supermarket_id: targetSupermarketId
     });
   };
 
@@ -574,6 +687,32 @@ export default function Home() {
   const hasItems = totalCount > 0;
   const hasTopItemsData = topItems.length > 0;
   const canOpenTopItems = hasItems ? true : (hasTopItemsData || topItemsLoading);
+  const hasSupermarkets = supermarkets.length > 0;
+
+  // Group items by supermarket for hierarchical view
+  const groupedBySupermarket = useMemo(() => {
+    if (!hasSupermarkets) return null;
+
+    const result = {
+      unassigned: []
+    };
+
+    // Initialize groups for each supermarket
+    supermarkets.forEach(sm => {
+      result[sm.id] = [];
+    });
+
+    items.forEach(item => {
+      const smId = item.supermarket_id || item.supermarket?.id;
+      if (smId && result[smId]) {
+        result[smId].push(item);
+      } else {
+        result.unassigned.push(item);
+      }
+    });
+
+    return result;
+  }, [items, supermarkets, hasSupermarkets]);
 
   const managerAisles = useMemo(() => {
     return localizedCustomAisles.map((localizedName, index) => {
@@ -636,6 +775,7 @@ export default function Home() {
                 onShareList={() => setShowShareModal(true)}
                 onViewMembers={() => setShowMembersModal(true)}
                 onManageAisles={() => setShowAisleManager(true)}
+                onManageSupermarkets={() => setShowSupermarketManager(true)}
                 onOpenHistory={handleOpenTopItems}
                 onClearCompleted={handleClearCompleted}
                 onClearAll={handleClearAll}
@@ -648,9 +788,9 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Shopping List by Aisles */}
+        {/* Shopping List */}
         <div className="space-y-6">
-          {Object.keys(groupedItems).length === 0 ? (
+          {!hasItems ? (
             <div className="text-center py-12 space-y-6">
               <div className="text-gray-500 dark:text-gray-400">
                 <p className="text-xl">{t('shoppingList.emptyTitle')}</p>
@@ -674,7 +814,45 @@ export default function Home() {
                 </div>
               )}
             </div>
+          ) : hasSupermarkets && groupedBySupermarket ? (
+            /* Hierarchical view: Supermarket -> Aisle -> Items */
+            <>
+              {supermarkets
+                .filter(sm => groupedBySupermarket[sm.id] && groupedBySupermarket[sm.id].length > 0)
+                .map((sm) => (
+                  <SupermarketSection
+                    key={sm.id}
+                    supermarket={sm}
+                    items={groupedBySupermarket[sm.id]}
+                    customAisles={englishCustomAisles}
+                    aisleColors={aisleColors}
+                    onToggleComplete={handleToggleComplete}
+                    onDelete={handleDeleteItem}
+                    onEdit={handleEditItem}
+                    availableAisles={englishCustomAisles}
+                    onChangeAisle={handleChangeItemAisle}
+                    availableSupermarkets={supermarkets}
+                    onChangeSupermarket={handleChangeItemSupermarket}
+                  />
+                ))}
+              {groupedBySupermarket.unassigned && groupedBySupermarket.unassigned.length > 0 && (
+                <SupermarketSection
+                  supermarket={{ name: t('shoppingList.unassigned'), color: '#6b7280' }}
+                  items={groupedBySupermarket.unassigned}
+                  customAisles={englishCustomAisles}
+                  aisleColors={aisleColors}
+                  onToggleComplete={handleToggleComplete}
+                  onDelete={handleDeleteItem}
+                  onEdit={handleEditItem}
+                  availableAisles={englishCustomAisles}
+                  onChangeAisle={handleChangeItemAisle}
+                  availableSupermarkets={supermarkets}
+                  onChangeSupermarket={handleChangeItemSupermarket}
+                />
+              )}
+            </>
           ) : (
+            /* Flat view: Aisle -> Items (no supermarkets) */
             Object.entries(groupedItems).map(([aisle, aisleItems]) => (
               <AisleSection
                 key={aisle}
@@ -686,6 +864,8 @@ export default function Home() {
                 onEdit={handleEditItem}
                 availableAisles={englishCustomAisles}
                 onChangeAisle={handleChangeItemAisle}
+                availableSupermarkets={supermarkets}
+                onChangeSupermarket={handleChangeItemSupermarket}
               />
             ))
           )}
@@ -697,6 +877,15 @@ export default function Home() {
             aisles={managerAisles}
             onUpdateAisles={handleUpdateAisles}
             onClose={() => setShowAisleManager(false)}
+          />
+        )}
+
+        {/* Supermarket Manager Modal */}
+        {showSupermarketManager && (
+          <SupermarketManager
+            supermarkets={supermarkets}
+            onUpdateSupermarkets={handleUpdateSupermarkets}
+            onClose={() => setShowSupermarketManager(false)}
           />
         )}
       </div>
@@ -749,6 +938,7 @@ export default function Home() {
         itemUsageHistory={topItems}
         existingItems={items}
         aisleColors={aisleColors}
+        supermarkets={supermarkets}
       />
     </div>
   );

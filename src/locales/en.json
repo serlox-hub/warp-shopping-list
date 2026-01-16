@@ -30,9 +30,15 @@
     "clearCompleted": "Clear Completed ({{count}})",
     "clearAll": "Clear All",
     "manageAisles": "Manage Aisles",
+    "manageSupermarkets": "Manage Supermarkets",
+    "filterBySupermarket": "Filter by supermarket",
+    "allSupermarkets": "All",
+    "unassigned": "Unassigned",
     "itemActions": "Item actions",
     "changeAisle": "Change aisle",
-    "currentAisle": "Current aisle"
+    "currentAisle": "Current aisle",
+    "changeSupermarket": "Change supermarket",
+    "noSupermarket": "No supermarket"
   },
   "topItems": {
     "title": "History",
@@ -54,6 +60,8 @@
     "itemNamePlaceholder": "Enter item name",
     "aisle": "Aisle",
     "quantity": "Quantity",
+    "supermarket": "Supermarket",
+    "supermarketHelper": "Select where to buy this item (optional)",
     "comment": "Comment (optional)",
     "commentPlaceholder": "Add a note or comment...",
     "commentHelper": "Optional note (max 200 characters)",
@@ -72,6 +80,24 @@
     "invalidName": "Invalid name: must be unique, non-empty, and under 50 characters",
     "finishEditing": "Please finish editing the current aisle first",
     "colorLabel": "Select color"
+  },
+  "supermarketManager": {
+    "title": "Manage Supermarkets",
+    "subtitle": "Add, edit, delete, and reorder your supermarkets",
+    "addPlaceholder": "Add new supermarket...",
+    "saveChanges": "Save Changes",
+    "resetButton": "Reset",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "invalidName": "Invalid name: must be unique, non-empty, and under 50 characters",
+    "finishEditing": "Please finish editing the current supermarket first",
+    "colorLabel": "Select color",
+    "empty": "No supermarkets yet. Add one to organize your shopping by store.",
+    "confirmDelete": "Are you sure you want to delete this supermarket? Items assigned to it will become unassigned."
+  },
+  "supermarket": {
+    "unassigned": "Unassigned",
+    "noItems": "No items in this supermarket"
   },
   "aisles": {
     "produce": "Produce",
@@ -141,6 +167,7 @@
     "deleteItemFailed": "Failed to delete item. Please try again.",
     "toggleCompleteFailed": "Failed to update item status. Please try again.",
     "changeAisleFailed": "Failed to change aisle. Please try again.",
+    "changeSupermarketFailed": "Failed to change supermarket. Please try again.",
     "clearCompletedFailed": "Failed to clear completed items. Please try again.",
     "clearAllFailed": "Failed to clear all items. Please try again.",
     "networkError": "Network error. Please check your connection and try again.",

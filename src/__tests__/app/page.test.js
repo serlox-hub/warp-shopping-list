@@ -407,6 +407,7 @@ describe('Home', () => {
     })
 
     mockShoppingListService.getListAisles.mockResolvedValue([])
+    mockShoppingListService.getListSupermarkets.mockResolvedValue([])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({ list: mockShoppingList, items: [] })
     mockShoppingListService.getShoppingItems.mockResolvedValue([])
     mockShoppingListService.getActiveShoppingListWithItems.mockResolvedValue({
@@ -419,6 +420,7 @@ describe('Home', () => {
     mockShoppingListService.clearCompletedItems.mockResolvedValue(undefined)
     mockShoppingListService.clearAllItems.mockResolvedValue(undefined)
     mockShoppingListService.updateListAisles.mockResolvedValue([])
+    mockShoppingListService.updateListSupermarkets.mockResolvedValue([])
     mockShoppingListService.getMostPurchasedItems.mockResolvedValue([])
   })
 
@@ -1156,13 +1158,13 @@ describe('Home', () => {
       .mockResolvedValueOnce([mockItems[0]]) // After list change
 
     render(<Home />)
-    
+
     await waitFor(() => {
       expect(screen.getByTestId('list-selector')).toBeInTheDocument()
     })
 
     await user.click(screen.getByText('Change List'))
-    
+
     await waitFor(() => {
       expect(mockShoppingListService.getShoppingItems).toHaveBeenCalledWith('2')
     })

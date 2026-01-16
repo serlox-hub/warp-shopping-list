@@ -367,4 +367,115 @@ describe('TopPurchasedItems', () => {
       expect(screen.queryByText('Remove from history')).not.toBeInTheDocument()
     })
   })
+
+  describe('Supermarket data passthrough', () => {
+    it('should pass supermarket_id from history item to onAddItem callback', async () => {
+      const onAddItem = jest.fn()
+      const user = userEvent.setup()
+
+      const itemWithSupermarket = {
+        item_name: 'Milk',
+        purchase_count: 5,
+        last_aisle: 'Dairy',
+        supermarket_id: 'super-1'
+      }
+
+      render(
+        <TopPurchasedItems
+          items={[itemWithSupermarket]}
+          loading={false}
+          onAddItem={onAddItem}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      const addButton = screen.getByRole('button', { name: /Add to list/ })
+      await user.click(addButton)
+
+      expect(onAddItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          item_name: 'Milk',
+          supermarket_id: 'super-1'
+        })
+      )
+    })
+
+    it('should pass items without supermarket_id when none exist', async () => {
+      const onAddItem = jest.fn()
+      const user = userEvent.setup()
+
+      const itemWithoutSupermarket = {
+        item_name: 'Bread',
+        purchase_count: 3,
+        last_aisle: 'Bakery'
+      }
+
+      mockMapEnglishToLocalized.mockImplementation((aisles) =>
+        aisles.map((aisle) => `Localized ${aisle}`)
+      )
+
+      render(
+        <TopPurchasedItems
+          items={[itemWithoutSupermarket]}
+          loading={false}
+          onAddItem={onAddItem}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Bakery': '#654321' }}
+        />
+      )
+
+      const addButton = screen.getByRole('button', { name: /Add to list/ })
+      await user.click(addButton)
+
+      expect(onAddItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          item_name: 'Bread'
+        })
+      )
+      // Verify supermarket_id is not present or is undefined/null
+      const callArg = onAddItem.mock.calls[0][0]
+      expect(callArg.supermarket_id).toBeFalsy()
+    })
+
+    it('should preserve all original item properties in onAddItem callback', async () => {
+      const onAddItem = jest.fn()
+      const user = userEvent.setup()
+
+      const fullItem = {
+        item_name: 'Milk',
+        purchase_count: 5,
+        last_aisle: 'Dairy',
+        last_quantity: 2,
+        supermarket_id: 'super-1',
+        extra_property: 'should be preserved'
+      }
+
+      render(
+        <TopPurchasedItems
+          items={[fullItem]}
+          loading={false}
+          onAddItem={onAddItem}
+          existingItemNames={[]}
+          aisleColors={{ 'Localized Dairy': '#123456' }}
+        />
+      )
+
+      const addButton = screen.getByRole('button', { name: /Add to list/ })
+      await user.click(addButton)
+
+      expect(onAddItem).toHaveBeenCalledWith(
+        expect.objectContaining({
+          item_name: 'Milk',
+          purchase_count: 5,
+          last_aisle: 'Dairy',
+          last_quantity: 2,
+          supermarket_id: 'super-1',
+          extra_property: 'should be preserved',
+          displayAisle: 'Localized Dairy',
+          isInCurrentList: false
+        })
+      )
+    })
+  })
 })

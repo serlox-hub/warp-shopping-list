@@ -149,13 +149,15 @@ export default function ItemModal({
   englishAisles = DEFAULT_AISLES,
   itemUsageHistory = [],
   existingItems = [],
-  aisleColors = {}
+  aisleColors = {},
+  supermarkets = []
 }) {
   const t = useTranslations();
   const [name, setName] = useState('');
   const [aisle, setAisle] = useState('Other');
   const [quantity, setQuantity] = useState(DEFAULT_QUANTITY);
   const [comment, setComment] = useState('');
+  const [selectedSupermarketId, setSelectedSupermarketId] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showAisleDropdown, setShowAisleDropdown] = useState(false);
@@ -216,6 +218,7 @@ export default function ItemModal({
     setAisle(getDefaultLocalizedAisle());
     setQuantity(DEFAULT_QUANTITY);
     setComment('');
+    setSelectedSupermarketId(null);
     setSuggestions([]);
     setShowSuggestions(false);
     setShowAisleDropdown(false);
@@ -244,6 +247,11 @@ export default function ItemModal({
 
     setQuantity(item.quantity || DEFAULT_QUANTITY);
     setComment(item.comment || '');
+
+    // Initialize supermarket selection
+    const supermarketId = item.supermarket_id || item.supermarket?.id || null;
+    setSelectedSupermarketId(supermarketId);
+
     setSuggestions([]);
     setShowSuggestions(false);
     setShowAisleDropdown(false);
@@ -428,7 +436,8 @@ export default function ItemModal({
       name: name.trim(),
       aisle: englishAisle,
       quantity: parseInt(quantity, 10),
-      comment: comment.trim()
+      comment: comment.trim(),
+      supermarket_id: selectedSupermarketId
     };
 
     if (isEditMode && item) {
@@ -439,6 +448,11 @@ export default function ItemModal({
     }
 
     onClose();
+  };
+
+  const handleSupermarketSelect = (supermarketId) => {
+    // Toggle: if already selected, deselect; otherwise select
+    setSelectedSupermarketId(prev => prev === supermarketId ? null : supermarketId);
   };
 
   const handleNameChange = (value) => {
@@ -466,7 +480,8 @@ export default function ItemModal({
       name: suggestion.item_name?.trim() || '',
       aisle: englishAisle,
       quantity: sanitizedQuantity,
-      comment: comment.trim()
+      comment: comment.trim(),
+      supermarket_id: suggestion.supermarket_id || null
     });
 
     resetForm();
@@ -716,6 +731,56 @@ export default function ItemModal({
                 />
               </div>
             </div>
+
+            {/* Supermarket */}
+            {supermarkets.length > 0 && (
+              <div>
+                <label className={labelClass}>
+                  {t('addItemForm.supermarket')}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {supermarkets.map((supermarket) => {
+                    const isSelected = selectedSupermarketId === supermarket.id;
+                    return (
+                      <button
+                        key={supermarket.id}
+                        type="button"
+                        onClick={() => handleSupermarketSelect(supermarket.id)}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 ${
+                          isSelected
+                            ? 'border-transparent ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-900'
+                            : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500'
+                        }`}
+                        style={isSelected ? {
+                          backgroundColor: supermarket.color,
+                          color: getContrastingTextColor(supermarket.color, { light: '#f9fafb', dark: '#111827' }),
+                          '--tw-ring-color': supermarket.color
+                        } : undefined}
+                      >
+                        {!isSelected && (
+                          <span
+                            className="inline-flex h-2.5 w-2.5 rounded-full border border-slate-300 dark:border-slate-600 shrink-0"
+                            style={{ backgroundColor: supermarket.color }}
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className={isSelected ? '' : 'text-slate-700 dark:text-slate-200'}>
+                          {supermarket.name}
+                        </span>
+                        {isSelected && (
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                  {t('addItemForm.supermarketHelper')}
+                </p>
+              </div>
+            )}
 
             {/* Comment */}
             <div>

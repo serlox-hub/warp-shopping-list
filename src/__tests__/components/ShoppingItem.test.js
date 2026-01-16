@@ -12,6 +12,8 @@ const mockTranslations = {
   'shoppingList.itemActions': 'Item actions',
   'shoppingList.changeAisle': 'Change aisle',
   'shoppingList.currentAisle': 'Current aisle',
+  'shoppingList.changeSupermarket': 'Change supermarket',
+  'shoppingList.noSupermarket': 'No supermarket',
   'aisles.produce': 'Produce',
   'aisles.bakery': 'Bakery',
   'aisles.pantry': 'Pantry'
@@ -23,6 +25,7 @@ describe('ShoppingItem', () => {
   const mockOnDelete = jest.fn()
   const mockOnEdit = jest.fn()
   const mockOnChangeAisle = jest.fn()
+  const mockOnChangeSupermarket = jest.fn()
 
   const defaultItem = {
     id: '1',
@@ -32,6 +35,11 @@ describe('ShoppingItem', () => {
     completed: false,
     comment: 'Red apples'
   }
+
+  const mockSupermarkets = [
+    { id: 'super-1', name: 'Mercadona', color: '#00a65a' },
+    { id: 'super-2', name: 'Carrefour', color: '#0066cc' }
+  ]
 
   const defaultProps = {
     item: defaultItem,
@@ -44,7 +52,9 @@ describe('ShoppingItem', () => {
       Produce: '#22c55e',
       Bakery: '#f59e0b',
       Pantry: '#6366f1'
-    }
+    },
+    availableSupermarkets: mockSupermarkets,
+    onChangeSupermarket: mockOnChangeSupermarket
   }
 
   beforeEach(() => {
@@ -179,6 +189,62 @@ describe('ShoppingItem', () => {
     expect(mockOnChangeAisle).not.toHaveBeenCalled()
   })
 
+  it('should open supermarket selector and call onChangeSupermarket when selecting a different supermarket', async () => {
+    const user = userEvent.setup()
+    render(<ShoppingItem {...defaultProps} />)
+
+    // First open the kebab menu
+    const actionsButton = screen.getByLabelText('Item actions')
+    await user.click(actionsButton)
+
+    // Then click on "Change supermarket" to open the submenu
+    const changeSupermarketOption = screen.getByText('Change supermarket')
+    await user.click(changeSupermarketOption)
+
+    const mercadonaOption = screen.getByRole('button', { name: 'Mercadona' })
+    await user.click(mercadonaOption)
+
+    expect(mockOnChangeSupermarket).toHaveBeenCalledWith('1', 'super-1')
+  })
+
+  it('should not call onChangeSupermarket when selecting the current supermarket', async () => {
+    const user = userEvent.setup()
+    const itemWithSupermarket = { ...defaultItem, supermarket_id: 'super-1' }
+    render(<ShoppingItem {...defaultProps} item={itemWithSupermarket} />)
+
+    // First open the kebab menu
+    const actionsButton = screen.getByLabelText('Item actions')
+    await user.click(actionsButton)
+
+    // Then click on "Change supermarket" to open the submenu
+    const changeSupermarketOption = screen.getByText('Change supermarket')
+    await user.click(changeSupermarketOption)
+
+    const currentOption = screen.getByRole('button', { name: 'Mercadona' })
+    await user.click(currentOption)
+
+    expect(mockOnChangeSupermarket).not.toHaveBeenCalled()
+  })
+
+  it('should call onChangeSupermarket with null when selecting "No supermarket"', async () => {
+    const user = userEvent.setup()
+    const itemWithSupermarket = { ...defaultItem, supermarket_id: 'super-1' }
+    render(<ShoppingItem {...defaultProps} item={itemWithSupermarket} />)
+
+    // First open the kebab menu
+    const actionsButton = screen.getByLabelText('Item actions')
+    await user.click(actionsButton)
+
+    // Then click on "Change supermarket" to open the submenu
+    const changeSupermarketOption = screen.getByText('Change supermarket')
+    await user.click(changeSupermarketOption)
+
+    const noSupermarketOption = screen.getByRole('button', { name: 'No supermarket' })
+    await user.click(noSupermarketOption)
+
+    expect(mockOnChangeSupermarket).toHaveBeenCalledWith('1', null)
+  })
+
   it('should handle item without comment gracefully', () => {
     const itemWithoutComment = { ...defaultItem, comment: null }
     render(<ShoppingItem {...defaultProps} item={itemWithoutComment} />)
@@ -200,5 +266,15 @@ describe('ShoppingItem', () => {
 
     container = screen.getByText('Apples').closest('div.px-4')
     expect(container).toHaveClass('opacity-80')
+  })
+
+  it('should call onToggleComplete with item id', async () => {
+    const user = userEvent.setup()
+    render(<ShoppingItem {...defaultProps} />)
+
+    const itemContainer = screen.getByText('Apples').closest('div[role="button"]')
+    await user.click(itemContainer)
+
+    expect(mockOnToggleComplete).toHaveBeenCalledWith('1')
   })
 })

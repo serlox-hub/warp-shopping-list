@@ -815,4 +815,68 @@ describe('ShoppingListService', () => {
       })
     })
   })
+
+  // ============================================================================
+  // SUPERMARKET METHODS
+  // ============================================================================
+
+  describe('getListSupermarkets', () => {
+    const mockSupermarkets = [
+      { id: 'super-1', name: 'Mercadona', color: '#00a65a', display_order: 1 },
+      { id: 'super-2', name: 'Carrefour', color: '#0066cc', display_order: 2 }
+    ]
+
+    it('should return supermarkets for a list', async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({
+              data: mockSupermarkets,
+              error: null
+            })
+          })
+        })
+      })
+
+      const result = await ShoppingListService.getListSupermarkets(mockListId)
+
+      expect(result).toHaveLength(2)
+      expect(result[0].name).toBe('Mercadona')
+      expect(mockSupabase.from).toHaveBeenCalledWith('list_supermarkets')
+    })
+
+    it('should return empty array if no supermarkets', async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({
+              data: [],
+              error: null
+            })
+          })
+        })
+      })
+
+      const result = await ShoppingListService.getListSupermarkets(mockListId)
+
+      expect(result).toEqual([])
+    })
+
+    it('should use default color if not provided', async () => {
+      mockSupabase.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            order: jest.fn().mockResolvedValue({
+              data: [{ id: 'super-1', name: 'Test', color: null, display_order: 1 }],
+              error: null
+            })
+          })
+        })
+      })
+
+      const result = await ShoppingListService.getListSupermarkets(mockListId)
+
+      expect(result[0].color).toBe('#6b7280')
+    })
+  })
 })

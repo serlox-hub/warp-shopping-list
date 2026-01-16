@@ -30,9 +30,15 @@
     "clearCompleted": "Limpiar Completados ({{count}})",
     "clearAll": "Limpiar Todo",
     "manageAisles": "Gestionar Pasillos",
+    "manageSupermarkets": "Gestionar Supermercados",
+    "filterBySupermarket": "Filtrar por supermercado",
+    "allSupermarkets": "Todos",
+    "unassigned": "Sin asignar",
     "itemActions": "Acciones del artículo",
     "changeAisle": "Cambiar pasillo",
-    "currentAisle": "Pasillo actual"
+    "currentAisle": "Pasillo actual",
+    "changeSupermarket": "Cambiar supermercado",
+    "noSupermarket": "Sin supermercado"
   },
   "topItems": {
     "title": "Historial",
@@ -54,6 +60,8 @@
     "itemNamePlaceholder": "Ingresa el nombre del artículo",
     "aisle": "Pasillo",
     "quantity": "Cantidad",
+    "supermarket": "Supermercado",
+    "supermarketHelper": "Selecciona dónde comprar este artículo (opcional)",
     "comment": "Comentario (opcional)",
     "commentPlaceholder": "Agrega una nota o comentario...",
     "commentHelper": "Nota opcional (máx. 200 caracteres)",
@@ -72,6 +80,24 @@
     "invalidName": "Nombre inválido: debe ser único, no vacío y menor a 50 caracteres",
     "finishEditing": "Por favor termina de editar el pasillo actual primero",
     "colorLabel": "Seleccionar color"
+  },
+  "supermarketManager": {
+    "title": "Gestionar Supermercados",
+    "subtitle": "Agrega, edita, elimina y reordena tus supermercados",
+    "addPlaceholder": "Agregar nuevo supermercado...",
+    "saveChanges": "Guardar Cambios",
+    "resetButton": "Reiniciar",
+    "moveUp": "Mover arriba",
+    "moveDown": "Mover abajo",
+    "invalidName": "Nombre inválido: debe ser único, no vacío y menor a 50 caracteres",
+    "finishEditing": "Por favor termina de editar el supermercado actual primero",
+    "colorLabel": "Seleccionar color",
+    "empty": "Aún no hay supermercados. Añade uno para organizar tu compra por tienda.",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar este supermercado? Los artículos asignados quedarán sin asignar."
+  },
+  "supermarket": {
+    "unassigned": "Sin asignar",
+    "noItems": "No hay artículos en este supermercado"
   },
   "aisles": {
     "produce": "Productos Frescos",
@@ -141,6 +167,7 @@
     "deleteItemFailed": "Error al eliminar el elemento. Inténtalo de nuevo.",
     "toggleCompleteFailed": "Error al actualizar el estado. Inténtalo de nuevo.",
     "changeAisleFailed": "Error al cambiar el pasillo. Inténtalo de nuevo.",
+    "changeSupermarketFailed": "Error al cambiar el supermercado. Inténtalo de nuevo.",
     "clearCompletedFailed": "Error al limpiar completados. Inténtalo de nuevo.",
     "clearAllFailed": "Error al limpiar todos los elementos. Inténtalo de nuevo.",
     "networkError": "Error de red. Verifica tu conexión e inténtalo de nuevo.",
