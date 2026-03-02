@@ -7,6 +7,7 @@ jest.mock('../../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: jest.fn(),
+      getUser: jest.fn(),
       onAuthStateChange: jest.fn(),
       signInWithOAuth: jest.fn(),
       signOut: jest.fn()
@@ -31,12 +32,17 @@ describe('AuthContext', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
-    // Default mock setup
+
+    // Default mock setup - no session
     supabase.auth.getSession.mockResolvedValue({
       data: { session: null }
     })
-    
+
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: null
+    })
+
     supabase.auth.onAuthStateChange.mockReturnValue({
       data: {
         subscription: {
@@ -71,9 +77,13 @@ describe('AuthContext', () => {
     supabase.auth.getSession.mockResolvedValue({
       data: { session: { user: mockUser } }
     })
-    
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null
+    })
+
     const { result } = renderHook(() => useAuth(), { wrapper })
-    
+
     await waitFor(() => {
       expect(result.current.loading).toBe(false)
       expect(result.current.user).toEqual(mockUser)
@@ -216,6 +226,10 @@ describe('AuthContext', () => {
     let authStateChangeCallback
     supabase.auth.getSession.mockResolvedValue({
       data: { session: { user: mockUser } }
+    })
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: mockUser },
+      error: null
     })
 
     supabase.auth.onAuthStateChange.mockImplementation((callback) => {

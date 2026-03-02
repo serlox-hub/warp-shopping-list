@@ -49,20 +49,33 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // Get initial session
+    // Get initial session and refresh if needed
     const getInitialSession = async () => {
       try {
+        // First, try to get the session from storage
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
-        updateUserState(session?.user ?? null);
+
+        if (session) {
+          // If we have a session, verify it's still valid by calling getUser
+          // This triggers a token refresh if the JWT is expired but refresh token is valid
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          if (userError) {
+            // Session is invalid, clear it
+            await supabase.auth.signOut();
+            updateUserState(null);
+          } else {
+            updateUserState(user);
+          }
+        } else {
+          updateUserState(null);
+        }
       } catch {
         // If session is corrupted, clear storage and continue without session
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-        if (supabaseUrl) {
-          const projectRef = supabaseUrl.split('//')[1]?.split('.')[0];
-          if (projectRef) {
-            localStorage.removeItem(`sb-${projectRef}-auth-token`);
-          }
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // Ignore signout errors
         }
         updateUserState(null);
       } finally {

@@ -19,12 +19,15 @@ const createMockSupabase = () => ({
   })
 })
 
-export const supabase = (!supabaseUrl || !supabaseAnonKey) 
+export const supabase = (!supabaseUrl || !supabaseAnonKey)
   ? createMockSupabase()
   : createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: 'pocuo-auth',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
       },
     })
 
