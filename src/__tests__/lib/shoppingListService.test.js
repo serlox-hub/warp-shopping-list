@@ -495,9 +495,7 @@ describe('ShoppingListService', () => {
           eq: jest.fn().mockReturnValue({
             gt: jest.fn().mockReturnValue({
               order: jest.fn().mockReturnValue({
-                order: jest.fn().mockReturnValue({
-                  limit: jest.fn().mockResolvedValue({ data: mockPurchasedItems, error: null })
-                })
+                order: jest.fn().mockResolvedValue({ data: mockPurchasedItems, error: null })
               })
             })
           })

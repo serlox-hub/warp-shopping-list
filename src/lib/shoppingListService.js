@@ -592,7 +592,7 @@ export class ShoppingListService {
   // PURCHASE HISTORY METHODS (list-scoped, no user_id)
   // ============================================================================
 
-  static async getMostPurchasedItems(listId, limit = 8) {
+  static async getMostPurchasedItems(listId) {
     if (!listId) return [];
 
     try {
@@ -619,8 +619,7 @@ export class ShoppingListService {
         .eq('shopping_list_id', listId)
         .gt('purchase_count', 0)
         .order('purchase_count', { ascending: false })
-        .order('last_purchased_at', { ascending: false })
-        .limit(limit);
+        .order('last_purchased_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
