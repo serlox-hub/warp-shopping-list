@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslations } from '@/contexts/LanguageContext';
+import { getImageUrl } from '@/lib/imageStorage';
 
 export default function ShoppingItem({
   item,
@@ -16,10 +17,24 @@ export default function ShoppingItem({
 }) {
   const t = useTranslations();
   const [openMenu, setOpenMenu] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
+  const [showImageModal, setShowImageModal] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
-    if (!openMenu) return;
+    if (!item.image_key) {
+      setImageUrl(null);
+      return;
+    }
+    let cancelled = false;
+    getImageUrl(item.image_key)
+      .then((url) => { if (!cancelled) setImageUrl(url); })
+      .catch(() => { if (!cancelled) setImageUrl(null); });
+    return () => { cancelled = true; };
+  }, [item.image_key]);
+
+  useEffect(() => {
+    if (!openMenu && !showImageModal) return;
 
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -29,7 +44,11 @@ export default function ShoppingItem({
 
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        setOpenMenu(null);
+        if (showImageModal) {
+          setShowImageModal(false);
+        } else {
+          setOpenMenu(null);
+        }
       }
     };
 
@@ -40,7 +59,7 @@ export default function ShoppingItem({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [openMenu]);
+  }, [openMenu, showImageModal]);
 
   const aisleTranslationMap = useMemo(() => ({
     Produce: 'aisles.produce',
@@ -120,7 +139,8 @@ export default function ShoppingItem({
   const currentSupermarketId = item.supermarket_id || item.supermarket?.id;
 
   return (
-    <div
+    <>
+      <div
       className={`px-4 py-2.5 border rounded-lg transition-all duration-200 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 ${
         item.completed
           ? 'bg-slate-100/70 dark:bg-slate-900/60 border-slate-200/80 dark:border-slate-800 opacity-80'
@@ -132,14 +152,28 @@ export default function ShoppingItem({
       onClick={handleToggle}
       onKeyDown={handleKeyDown}
     >
-      <div className={`flex justify-between ${item.comment && item.comment.trim() ? 'items-start' : 'items-center'}`}>
-        <div className="flex-1 cursor-pointer select-none">
-          <div className={item.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}>
-            <span className="font-medium">{item.name}</span>
-            {item.quantity > 1 && (
-              <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">({item.quantity})</span>
-            )}
-          </div>
+      <div className={`flex justify-between ${(item.comment && item.comment.trim()) || imageUrl ? 'items-start' : 'items-center'}`}>
+        <div className="flex-1 cursor-pointer select-none flex gap-3">
+          {imageUrl && (
+            <button
+              type="button"
+              className="shrink-0"
+              onClick={(e) => { e.stopPropagation(); setShowImageModal(true); }}
+            >
+              <img
+                src={imageUrl}
+                alt=""
+                className="w-10 h-10 object-cover rounded-md border border-slate-200 dark:border-slate-700"
+              />
+            </button>
+          )}
+          <div className="min-w-0">
+            <div className={item.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}>
+              <span className="font-medium">{item.name}</span>
+              {item.quantity > 1 && (
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">({item.quantity})</span>
+              )}
+            </div>
           {item.comment && item.comment.trim() && (
             <div className={`mt-1 text-sm ${
               item.completed
@@ -152,6 +186,7 @@ export default function ShoppingItem({
               {item.comment.trim()}
             </div>
           )}
+          </div>
         </div>
 
         <div className="flex items-center gap-1 ml-3" ref={menuRef}>
@@ -333,6 +368,30 @@ export default function ShoppingItem({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+      {showImageModal && imageUrl && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowImageModal(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setShowImageModal(false)}
+            className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+            aria-label={t('common.close')}
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={imageUrl}
+            alt={item.name}
+            className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 }

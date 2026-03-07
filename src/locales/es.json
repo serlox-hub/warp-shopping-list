@@ -65,6 +65,10 @@
     "comment": "Comentario (opcional)",
     "commentPlaceholder": "Agrega una nota o comentario...",
     "commentHelper": "Nota opcional (máx. 200 caracteres)",
+    "image": "Foto (opcional)",
+    "imageHelper": "Toma o selecciona una foto del producto",
+    "imageUploading": "Subiendo imagen...",
+    "imageRemove": "Eliminar foto",
     "addButton": "Agregar Artículo",
     "updateButton": "Actualizar Artículo"
   },
@@ -171,7 +175,8 @@
     "clearCompletedFailed": "Error al limpiar completados. Inténtalo de nuevo.",
     "clearAllFailed": "Error al limpiar todos los elementos. Inténtalo de nuevo.",
     "networkError": "Error de red. Verifica tu conexión e inténtalo de nuevo.",
-    "removeFromHistoryFailed": "Error al eliminar del historial. Inténtalo de nuevo."
+    "removeFromHistoryFailed": "Error al eliminar del historial. Inténtalo de nuevo.",
+    "imageUploadFailed": "Error al subir la imagen. Inténtalo de nuevo o elimina la foto."
   },
   "success": {
     "itemAdded": "Elemento agregado exitosamente",

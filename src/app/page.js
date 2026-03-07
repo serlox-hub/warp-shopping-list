@@ -252,6 +252,7 @@ export default function Home() {
       supermarket_id: supermarketId,
       quantity: itemData.quantity || 1,
       comment: itemData.comment || '',
+      image_key: itemData.image_key || null,
       completed: false,
       shopping_list_id: shoppingList.id,
       created_at: new Date().toISOString(),
@@ -268,7 +269,8 @@ export default function Home() {
         {
           ...itemData,
           aisle_id: aisleId,
-          supermarket_id: supermarketId
+          supermarket_id: supermarketId,
+          image_key: itemData.image_key || null
         }
       );
 
@@ -325,6 +327,7 @@ export default function Home() {
       supermarket_id: supermarketId,
       quantity: updatedItem.quantity,
       comment: updatedItem.comment,
+      image_key: updatedItem.image_key !== undefined ? updatedItem.image_key : previousItem.image_key,
       updated_at: new Date().toISOString()
     };
 
@@ -341,7 +344,8 @@ export default function Home() {
         aisle_id: aisleId,
         supermarket_id: supermarketId,
         quantity: updatedItem.quantity,
-        comment: updatedItem.comment
+        comment: updatedItem.comment,
+        image_key: updatedItem.image_key !== undefined ? updatedItem.image_key : previousItem.image_key
       });
 
       // Update with server response

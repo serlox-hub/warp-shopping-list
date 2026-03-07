@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DEFAULT_AISLES, getDefaultAisleColor } from '@/types/shoppingList';
 import { useTranslations } from '@/contexts/LanguageContext';
 import { normalizeHexColor, getContrastingTextColor, getBorderColorFromHex } from '@/utils/colors';
+import { uploadImage, getImageUrl } from '@/lib/imageStorage';
 
 const stripDiacritics = (value) => {
   if (value === null || value === undefined) {
@@ -158,12 +159,19 @@ export default function ItemModal({
   const [quantity, setQuantity] = useState(DEFAULT_QUANTITY);
   const [comment, setComment] = useState('');
   const [selectedSupermarketId, setSelectedSupermarketId] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [existingImageKey, setExistingImageKey] = useState(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [imageError, setImageError] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showAisleDropdown, setShowAisleDropdown] = useState(false);
   const suggestionCloseTimeout = useRef(null);
   const nameInputRef = useRef(null);
   const aisleDropdownRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const isEditMode = mode === 'edit';
 
@@ -219,6 +227,11 @@ export default function ItemModal({
     setQuantity(DEFAULT_QUANTITY);
     setComment('');
     setSelectedSupermarketId(null);
+    setImageFile(null);
+    setImagePreview(null);
+    setExistingImageKey(null);
+    setImageError(false);
+    setUploadProgress(0);
     setSuggestions([]);
     setShowSuggestions(false);
     setShowAisleDropdown(false);
@@ -252,6 +265,11 @@ export default function ItemModal({
     const supermarketId = item.supermarket_id || item.supermarket?.id || null;
     setSelectedSupermarketId(supermarketId);
 
+    // Initialize image
+    setImageFile(null);
+    setExistingImageKey(item.image_key || null);
+    setImagePreview(null);
+
     setSuggestions([]);
     setShowSuggestions(false);
     setShowAisleDropdown(false);
@@ -270,6 +288,16 @@ export default function ItemModal({
       }, 100);
     }
   }, [isOpen, isEditMode, item, resetForm, initializeFromItem]);
+
+  // Load existing image preview when editing
+  useEffect(() => {
+    if (!existingImageKey) return;
+    let cancelled = false;
+    getImageUrl(existingImageKey)
+      .then((url) => { if (!cancelled) setImagePreview(url); })
+      .catch(() => { if (!cancelled) setImagePreview(null); });
+    return () => { cancelled = true; };
+  }, [existingImageKey]);
 
   // Handle Escape key
   useEffect(() => {
@@ -422,9 +450,9 @@ export default function ItemModal({
     return rankedSuggestions.slice(0, MAX_SUGGESTIONS);
   }, [isEditMode, normalizedUsageHistory, existingItemsSet, englishToLocalized, aisleColors]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || imageUploading) return;
 
     // Convert localized aisle to English using the parallel arrays
     const aisleIndex = customAisles.indexOf(aisle);
@@ -432,12 +460,30 @@ export default function ItemModal({
       ? englishAisles[aisleIndex]
       : (localizedToEnglish[aisle] || aisle);
 
+    // Upload image if a new file was selected
+    let imageKey = existingImageKey;
+    if (imageFile) {
+      try {
+        setImageUploading(true);
+        setImageError(false);
+        setUploadProgress(0);
+        imageKey = await uploadImage(imageFile, setUploadProgress);
+      } catch {
+        setImageError(true);
+        setImageUploading(false);
+        return; // Don't submit — let user retry or remove image
+      } finally {
+        setImageUploading(false);
+      }
+    }
+
     const submitData = {
       name: name.trim(),
       aisle: englishAisle,
       quantity: parseInt(quantity, 10),
       comment: comment.trim(),
-      supermarket_id: selectedSupermarketId
+      supermarket_id: selectedSupermarketId,
+      image_key: imageKey
     };
 
     if (isEditMode && item) {
@@ -448,6 +494,28 @@ export default function ItemModal({
     }
 
     onClose();
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFile(file);
+    setExistingImageKey(null);
+    setImageError(false);
+
+    const reader = new FileReader();
+    reader.onload = (event) => setImagePreview(event.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageRemove = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setExistingImageKey(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSupermarketSelect = (supermarketId) => {
@@ -804,6 +872,56 @@ export default function ItemModal({
                 </span>
               </div>
             </div>
+
+            {/* Image */}
+            <div>
+              <label className={labelClass}>
+                {t('addItemForm.image')}
+              </label>
+              {imagePreview ? (
+                <div className="relative inline-block">
+                  <img
+                    src={imagePreview}
+                    alt=""
+                    className="w-24 h-24 object-cover rounded-lg border border-slate-300 dark:border-slate-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleImageRemove}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-rose-500 hover:bg-rose-600 text-white rounded-full flex items-center justify-center shadow-sm transition-colors"
+                    aria-label={t('addItemForm.imageRemove')}
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-indigo-400 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span className="text-sm">{t('addItemForm.imageHelper')}</span>
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              {imageError && (
+                <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">
+                  {t('errors.imageUploadFailed')}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Modal Footer */}
@@ -817,9 +935,10 @@ export default function ItemModal({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+              disabled={imageUploading}
+              className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isEditMode ? t('addItemForm.updateButton') : t('addItemForm.addButton')}
+              {imageUploading ? `${t('addItemForm.imageUploading')} ${uploadProgress}%` : (isEditMode ? t('addItemForm.updateButton') : t('addItemForm.addButton'))}
             </button>
           </div>
         </form>

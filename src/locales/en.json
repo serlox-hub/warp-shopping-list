@@ -65,6 +65,10 @@
     "comment": "Comment (optional)",
     "commentPlaceholder": "Add a note or comment...",
     "commentHelper": "Optional note (max 200 characters)",
+    "image": "Photo (optional)",
+    "imageHelper": "Take or select a product photo",
+    "imageUploading": "Uploading image...",
+    "imageRemove": "Remove photo",
     "addButton": "Add Item",
     "updateButton": "Update Item"
   },
@@ -171,7 +175,8 @@
     "clearCompletedFailed": "Failed to clear completed items. Please try again.",
     "clearAllFailed": "Failed to clear all items. Please try again.",
     "networkError": "Network error. Please check your connection and try again.",
-    "removeFromHistoryFailed": "Failed to remove item from history. Please try again."
+    "removeFromHistoryFailed": "Failed to remove item from history. Please try again.",
+    "imageUploadFailed": "Failed to upload image. Try again or remove the photo."
   },
   "success": {
     "itemAdded": "Item added successfully",

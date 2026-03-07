@@ -312,6 +312,7 @@ export class ShoppingListService {
             supermarket_id: itemData.supermarket_id !== undefined ? itemData.supermarket_id : existingItem.supermarket_id,
             quantity: itemData.quantity || 1,
             comment: itemData.comment || '',
+            image_key: itemData.image_key !== undefined ? itemData.image_key : existingItem.image_key,
             completed: false,
             updated_at: new Date().toISOString()
           })
@@ -347,6 +348,7 @@ export class ShoppingListService {
           supermarket_id: itemData.supermarket_id || null,
           quantity: itemData.quantity || 1,
           comment: itemData.comment || '',
+          image_key: itemData.image_key || null,
           completed: false,
           purchase_count: 0,
           active: true
